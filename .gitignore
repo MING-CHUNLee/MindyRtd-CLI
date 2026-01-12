@@ -1,9 +1,12 @@
+# Ignore cluade local setting
+.claude/
+
 # Ignore all markdown files
 *.md
 
 # Except markdown files in skills/code-review/
-!skills/code-review/*.md
-!skills/code-review/**/*.md
+!skills/**/*.md
+
 
 # Node.js
 node_modules/
@@ -69,3 +72,4 @@ logs/
 # Application specific
 config/secrets.yml
 !config/secrets_example.yml
+
