@@ -1,0 +1,39 @@
+---
+title: "Sample R Markdown Report"
+author: "Test User"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+## Introduction
+
+This is a sample R Markdown document for testing the CLI scanner.
+
+## Data Analysis
+
+```{r data}
+# Create sample data
+data <- mtcars %>%
+  select(mpg, cyl, hp, wt) %>%
+  head(10)
+
+knitr::kable(data)
+```
+
+## Visualization
+
+```{r plot}
+ggplot(mtcars, aes(x = wt, y = mpg)) +
+  geom_point(aes(color = factor(cyl))) +
+  theme_minimal() +
+  labs(title = "MPG vs Weight", color = "Cylinders")
+```
+
+## Summary
+
+This document demonstrates the scanner's ability to detect `.Rmd` files.
