@@ -8,6 +8,13 @@
 export { FileInfo, createFileInfo } from './file-info';
 export { ProjectInfo, createProjectInfo } from './project-info';
 export { ScanResult, RFileCollection, ScanResultProps, createScanResult } from './scan-result';
+export {
+    LibraryInfo,
+    LibraryScanResult,
+    LibraryScanOptions,
+    createLibraryInfo,
+    createLibraryScanResult
+} from './library-info';
 
 /**
  * Options for scan operation

@@ -24,3 +24,17 @@ export class InvalidDirectoryError extends CLIError {
         this.name = 'InvalidDirectoryError';
     }
 }
+
+export class RNotFoundError extends CLIError {
+    constructor() {
+        super('R is not installed or not accessible in PATH. Please install R and ensure Rscript is available.');
+        this.name = 'RNotFoundError';
+    }
+}
+
+export class LibraryScanError extends CLIError {
+    constructor(message: string) {
+        super(message);
+        this.name = 'LibraryScanError';
+    }
+}

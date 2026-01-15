@@ -15,6 +15,7 @@
 
 import { Command } from 'commander';
 import { scanCommand } from './commands/scan';
+import { libraryCommand } from './commands/library';
 import { displayBanner } from './views/banner';
 import { version } from '../package.json';
 
@@ -30,6 +31,7 @@ program
 
 // Register commands
 program.addCommand(scanCommand);
+program.addCommand(libraryCommand);
 
 // Default action
 program.action(() => {
