@@ -97,6 +97,8 @@ async function findFiles(pattern: string, options: object): Promise<FileInfo[]> 
         const files = await glob(pattern, options);
         return files.map(getFileInfo);
     } catch {
+        // Intentionally return empty array on glob failures
+        // Common causes: permission denied, broken symlinks
         return [];
     }
 }

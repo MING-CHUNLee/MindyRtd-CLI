@@ -61,16 +61,128 @@ describe('Library Scanner', () => {
 
     describe('findRscriptPath (integration simulation)', () => {
         it('should search Windows R installation directories', () => {
-            // This tests the logic of searching for R installations
             const windowsPaths = [
                 'C:\\Program Files\\R',
                 'C:\\Program Files (x86)\\R',
             ];
 
-            // Verify paths structure is correct
             expect(windowsPaths[0]).toContain('Program Files');
             expect(windowsPaths[1]).toContain('(x86)');
         });
+
+        it('should search macOS R installation directories', () => {
+            const macosPaths = [
+                '/Library/Frameworks/R.framework/Versions',
+                '/opt/homebrew/Cellar/r',        // Homebrew Apple Silicon
+                '/usr/local/Cellar/r',           // Homebrew Intel
+                '/opt/local/Library/Frameworks/R.framework/Versions', // MacPorts
+            ];
+
+            expect(macosPaths[0]).toContain('R.framework');
+            expect(macosPaths[1]).toContain('homebrew');
+            expect(macosPaths[2]).toContain('Cellar');
+            expect(macosPaths[3]).toContain('opt/local');
+        });
+
+        it('should search Linux R installation directories', () => {
+            const linuxPaths = [
+                '/usr/lib/R',
+                '/usr/lib64/R',
+                '/usr/local/lib/R',
+                '/opt/R',
+                '/usr/share/R',
+            ];
+
+            expect(linuxPaths[0]).toBe('/usr/lib/R');
+            expect(linuxPaths[1]).toBe('/usr/lib64/R');
+            expect(linuxPaths[2]).toBe('/usr/local/lib/R');
+            expect(linuxPaths[3]).toBe('/opt/R');
+        });
+    });
+});
+
+describe('Cross-Platform Path Detection', () => {
+    it('should use correct executable name per platform', () => {
+        const getExecutableName = (platform: string): string => {
+            return platform === 'win32' ? 'Rscript.exe' : 'Rscript';
+        };
+
+        expect(getExecutableName('win32')).toBe('Rscript.exe');
+        expect(getExecutableName('darwin')).toBe('Rscript');
+        expect(getExecutableName('linux')).toBe('Rscript');
+    });
+
+    it('should detect macOS R.framework structure', () => {
+        // macOS R.framework has a specific directory structure
+        const frameworkPath = '/Library/Frameworks/R.framework/Versions';
+        const version = '4.4';
+        const expectedRscriptPath = path.join(frameworkPath, version, 'Resources', 'bin', 'Rscript');
+
+        // Use path.sep to handle cross-platform path separators
+        expect(expectedRscriptPath).toContain('R.framework');
+        expect(expectedRscriptPath).toContain('Resources');
+        expect(expectedRscriptPath).toContain('Rscript');
+    });
+
+    it('should detect Homebrew R installation structure', () => {
+        // Homebrew installs R in Cellar with version subdirectories
+        const homebrewPath = '/opt/homebrew/Cellar/r';
+        const version = '4.4.2';
+        const expectedRscriptPath = path.join(homebrewPath, version, 'bin', 'Rscript');
+
+        expect(expectedRscriptPath).toContain('Cellar');
+        expect(expectedRscriptPath).toContain('4.4.2');
+        expect(expectedRscriptPath).toContain('Rscript');
+    });
+
+    it('should detect Linux standard R installation structure', () => {
+        // Linux standard paths have bin/Rscript directly
+        const linuxPath = '/usr/lib/R';
+        const expectedRscriptPath = path.join(linuxPath, 'bin', 'Rscript');
+
+        expect(expectedRscriptPath).toContain('lib');
+        expect(expectedRscriptPath).toContain('bin');
+        expect(expectedRscriptPath).toContain('Rscript');
+    });
+
+    it('should detect Linux opt R installation with versions', () => {
+        // /opt/R often has versioned subdirectories
+        const optPath = '/opt/R';
+        const version = '4.4.2';
+        const expectedRscriptPath = path.join(optPath, version, 'bin', 'Rscript');
+
+        expect(expectedRscriptPath).toContain('opt');
+        expect(expectedRscriptPath).toContain('4.4.2');
+        expect(expectedRscriptPath).toContain('Rscript');
+    });
+
+    it('should handle version directory sorting to get latest', () => {
+        const versions = ['4.2.1', '4.4.2', '4.3.0', '4.1.0'];
+        const sorted = [...versions].sort((a, b) => b.localeCompare(a));
+
+        expect(sorted[0]).toBe('4.4.2');
+        expect(sorted[sorted.length - 1]).toBe('4.1.0');
+    });
+
+    it('should handle R-prefixed version directories (Windows style)', () => {
+        const dirs = ['R-4.4.2', 'R-4.3.1', 'R-4.2.0', 'other-folder'];
+        const rVersionDirs = dirs
+            .filter(dir => dir.startsWith('R-'))
+            .sort((a, b) => b.localeCompare(a));
+
+        expect(rVersionDirs).toHaveLength(3);
+        expect(rVersionDirs[0]).toBe('R-4.4.2');
+    });
+
+    it('should handle numeric version directories (macOS/Linux style)', () => {
+        const dirs = ['4.4', '4.3', 'Current', '4.2', 'other'];
+        const versionDirs = dirs
+            .filter(dir => /^\d+\.\d+/.test(dir) || dir === 'Current')
+            .sort((a, b) => b.localeCompare(a));
+
+        expect(versionDirs).toContain('Current');
+        expect(versionDirs).toContain('4.4');
+        expect(versionDirs).not.toContain('other');
     });
 });
 

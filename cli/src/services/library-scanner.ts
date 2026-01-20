@@ -20,15 +20,48 @@ import { RNotFoundError, LibraryScanError } from '../utils/errors';
 
 const execAsync = promisify(exec);
 
+// Constants
+const TEMP_SCRIPT_PREFIX = 'mindy_r_script_';
+const TEMP_SCRIPT_EXTENSION = '.R';
+
 // Cached Rscript path
 let cachedRscriptPath: string | null = null;
 
-// Common R installation paths on Windows
+// Detect current platform
+const PLATFORM = process.platform;
+
+/**
+ * Sort strings in descending order (newest version first)
+ * Used for version directory sorting to get the latest R version
+ */
+function sortDescending(a: string, b: string): number {
+    return b.localeCompare(a);
+}
+
+// Common R installation paths by platform
 const WINDOWS_R_PATHS = [
     'C:\\Program Files\\R',
     'C:\\Program Files (x86)\\R',
     process.env.LOCALAPPDATA ? path.join(process.env.LOCALAPPDATA, 'Programs', 'R') : '',
     process.env.USERPROFILE ? path.join(process.env.USERPROFILE, 'R') : '',
+].filter(p => p !== '');
+
+const MACOS_R_PATHS = [
+    '/Library/Frameworks/R.framework/Versions',
+    '/opt/homebrew/Cellar/r',        // Homebrew Apple Silicon
+    '/usr/local/Cellar/r',           // Homebrew Intel
+    '/opt/local/Library/Frameworks/R.framework/Versions', // MacPorts
+    process.env.HOME ? path.join(process.env.HOME, 'Library', 'R') : '',
+].filter(p => p !== '');
+
+const LINUX_R_PATHS = [
+    '/usr/lib/R',
+    '/usr/lib64/R',
+    '/usr/local/lib/R',
+    '/opt/R',
+    '/usr/share/R',
+    process.env.HOME ? path.join(process.env.HOME, '.local', 'lib', 'R') : '',
+    process.env.HOME ? path.join(process.env.HOME, 'R') : '',
 ].filter(p => p !== '');
 
 // R script to get installed packages info
@@ -50,8 +83,109 @@ cat(sprintf("LIBPATHS|%s\\n", paste(.libPaths(), collapse=";")))
 `;
 
 /**
+ * Get platform-specific R installation paths
+ */
+function getPlatformRPaths(): string[] {
+    switch (PLATFORM) {
+        case 'win32':
+            return WINDOWS_R_PATHS;
+        case 'darwin':
+            return MACOS_R_PATHS;
+        case 'linux':
+            return LINUX_R_PATHS;
+        default:
+            return [];
+    }
+}
+
+/**
+ * Get the Rscript executable name for the current platform
+ */
+function getRscriptExecutableName(): string {
+    return PLATFORM === 'win32' ? 'Rscript.exe' : 'Rscript';
+}
+
+/**
+ * Search for Rscript in a macOS R.framework directory
+ */
+function findRscriptInFramework(basePath: string): string | null {
+    if (!fs.existsSync(basePath)) return null;
+
+    try {
+        const versions = fs.readdirSync(basePath)
+            .filter(dir => /^\d+\.\d+/.test(dir) || dir === 'Current')
+            .sort(sortDescending);
+
+        for (const version of versions) {
+            const rscriptPath = path.join(basePath, version, 'Resources', 'bin', 'Rscript');
+            if (fs.existsSync(rscriptPath)) {
+                return rscriptPath;
+            }
+        }
+    } catch {
+        // Intentionally ignore filesystem errors (e.g., permission denied)
+        // Return null to indicate path not found in this location
+    }
+    return null;
+}
+
+/**
+ * Search for Rscript in a Homebrew Cellar directory
+ */
+function findRscriptInHomebrew(basePath: string): string | null {
+    if (!fs.existsSync(basePath)) return null;
+
+    try {
+        const versions = fs.readdirSync(basePath)
+            .sort(sortDescending);
+
+        for (const version of versions) {
+            const rscriptPath = path.join(basePath, version, 'bin', 'Rscript');
+            if (fs.existsSync(rscriptPath)) {
+                return rscriptPath;
+            }
+        }
+    } catch {
+        // Intentionally ignore directory read errors
+        // Return null to continue searching other locations
+    }
+    return null;
+}
+
+/**
+ * Search for Rscript in a standard Linux/Unix directory
+ */
+function findRscriptInStandardDir(basePath: string): string | null {
+    if (!fs.existsSync(basePath)) return null;
+
+    // Check direct bin path
+    const directPath = path.join(basePath, 'bin', 'Rscript');
+    if (fs.existsSync(directPath)) {
+        return directPath;
+    }
+
+    // Check versioned subdirectories (e.g., /opt/R/4.3.0/bin/Rscript)
+    try {
+        const versions = fs.readdirSync(basePath)
+            .filter(dir => /^\d+\.\d+/.test(dir) || dir.startsWith('R-'))
+            .sort(sortDescending);
+
+        for (const version of versions) {
+            const rscriptPath = path.join(basePath, version, 'bin', 'Rscript');
+            if (fs.existsSync(rscriptPath)) {
+                return rscriptPath;
+            }
+        }
+    } catch {
+        // Intentionally ignore directory traversal errors
+        // Common causes: permission denied, broken symlinks
+    }
+    return null;
+}
+
+/**
  * Find Rscript executable path
- * Searches common installation directories on Windows
+ * Searches common installation directories based on the current platform
  */
 async function findRscriptPath(): Promise<string> {
     // Return cached path if available
@@ -68,45 +202,60 @@ async function findRscriptPath(): Promise<string> {
         // Not in PATH, search common locations
     }
 
-    // Search Windows R installation directories
-    for (const basePath of WINDOWS_R_PATHS) {
+    const platformPaths = getPlatformRPaths();
+    const executableName = getRscriptExecutableName();
+
+    for (const basePath of platformPaths) {
         if (!fs.existsSync(basePath)) continue;
 
-        try {
-            // Get all R version directories and sort to get the latest
-            const versions = fs.readdirSync(basePath)
-                .filter(dir => dir.startsWith('R-'))
-                .sort((a, b) => b.localeCompare(a)); // Sort descending to get latest version first
+        let foundPath: string | null = null;
 
-            for (const version of versions) {
-                const rscriptPath = path.join(basePath, version, 'bin', 'Rscript.exe');
-                if (fs.existsSync(rscriptPath)) {
-                    // Verify it works
-                    try {
-                        await execAsync(`"${rscriptPath}" --version`);
-                        cachedRscriptPath = rscriptPath;
-                        return cachedRscriptPath;
-                    } catch {
-                        continue;
+        if (PLATFORM === 'win32') {
+            // Windows: search for R-x.x.x directories
+            try {
+                const versions = fs.readdirSync(basePath)
+                    .filter(dir => dir.startsWith('R-'))
+                    .sort(sortDescending);
+
+                for (const version of versions) {
+                    const rscriptPath = path.join(basePath, version, 'bin', executableName);
+                    if (fs.existsSync(rscriptPath)) {
+                        foundPath = rscriptPath;
+                        break;
                     }
                 }
+            } catch {
+                // Failed to read directory, continue to next path
+                continue;
             }
-        } catch {
-            continue;
+        } else if (PLATFORM === 'darwin') {
+            // macOS: handle different installation methods
+            if (basePath.includes('R.framework')) {
+                foundPath = findRscriptInFramework(basePath);
+            } else if (basePath.includes('Cellar')) {
+                foundPath = findRscriptInHomebrew(basePath);
+            } else {
+                foundPath = findRscriptInStandardDir(basePath);
+            }
+        } else {
+            // Linux: check standard directories
+            foundPath = findRscriptInStandardDir(basePath);
+        }
+
+        if (foundPath) {
+            // Verify it works
+            try {
+                await execAsync(`"${foundPath}" --version`);
+                cachedRscriptPath = foundPath;
+                return cachedRscriptPath;
+            } catch {
+                // Rscript found but verification failed, try next location
+                continue;
+            }
         }
     }
 
     throw new RNotFoundError();
-}
-
-/**
- * Execute Rscript command with auto-detected path
- * Uses a temporary file to avoid shell escaping issues on Windows
- */
-async function execRscript(args: string): Promise<{ stdout: string; stderr: string }> {
-    const rscriptPath = await findRscriptPath();
-    const command = rscriptPath === 'Rscript' ? `Rscript ${args}` : `"${rscriptPath}" ${args}`;
-    return execAsync(command);
 }
 
 /**
@@ -117,7 +266,7 @@ async function execRscriptCode(code: string): Promise<{ stdout: string; stderr: 
     const rscriptPath = await findRscriptPath();
     const os = await import('os');
     const tempDir = os.tmpdir();
-    const tempFile = path.join(tempDir, `mindy_r_script_${Date.now()}.R`);
+    const tempFile = path.join(tempDir, `${TEMP_SCRIPT_PREFIX}${Date.now()}${TEMP_SCRIPT_EXTENSION}`);
 
     try {
         // Write R script to temp file
@@ -131,13 +280,13 @@ async function execRscriptCode(code: string): Promise<{ stdout: string; stderr: 
         const result = await execAsync(command);
         return result;
     } finally {
-        // Clean up temp file
+        // Clean up temp file - ignore errors as cleanup is best-effort
         try {
             if (fs.existsSync(tempFile)) {
                 fs.unlinkSync(tempFile);
             }
         } catch {
-            // Ignore cleanup errors
+            // Intentionally ignore cleanup errors - temp files will be cleaned by OS
         }
     }
 }
@@ -256,6 +405,7 @@ export async function isPackageInstalled(packageName: string): Promise<boolean> 
         const { stdout } = await execRscriptCode(script);
         return stdout.trim() === 'TRUE';
     } catch {
+        // Package not found or R error - return false as expected behavior
         return false;
     }
 }
@@ -293,6 +443,7 @@ if (requireNamespace("${packageName}", quietly = TRUE)) {
             priority: priority || undefined,
         });
     } catch {
+        // Package info unavailable or R error - null indicates not found
         return null;
     }
 }
