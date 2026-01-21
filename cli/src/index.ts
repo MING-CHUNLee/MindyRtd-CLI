@@ -6,16 +6,21 @@
  * A CLI tool for detecting and analyzing R files in RStudio projects.
  * 
  * Architecture:
- * - commands/  : CLI command handlers
- * - services/  : Business logic (local or API calls)
- * - views/     : Output formatting
- * - types/     : TypeScript type definitions
- * - utils/     : Helper functions
+ * - commands/     : CLI command handlers (user-facing)
+ * - controllers/  : API communication (LLM, external services)
+ * - services/     : Business logic
+ * - views/        : Output formatting
+ * - types/        : TypeScript type definitions
+ * - config/       : Environment configuration
+ * - templates/    : Prompt templates + i18n
+ * - data/         : Static data
+ * - utils/        : Helper functions
  */
 
 import { Command } from 'commander';
 import { scanCommand } from './commands/scan';
 import { libraryCommand } from './commands/library';
+import { contextCommand } from './commands/context';
 import { displayBanner } from './views/banner';
 import { version } from '../package.json';
 
@@ -32,6 +37,7 @@ program
 // Register commands
 program.addCommand(scanCommand);
 program.addCommand(libraryCommand);
+program.addCommand(contextCommand);
 
 // Default action
 program.action(() => {

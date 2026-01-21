@@ -15,6 +15,21 @@ export {
     createLibraryInfo,
     createLibraryScanResult
 } from './library-info';
+export {
+    ContextBuilderOptions,
+    EnvironmentContext,
+    GeneratedPrompt,
+    ContextSummary,
+    CapabilityGroup,
+    SupportedLanguage
+} from './prompt-context';
+export {
+    EnvironmentServiceOptions,
+    EnvironmentReport,
+    PackageCheckResult,
+    RHealthCheck,
+    EnvironmentCapabilities
+} from './environment';
 
 /**
  * Options for scan operation
