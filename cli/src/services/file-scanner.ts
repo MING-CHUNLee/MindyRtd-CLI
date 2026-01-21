@@ -1,20 +1,29 @@
 /**
  * Service: File Scanner
- * 
+ *
  * Scans directories for R-related files.
  * Currently runs locally. In the future, this may call the backend API instead.
  */
 
-import { glob } from 'glob';
+import { glob, GlobOptions } from 'glob';
 import * as fs from 'fs';
 import * as path from 'path';
 import { FileInfo, ProjectInfo, ScanResult, ScanOptions } from '../types';
 import { DirectoryNotFoundError, InvalidDirectoryError } from '../utils/errors';
+import { FILE_SCAN } from '../config/constants';
 
-// Pattern constants
-const RECURSIVE_PATTERN = '**/*';
-const TOP_LEVEL_PATTERN = '*';
-const HIDDEN_FILE_PATTERNS = ['**/.*', '**/.*/**'];
+// ============================================
+// Types
+// ============================================
+
+type GlobSearchOptions = Pick<GlobOptions, 'cwd' | 'absolute' | 'nodir' | 'ignore' | 'nocase'>;
+
+interface RFilesByType {
+    rScripts: FileInfo[];
+    rMarkdown: FileInfo[];
+    rData: FileInfo[];
+    rProject: FileInfo[];
+}
 
 /**
  * Scan a directory for R-related files
@@ -58,16 +67,13 @@ function validateDirectory(dirPath: string): void {
     }
 }
 
-async function findAllRFiles(baseDir: string, options: ScanOptions): Promise<{
-    rScripts: FileInfo[];
-    rMarkdown: FileInfo[];
-    rData: FileInfo[];
-    rProject: FileInfo[];
-}> {
-    const pattern = options.recursive ? RECURSIVE_PATTERN : TOP_LEVEL_PATTERN;
-    const ignore = options.includeHidden ? [] : HIDDEN_FILE_PATTERNS;
+async function findAllRFiles(baseDir: string, options: ScanOptions): Promise<RFilesByType> {
+    const pattern = options.recursive
+        ? FILE_SCAN.RECURSIVE_PATTERN
+        : FILE_SCAN.TOP_LEVEL_PATTERN;
+    const ignore = options.includeHidden ? [] : [...FILE_SCAN.HIDDEN_FILE_PATTERNS];
 
-    const searchOptions = {
+    const searchOptions: GlobSearchOptions = {
         cwd: baseDir,
         absolute: true,
         nodir: true,
@@ -92,7 +98,7 @@ async function findAllRFiles(baseDir: string, options: ScanOptions): Promise<{
     };
 }
 
-async function findFiles(pattern: string, options: object): Promise<FileInfo[]> {
+async function findFiles(pattern: string, options: GlobSearchOptions): Promise<FileInfo[]> {
     try {
         const files = await glob(pattern, options);
         return files.map(getFileInfo);

@@ -1,24 +1,26 @@
 /**
  * Section Builders for Prompt Generation
- * 
+ *
  * Pure functions that build each section of the system prompt.
  * Each function takes data and locale, returns formatted string.
- * 
- * This separation follows the principle used in:
+ *
+ * Design Pattern:
  * - Angular Schematics (templates separate from logic)
  * - Yeoman Generators (template-based generation)
  */
 
-import { LibraryScanResult, LibraryInfo } from '../../types/library-info';
-import { ScanResult } from '../../types/scan-result';
-import { CapabilityGroup } from '../../types/prompt-context';
-import { LocaleData, t } from '../locale-loader';
+import { LibraryScanResult, LibraryInfo } from '../types/library-info';
+import { ScanResult } from '../types/scan-result';
+import { CapabilityGroup } from '../types/prompt-context';
+import { LocaleData, t } from '../i18n';
 import {
     PACKAGE_CAPABILITIES,
     KEY_PACKAGE_GROUPS,
     TIDYVERSE_CORE,
     IMPORTANT_PACKAGES
-} from '../../data/package-capabilities';
+} from '../data/package-capabilities';
+import { formatFileSize } from '../utils/format';
+import { TOKEN_ESTIMATION } from '../config/constants';
 
 // ============================================
 // Section Builder Functions
@@ -251,21 +253,15 @@ export function groupCapabilities(
 }
 
 /**
- * Format file size for display
- */
-export function formatFileSize(bytes: number): string {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-/**
  * Estimate token count for a text
  */
 export function estimateTokens(text: string): number {
-    // Rough estimate: ~4 characters per token for English
-    // ~2 characters per token for Chinese
+    // Rough estimate based on character types
     const chineseChars = (text.match(/[\u4e00-\u9fff]/g) || []).length;
     const otherChars = text.length - chineseChars;
-    return Math.ceil(chineseChars / 2 + otherChars / 4);
+
+    return Math.ceil(
+        chineseChars / TOKEN_ESTIMATION.CHARS_PER_TOKEN_CHINESE +
+        otherChars / TOKEN_ESTIMATION.CHARS_PER_TOKEN_ENGLISH
+    );
 }

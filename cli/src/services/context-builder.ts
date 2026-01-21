@@ -1,16 +1,17 @@
 /**
  * Service: Context Builder
- * 
+ *
  * Integrates environment information from library-scanner and file-scanner
  * to generate dynamic System Prompts for LLM interactions.
- * 
- * This solves the professor's challenge: "help the LLM communicate with 
+ *
+ * This solves the professor's challenge: "help the LLM communicate with
  * the client side to figure out what is available and what can be done"
- * 
+ *
  * Architecture Note:
- * - Types are defined in /types/context.ts
+ * - Types are defined in /types/prompt-context.ts
  * - Static data is in /data/package-capabilities.ts
- * - Prompt templates are in /templates/
+ * - i18n locales are in /i18n/
+ * - Prompt builders are in /prompts/
  * - This service orchestrates them together (Clean Architecture pattern)
  */
 
@@ -22,7 +23,7 @@ import {
     GeneratedPrompt,
     ContextSummary,
 } from '../types/prompt-context';
-import { loadLocale } from '../templates/locale-loader';
+import { loadLocale } from '../i18n';
 import {
     buildRoleSection,
     buildEnvironmentSection,
@@ -32,7 +33,7 @@ import {
     buildCustomSection,
     identifyKeyPackages,
     estimateTokens,
-} from '../templates/prompts';
+} from '../prompts';
 
 // Re-export types for backward compatibility
 export {

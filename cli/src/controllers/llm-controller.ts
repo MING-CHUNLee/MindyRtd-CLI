@@ -1,22 +1,46 @@
 /**
  * Controller: LLM Controller
- * 
+ *
  * Handles communication with LLM APIs (OpenAI, Anthropic, etc.)
- * 
+ *
  * Architecture References:
  * - LangChain: Provider abstraction pattern
  * - Vercel AI SDK: Unified interface for multiple providers
  * - Clean Architecture: Gateway/Adapter pattern
- * 
+ *
  * Best Practices:
  * - API keys loaded from environment variables (never hardcoded)
  * - Provider-agnostic interface
  * - Automatic retry with exponential backoff
  * - Proper error handling and typing
+ * - Input validation before API calls
  */
 
 import { GeneratedPrompt } from '../types/prompt-context';
 import { LLMConfig, getLLMConfigFromEnv, LLMProvider } from '../config';
+import { LLM } from '../config/constants';
+
+// ============================================
+// Error Classes
+// ============================================
+
+export class LLMValidationError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = 'LLMValidationError';
+    }
+}
+
+export class LLMAPIError extends Error {
+    constructor(
+        message: string,
+        public readonly provider: LLMProvider,
+        public readonly statusCode?: number
+    ) {
+        super(message);
+        this.name = 'LLMAPIError';
+    }
+}
 
 // ============================================
 // Types
@@ -122,6 +146,8 @@ export class LLMController {
      * Send a prompt to the LLM and get a response
      */
     async sendPrompt(request: LLMRequest): Promise<LLMResponse> {
+        this.validateRequest(request);
+
         const messages: LLMMessage[] = [
             { role: 'system', content: request.systemPrompt },
             ...(request.history || []),
@@ -139,6 +165,49 @@ export class LLMController {
             ...result,
             responseTimeMs: Date.now() - startTime,
         };
+    }
+
+    // ============================================
+    // Validation
+    // ============================================
+
+    /**
+     * Validate request parameters before sending to API
+     */
+    private validateRequest(request: LLMRequest): void {
+        // Validate system prompt
+        if (!request.systemPrompt?.trim()) {
+            throw new LLMValidationError('System prompt is required and cannot be empty');
+        }
+
+        if (request.systemPrompt.length > LLM.MAX_SYSTEM_PROMPT_LENGTH) {
+            throw new LLMValidationError(
+                `System prompt exceeds maximum length of ${LLM.MAX_SYSTEM_PROMPT_LENGTH} characters`
+            );
+        }
+
+        // Validate user message
+        if (!request.userMessage?.trim()) {
+            throw new LLMValidationError('User message is required and cannot be empty');
+        }
+
+        if (request.userMessage.length > LLM.MAX_USER_MESSAGE_LENGTH) {
+            throw new LLMValidationError(
+                `User message exceeds maximum length of ${LLM.MAX_USER_MESSAGE_LENGTH} characters`
+            );
+        }
+
+        // Validate history messages if present
+        if (request.history) {
+            for (const msg of request.history) {
+                if (!msg.content?.trim()) {
+                    throw new LLMValidationError('History messages cannot have empty content');
+                }
+                if (!['system', 'user', 'assistant'].includes(msg.role)) {
+                    throw new LLMValidationError(`Invalid message role: ${msg.role}`);
+                }
+            }
+        }
     }
 
     /**

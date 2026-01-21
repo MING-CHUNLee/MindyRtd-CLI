@@ -1,9 +1,9 @@
 /**
  * Service: R Environment Service
- * 
+ *
  * High-level service that integrates all environment scanning and context building.
  * This is the main entry point for CLI commands to get environment context.
- * 
+ *
  * Architecture Note:
  * - Types are defined in /types/environment.ts
  * - Display formatting is in /views/environment-result.ts
@@ -23,6 +23,7 @@ import {
     RHealthCheck,
     EnvironmentCapabilities
 } from '../types/environment';
+import { CACHE } from '../config/constants';
 
 // Re-export types for backward compatibility
 export {
@@ -41,7 +42,6 @@ export class REnvironmentService {
     private options: Required<EnvironmentServiceOptions>;
     private cachedReport: EnvironmentReport | null = null;
     private cacheTime: Date | null = null;
-    private readonly CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
     constructor(options: EnvironmentServiceOptions = {}) {
         this.options = {
@@ -60,7 +60,7 @@ export class REnvironmentService {
         // Check cache
         if (!forceRefresh && this.cachedReport && this.cacheTime) {
             const age = Date.now() - this.cacheTime.getTime();
-            if (age < this.CACHE_TTL_MS) {
+            if (age < CACHE.ENVIRONMENT_TTL_MS) {
                 return this.cachedReport;
             }
         }

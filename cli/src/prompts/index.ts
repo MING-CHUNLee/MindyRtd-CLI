@@ -1,7 +1,7 @@
 /**
- * Prompt Templates Module
- * 
- * Exports all prompt-related functionality.
+ * Prompts Module
+ *
+ * Exports all prompt generation functionality.
  */
 
 export {
@@ -13,6 +13,5 @@ export {
     buildCustomSection,
     identifyKeyPackages,
     groupCapabilities,
-    formatFileSize,
     estimateTokens,
 } from './section-builders';

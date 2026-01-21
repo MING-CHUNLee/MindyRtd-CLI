@@ -1,10 +1,8 @@
 /**
- * Locale Loader
- * 
- * Loads and manages language resources for prompt generation.
- * Inspired by i18next pattern for JSON-based localization.
- * 
- * Note: We import JSON directly to ensure files are bundled with the build.
+ * i18n Module
+ *
+ * Internationalization support for the CLI.
+ * Handles locale loading and translation.
  */
 
 import { SupportedLanguage } from '../types/prompt-context';
@@ -13,7 +11,10 @@ import { SupportedLanguage } from '../types/prompt-context';
 import enLocale from './locales/en.json';
 import zhTWLocale from './locales/zh-TW.json';
 
-// Type for locale data structure
+// ============================================
+// Types
+// ============================================
+
 export interface LocaleData {
     role: {
         title: string;
@@ -85,14 +86,21 @@ export interface LocaleData {
     minimal: { note: string };
 }
 
-// Pre-loaded locales map
+// ============================================
+// Locales Registry
+// ============================================
+
 const LOCALES: Record<SupportedLanguage, LocaleData> = {
     'en': enLocale as LocaleData,
     'zh-TW': zhTWLocale as LocaleData,
 };
 
+// ============================================
+// Public API
+// ============================================
+
 /**
- * Load locale data
+ * Load locale data for a specific language
  */
 export function loadLocale(language: SupportedLanguage): LocaleData {
     const locale = LOCALES[language];
@@ -107,6 +115,10 @@ export function loadLocale(language: SupportedLanguage): LocaleData {
 
 /**
  * Get a specific translation key with optional interpolation
+ *
+ * @example
+ * t(locale, 'environment.userPackages.title', { count: 10 })
+ * // Returns: "User-Installed Packages (first 10)"
  */
 export function t(locale: LocaleData, key: string, params?: Record<string, string | number>): string {
     // Navigate to the key using dot notation
@@ -136,8 +148,15 @@ export function t(locale: LocaleData, key: string, params?: Record<string, strin
 }
 
 /**
- * Get available languages
+ * Get all available languages
  */
 export function getAvailableLanguages(): SupportedLanguage[] {
     return Object.keys(LOCALES) as SupportedLanguage[];
+}
+
+/**
+ * Check if a language is supported
+ */
+export function isLanguageSupported(language: string): language is SupportedLanguage {
+    return language in LOCALES;
 }

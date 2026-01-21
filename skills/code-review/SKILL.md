@@ -23,46 +23,87 @@ This skill provides a structured approach for reviewing code changes in the Mind
 
 ### Step 2: Architecture Review
 
-Check if the change follows the CLI Frontend Architecture:
+Check if the change follows the **MVC-inspired CLI Architecture**:
 
 ```
 cli/
 ├── src/
-│   ├── index.ts              # Entry point
-│   ├── commands/             # CLI command handlers
+│   ├── index.ts              # Entry point (Commander.js setup)
+│   │
+│   ├── commands/             # [Controller Layer] CLI command handlers
 │   │   ├── scan.ts           # File scanning command
-│   │   └── library.ts        # R library scanning command
-│   ├── services/             # Business logic (local or API calls)
+│   │   ├── library.ts        # R library scanning command
+│   │   └── context.ts        # Context/prompt preview command
+│   │
+│   ├── controllers/          # [Controller Layer] External API communication
+│   │   ├── index.ts          # Controller exports
+│   │   └── llm-controller.ts # LLM API gateway (OpenAI, Anthropic, Azure, Ollama)
+│   │
+│   ├── services/             # [Model Layer] Business logic & orchestration
 │   │   ├── file-scanner.ts   # File detection & scanning
-│   │   └── library-scanner.ts # R package/library scanning (cross-platform)
-│   ├── types/                # TypeScript type definitions & data models
-│   │   ├── index.ts          # Main exports
-│   │   ├── file-info.ts      # File metadata type
-│   │   ├── project-info.ts   # Project metadata type
-│   │   ├── scan-result.ts    # Scan result type
-│   │   └── library-info.ts   # R library/package info type
-│   ├── utils/                # Helper functions & errors
-│   │   ├── format.ts         # Output formatting helpers
-│   │   └── errors.ts         # Custom error classes
-│   └── views/                # Output formatting
-│       ├── index.ts          # View exports
-│       ├── banner.ts         # CLI banner display
-│       ├── scan-result.ts    # File scan result display
-│       └── library-result.ts # Library scan result display
+│   │   ├── library-scanner.ts # R package/library scanning (cross-platform)
+│   │   ├── context-builder.ts # System prompt generation orchestrator
+│   │   └── r-environment-service.ts # R environment health checks & facade
+│   │
+│   ├── types/                # [Model Layer] TypeScript type definitions
+│   │   ├── index.ts          # Main exports (barrel file)
+│   │   ├── file-info.ts      # FileInfo entity
+│   │   ├── project-info.ts   # ProjectInfo entity
+│   │   ├── scan-result.ts    # ScanResult data structure
+│   │   ├── library-info.ts   # LibraryInfo & package types
+│   │   ├── environment.ts    # R environment types
+│   │   └── prompt-context.ts # Context builder types
+│   │
+│   ├── views/                # [View Layer] Output formatting & display
+│   │   ├── index.ts          # View exports
+│   │   ├── banner.ts         # CLI banner display
+│   │   ├── scan-result.ts    # File scan result display
+│   │   ├── library-result.ts # Library scan result display
+│   │   └── environment-result.ts # Environment report display
+│   │
+│   ├── config/               # [Infrastructure] Configuration management
+│   │   └── index.ts          # Env vars, LLM config (12-Factor App pattern)
+│   │
+│   ├── templates/            # [Infrastructure] Prompt templates & i18n
+│   │   ├── index.ts          # Template exports
+│   │   ├── locale-loader.ts  # i18n loader (i18next pattern)
+│   │   ├── locales/          # Language JSON files (en.json, zh-TW.json)
+│   │   └── prompts/
+│   │       ├── index.ts      # Prompt template exports
+│   │       └── section-builders.ts # Pure functions for prompt sections
+│   │
+│   ├── data/                 # [Infrastructure] Static data
+│   │   └── package-capabilities.ts # R package → capability mapping
+│   │
+│   └── utils/                # [Shared] Helper functions
+│       ├── errors.ts         # Custom error classes (DomainError pattern)
+│       └── format.ts         # Formatting utilities
+│
 └── tests/                    # Unit tests (Vitest)
     ├── types.test.ts         # Type definition tests
     ├── errors.test.ts        # Error class tests
     ├── file-scanner.test.ts  # File scanner tests
     ├── library-info.test.ts  # Library info type tests
-    └── library-scanner.test.ts # Library scanner tests (cross-platform)
+    └── library-scanner.test.ts # Library scanner tests
 ```
 
+**Layer Responsibilities:**
+
+| Layer | Directories | Responsibility |
+|-------|-------------|----------------|
+| **Controller** | `commands/`, `controllers/` | User interaction, API communication |
+| **Model** | `services/`, `types/` | Business logic, data structures |
+| **View** | `views/`, `templates/` | Output formatting, prompt generation |
+| **Infrastructure** | `config/`, `data/`, `utils/` | Cross-cutting concerns |
+
 **Architecture Questions:**
-- [ ] Is the code in the correct directory?
-- [ ] Commands only handle CLI interaction, not business logic?
-- [ ] Services contain reusable logic?
-- [ ] Views only handle output formatting?
+- [ ] Is the code in the correct directory for its responsibility?
+- [ ] Commands only handle CLI interaction (parsing args, calling services)?
+- [ ] Controllers only handle external API communication?
+- [ ] Services contain reusable business logic (no I/O dependencies)?
+- [ ] Views only handle output formatting (no business logic)?
 - [ ] Types are properly defined and exported from `types/index.ts`?
+- [ ] Config uses environment variables following 12-Factor App?
 - [ ] Tests exist in `tests/` directory with `.test.ts` suffix?
 
 **Cross-Platform Considerations:**
@@ -71,11 +112,21 @@ cli/
 - [ ] Is `path.join()` used instead of hardcoded path separators?
 - [ ] Are executable names platform-aware (e.g., `.exe` on Windows)?
 
-**Note:** This is a **frontend CLI**, so:
-- ❌ No `infrastructure/` (that's for backend Clean Architecture)
-- ❌ No `application/` layer (that's for backend DDD)
-- ❌ No `domain/` directory (frontend should use `types/` for all data structures)
-- ✅ All data models and interfaces live in `types/`
+**Dependency Flow:**
+```
+commands/ ──→ services/ ──→ types/
+    │              │
+    └──→ views/    └──→ utils/
+    │
+controllers/ ──→ config/
+```
+
+**Note:** This architecture is a **pragmatic MVC adaptation** for CLI tools:
+- ✅ Clear separation of concerns (Controller/Model/View)
+- ✅ `controllers/` for external API gateways (not traditional MVC controllers)
+- ✅ `services/` as business logic layer (orchestrates multiple operations)
+- ✅ `templates/` for i18n and prompt generation (View helper)
+- ✅ Factory functions (`createXxx`) for entity construction
 - ✅ Tests use Vitest framework
 
 ### Step 3: Code Quality Review
