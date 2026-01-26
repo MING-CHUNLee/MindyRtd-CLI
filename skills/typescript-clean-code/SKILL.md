@@ -193,6 +193,36 @@ After completing the review and fixes:
 | **Total** | 7.2/10 | 8.5/10 | +1.3 |
 ```
 
+## File Naming Convention
+
+All review reports must be saved in `skills/typescript-clean-code/reviews/` following this naming pattern:
+
+### Format
+```
+<scope>-<date>-review.md
+```
+
+### Components
+- **scope**: The area being reviewed (lowercase, hyphen-separated)
+  - Examples: `cli`, `services`, `commands`, `architecture`, `full-codebase`
+- **date**: ISO 8601 date format `YYYY-MM-DD`
+- **suffix**: Always end with `-review.md`
+
+### Examples
+- ✅ `cli-2026-01-26-review.md` - Full CLI review on Jan 26, 2026
+- ✅ `services-2026-01-20-review.md` - Services layer review
+- ✅ `commands-2026-02-15-review.md` - Commands review
+- ✅ `architecture-2026-01-26-review.md` - Architecture review
+- ❌ `cli-v1.0.0-review.md` - Don't use version numbers
+- ❌ `review-2026-01-26.md` - Missing scope
+- ❌ `services_review.md` - Missing date, wrong separator
+
+### Rationale
+- **Date-based**: Reviews are point-in-time snapshots; dates are more meaningful than version numbers
+- **Chronological sorting**: Files naturally sort by date when using `YYYY-MM-DD` format
+- **Scope clarity**: Immediately identifies what was reviewed
+- **Consistency**: One standard format for all reviews
+
 ## Quick Command
 
 To trigger this skill, say:

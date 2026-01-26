@@ -1,10 +1,39 @@
 # Code Review Skill
 
-A systematic skill for conducting code reviews on this project.
+A systematic skill for conducting **architecture-level** code reviews on this project.
 
 ## Overview
 
 This skill provides a structured approach for reviewing code changes in the MindyCLI project. It ensures consistency, quality, and adherence to project standards.
+
+### Scope & Relationship with Other Skills
+
+This is a **multi-layer review skill** that orchestrates the entire code review process:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  code-review/SKILL.md (THIS SKILL)                      │
+│  ┌───────────────────────────────────────────────────┐  │
+│  │ Layer 1: Architecture Review                      │  │
+│  │   → File structure, MVC compliance, dependencies  │  │
+│  ├───────────────────────────────────────────────────┤  │
+│  │ Layer 2: Code Quality Review                      │  │
+│  │   ┌───────────────────────────────────────────┐   │  │
+│  │   │ Delegates to:                             │   │  │
+│  │   │ • typescript-clean-code/SKILL.md          │   │  │
+│  │   │ • (future) ruby-clean-code/SKILL.md       │   │  │
+│  │   └───────────────────────────────────────────┘   │  │
+│  ├───────────────────────────────────────────────────┤  │
+│  │ Layer 3: Testing Review                           │  │
+│  ├───────────────────────────────────────────────────┤  │
+│  │ Layer 4: Documentation Review                     │  │
+│  └───────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Key Distinction:**
+- **This skill (`code-review`)**: Focuses on **WHERE** code lives and **HOW** it fits into the architecture
+- **Sub-skills (`typescript-clean-code`)**: Focus on **HOW** the code is written (naming, functions, SOLID, etc.)
 
 ## When to Use
 
@@ -131,9 +160,24 @@ controllers/ ──→ config/
 
 ### Step 3: Code Quality Review
 
+**This step delegates to language-specific clean code skills.**
+
 Apply the appropriate sub-skill based on language:
 - TypeScript/JavaScript → Use `typescript-clean-code/SKILL.md`
 - Ruby → Use Ruby style guide (future skill)
+
+**What this step does:**
+- Evaluates code against Clean Code principles (naming, functions, SOLID, etc.)
+- Automatically fixes issues where possible
+- Runs tests before and after changes
+- Generates a detailed quality report
+
+**When to skip this step:**
+- Architecture-only changes (moving files, restructuring directories)
+- Documentation-only updates
+- Configuration changes
+
+**Output:** A detailed review report saved to `skills/typescript-clean-code/reviews/` following the naming convention `<scope>-<date>-review.md`
 
 ### Step 4: Testing Review
 
