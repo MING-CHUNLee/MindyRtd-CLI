@@ -38,3 +38,42 @@ export class LibraryScanError extends CLIError {
         this.name = 'LibraryScanError';
     }
 }
+
+// ============================================
+// R Code Execution Errors
+// ============================================
+
+export class RExecutionError extends CLIError {
+    constructor(message: string, public readonly code?: string) {
+        super(message);
+        this.name = 'RExecutionError';
+    }
+}
+
+export class PlumberConnectionError extends CLIError {
+    constructor(public readonly host: string, public readonly port: number) {
+        super(`Cannot connect to Plumber API at ${host}:${port}`);
+        this.name = 'PlumberConnectionError';
+    }
+}
+
+export class PlumberTimeoutError extends CLIError {
+    constructor(public readonly timeoutMs: number) {
+        super(`Execution timed out after ${timeoutMs}ms`);
+        this.name = 'PlumberTimeoutError';
+    }
+}
+
+export class CodeFileNotFoundError extends CLIError {
+    constructor(public readonly filePath: string) {
+        super(`R file not found: ${filePath}`);
+        this.name = 'CodeFileNotFoundError';
+    }
+}
+
+export class ExecutionRejectedError extends CLIError {
+    constructor() {
+        super('Code execution was rejected by user');
+        this.name = 'ExecutionRejectedError';
+    }
+}

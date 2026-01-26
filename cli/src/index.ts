@@ -21,6 +21,7 @@ import { Command } from 'commander';
 import { scanCommand } from './commands/scan';
 import { libraryCommand } from './commands/library';
 import { contextCommand } from './commands/context';
+import { runCommand } from './commands/run';
 import { displayBanner } from './views/banner';
 import { version } from '../package.json';
 
@@ -38,6 +39,7 @@ program
 program.addCommand(scanCommand);
 program.addCommand(libraryCommand);
 program.addCommand(contextCommand);
+program.addCommand(runCommand);
 
 // Default action
 program.action(() => {

@@ -6,7 +6,18 @@
  */
 
 import chalk from 'chalk';
-import { CLIError, DirectoryNotFoundError, InvalidDirectoryError, RNotFoundError, LibraryScanError } from './errors';
+import {
+    CLIError,
+    DirectoryNotFoundError,
+    InvalidDirectoryError,
+    RNotFoundError,
+    LibraryScanError,
+    RExecutionError,
+    PlumberConnectionError,
+    PlumberTimeoutError,
+    CodeFileNotFoundError,
+    ExecutionRejectedError,
+} from './errors';
 
 // ============================================
 // Types
@@ -41,6 +52,11 @@ const ERROR_SUGGESTIONS: Record<string, string> = {
     InvalidDirectoryError: 'Please provide a valid directory path, not a file.',
     RNotFoundError: 'Install R from https://cran.r-project.org/ and ensure Rscript is in your PATH.',
     LibraryScanError: 'Check that R is properly installed and try running the command again.',
+    RExecutionError: 'Check your R code for syntax errors and try again.',
+    PlumberConnectionError: 'Ensure the Plumber API is running in RStudio. Run mindy::start_server() in your R console.',
+    PlumberTimeoutError: 'Increase timeout with --timeout flag or check your R code for infinite loops.',
+    CodeFileNotFoundError: 'Please check the file path and ensure the .R file exists.',
+    ExecutionRejectedError: 'Use --yes flag to skip confirmation prompt.',
     ENOENT: 'The specified file or directory does not exist.',
     EACCES: 'Permission denied. Try running with elevated privileges.',
     ECONNREFUSED: 'Could not connect to the server. Check your network connection.',
@@ -52,6 +68,11 @@ const ERROR_EXIT_CODES: Record<string, number> = {
     InvalidDirectoryError: 2,
     RNotFoundError: 3,
     LibraryScanError: 3,
+    RExecutionError: 6,
+    PlumberConnectionError: 7,
+    PlumberTimeoutError: 8,
+    CodeFileNotFoundError: 2,
+    ExecutionRejectedError: 0,
     ValidationError: 4,
     LLMError: 5,
     default: 1,

@@ -96,3 +96,26 @@ export const TOKEN_ESTIMATION = {
 export const SUPPORTED_LANGUAGES = ['en', 'zh-TW'] as const;
 
 export type SupportedLanguageCode = (typeof SUPPORTED_LANGUAGES)[number];
+
+// ============================================
+// R Code Execution (Plumber API)
+// ============================================
+
+export const EXECUTION = {
+    /** Default Plumber API host */
+    DEFAULT_HOST: 'localhost',
+    /** Default Plumber API port */
+    DEFAULT_PORT: 8787,
+    /** Default execution timeout (30 seconds) */
+    DEFAULT_TIMEOUT_MS: 30_000,
+    /** Maximum execution timeout (10 minutes) */
+    MAX_TIMEOUT_MS: 10 * 60 * 1000,
+    /** Polling interval for async results (500ms) */
+    POLL_INTERVAL_MS: 500,
+    /** Maximum polling attempts */
+    MAX_POLL_ATTEMPTS: 120,
+    /** Connection retry attempts */
+    CONNECTION_RETRIES: 3,
+    /** Connection retry delay (1 second) */
+    CONNECTION_RETRY_DELAY_MS: 1000,
+} as const;
