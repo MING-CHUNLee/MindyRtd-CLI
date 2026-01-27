@@ -7,8 +7,8 @@
 # Except markdown files in skills/code-review/
 !skills/**/*.md
 
-# Except markdown files in cli/README.md
-!cli/README.md
+# Except docs in root docs/
+!docs/**/*.md
 
 # Node.js
 node_modules/
