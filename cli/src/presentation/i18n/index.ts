@@ -5,7 +5,7 @@
  * Handles locale loading and translation.
  */
 
-import { SupportedLanguage } from '../types/prompt-context';
+import { SupportedLanguage } from '../../shared/types/prompt-context';
 
 // Import locale JSON files directly (TypeScript handles bundling)
 import enLocale from './locales/en.json';

@@ -15,8 +15,8 @@ import {
     LibraryScanOptions,
     createLibraryInfo,
     createLibraryScanResult
-} from '../types/library-info';
-import { RNotFoundError, LibraryScanError } from '../utils/errors';
+} from '../../shared/types/library-info';
+import { RNotFoundError, LibraryScanError } from '../../shared/utils/errors';
 
 const execAsync = promisify(exec);
 

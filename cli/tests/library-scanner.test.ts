@@ -30,7 +30,7 @@ describe('Library Scanner', () => {
 
     describe('RNotFoundError', () => {
         it('should throw RNotFoundError when R is not installed', async () => {
-            const { RNotFoundError } = await import('../src/utils/errors');
+            const { RNotFoundError } = await import('../src/shared/utils/errors');
 
             // Mock exec to simulate R not found
             vi.mocked(exec).mockImplementation(((cmd: string, callback: Function) => {
@@ -51,7 +51,7 @@ describe('Library Scanner', () => {
 
     describe('LibraryScanError', () => {
         it('should create LibraryScanError with custom message', async () => {
-            const { LibraryScanError } = await import('../src/utils/errors');
+            const { LibraryScanError } = await import('../src/shared/utils/errors');
 
             const error = new LibraryScanError('Failed to parse output');
             expect(error.message).toBe('Failed to parse output');

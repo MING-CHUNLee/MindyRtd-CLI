@@ -26,7 +26,7 @@ describe('File Scanner', () => {
 
     describe('scanDirectory', () => {
         it('should throw DirectoryNotFoundError for non-existent directory', async () => {
-            const { scanDirectory } = await import('../src/services/file-scanner');
+            const { scanDirectory } = await import('../src/core/services/file-scanner');
             vi.mocked(fs.existsSync).mockReturnValue(false);
 
             await expect(
@@ -35,7 +35,7 @@ describe('File Scanner', () => {
         });
 
         it('should throw InvalidDirectoryError for file path', async () => {
-            const { scanDirectory } = await import('../src/services/file-scanner');
+            const { scanDirectory } = await import('../src/core/services/file-scanner');
             vi.mocked(fs.existsSync).mockReturnValue(true);
             vi.mocked(fs.statSync).mockReturnValue({
                 isDirectory: () => false,

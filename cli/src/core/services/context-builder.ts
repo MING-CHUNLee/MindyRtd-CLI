@@ -15,15 +15,15 @@
  * - This service orchestrates them together (Clean Architecture pattern)
  */
 
-import { LibraryScanResult } from '../types/library-info';
-import { ScanResult } from '../types';
+import { LibraryScanResult } from '../../shared/types/library-info';
+import { ScanResult } from '../../shared/types';
 import {
     ContextBuilderOptions,
     EnvironmentContext,
     GeneratedPrompt,
     ContextSummary,
-} from '../types/prompt-context';
-import { loadLocale } from '../i18n';
+} from '../../shared/types/prompt-context';
+import { loadLocale } from '../../presentation/i18n';
 import {
     buildRoleSection,
     buildEnvironmentSection,
@@ -41,7 +41,7 @@ export {
     EnvironmentContext,
     GeneratedPrompt,
     ContextSummary,
-} from '../types/prompt-context';
+} from '../../shared/types/prompt-context';
 
 // ============================================
 // Context Builder Class

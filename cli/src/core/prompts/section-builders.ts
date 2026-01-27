@@ -9,18 +9,18 @@
  * - Yeoman Generators (template-based generation)
  */
 
-import { LibraryScanResult, LibraryInfo } from '../types/library-info';
-import { ScanResult } from '../types/scan-result';
-import { CapabilityGroup } from '../types/prompt-context';
-import { LocaleData, t } from '../i18n';
+import { LibraryScanResult, LibraryInfo } from '../../shared/types/library-info';
+import { ScanResult } from '../../shared/types/scan-result';
+import { CapabilityGroup } from '../../shared/types/prompt-context';
+import { LocaleData, t } from '../../presentation/i18n';
 import {
     PACKAGE_CAPABILITIES,
     KEY_PACKAGE_GROUPS,
     TIDYVERSE_CORE,
     IMPORTANT_PACKAGES
-} from '../data/package-capabilities';
-import { formatFileSize } from '../utils/format';
-import { TOKEN_ESTIMATION } from '../config/constants';
+} from '../../shared/data/package-capabilities';
+import { formatFileSize } from '../../shared/utils/format';
+import { TOKEN_ESTIMATION } from '../../infrastructure/config/constants';
 
 // ============================================
 // Section Builder Functions

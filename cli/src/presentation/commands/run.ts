@@ -17,16 +17,16 @@ import chalk from 'chalk';
 import ora from 'ora';
 import * as fs from 'fs';
 import * as path from 'path';
-import { RBridge } from '../services/r-bridge';
-import { confirmCode } from '../services/code-confirmer';
-import { RunCommandOptions, ExecutionResponse } from '../types/execution';
-import { EXECUTION } from '../config/constants';
-import { handleError } from '../utils/error-handler';
+import { RBridge } from '../../core/services/r-bridge';
+import { confirmCode } from '../../core/services/code-confirmer';
+import { RunCommandOptions, ExecutionResponse } from '../../shared/types/execution';
+import { EXECUTION } from '../../infrastructure/config/constants';
+import { handleError } from '../../shared/utils/error-handler';
 import {
     CodeFileNotFoundError,
     ExecutionRejectedError,
     PlumberConnectionError,
-} from '../utils/errors';
+} from '../../shared/utils/errors';
 
 // ============================================
 // Types

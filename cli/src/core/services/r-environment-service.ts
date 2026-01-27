@@ -13,17 +13,17 @@
 import { scanLibraries, isPackageInstalled, getPackageInfo } from './library-scanner';
 import { scanDirectory } from './file-scanner';
 import { ContextBuilder } from './context-builder';
-import { LibraryScanResult, createLibraryScanResult } from '../types/library-info';
-import { ScanResult } from '../types';
-import { ContextSummary } from '../types/prompt-context';
+import { LibraryScanResult, createLibraryScanResult } from '../../shared/types/library-info';
+import { ScanResult } from '../../shared/types';
+import { ContextSummary } from '../../shared/types/prompt-context';
 import {
     EnvironmentServiceOptions,
     EnvironmentReport,
     PackageCheckResult,
     RHealthCheck,
     EnvironmentCapabilities
-} from '../types/environment';
-import { CACHE } from '../config/constants';
+} from '../../shared/types/environment';
+import { CACHE } from '../../infrastructure/config/constants';
 
 // Re-export types for backward compatibility
 export {
@@ -32,7 +32,7 @@ export {
     PackageCheckResult,
     RHealthCheck,
     EnvironmentCapabilities
-} from '../types/environment';
+} from '../../shared/types/environment';
 
 // ============================================
 // R Environment Service

@@ -5,9 +5,9 @@
  */
 
 import chalk from 'chalk';
-import { ScanResult } from '../types';
-import { formatFileSize, formatRelativePath } from '../utils/format';
-import { DISPLAY } from '../config/constants';
+import { ScanResult } from '../../shared/types';
+import { formatFileSize, formatRelativePath } from '../../shared/utils/format';
+import { DISPLAY } from '../../infrastructure/config/constants';
 
 // ============================================
 // Types

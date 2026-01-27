@@ -16,7 +16,7 @@
  * - Input validation before API calls
  */
 
-import { GeneratedPrompt } from '../types/prompt-context';
+import { GeneratedPrompt } from '../../shared/types/prompt-context';
 import { LLMConfig, getLLMConfigFromEnv, LLMProvider } from '../config';
 import { LLM } from '../config/constants';
 

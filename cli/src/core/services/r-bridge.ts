@@ -8,12 +8,12 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import { ExecutionResponse } from '../types/execution';
-import { EXECUTION } from '../config/constants';
+import { ExecutionResponse } from '../../shared/types/execution';
+import { EXECUTION } from '../../infrastructure/config/constants';
 import {
     PlumberConnectionError,
     PlumberTimeoutError,
-} from '../utils/errors';
+} from '../../shared/utils/errors';
 
 // ============================================
 // File Paths

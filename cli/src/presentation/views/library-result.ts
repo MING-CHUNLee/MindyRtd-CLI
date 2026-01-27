@@ -5,7 +5,7 @@
  */
 
 import chalk from 'chalk';
-import { LibraryScanResult, LibraryInfo } from '../types/library-info';
+import { LibraryScanResult, LibraryInfo } from '../../shared/types/library-info';
 
 const MAX_LIBRARIES_DISPLAY = 20;
 

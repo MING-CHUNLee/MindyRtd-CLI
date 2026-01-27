@@ -18,11 +18,11 @@
  */
 
 import { Command } from 'commander';
-import { scanCommand } from './commands/scan';
-import { libraryCommand } from './commands/library';
-import { contextCommand } from './commands/context';
-import { runCommand } from './commands/run';
-import { displayBanner } from './views/banner';
+import { scanCommand } from './presentation/commands/scan';
+import { libraryCommand } from './presentation/commands/library';
+import { contextCommand } from './presentation/commands/context';
+import { runCommand } from './presentation/commands/run';
+import { displayBanner } from './presentation/views/banner';
 import { version } from '../package.json';
 
 const program = new Command();

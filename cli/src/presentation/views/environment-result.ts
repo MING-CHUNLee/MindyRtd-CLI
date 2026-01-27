@@ -7,8 +7,8 @@
  * Reference: NestJS Controller/Service separation, Ink CLI framework
  */
 
-import { ContextSummary } from '../types/prompt-context';
-import { EnvironmentReport, RHealthCheck, EnvironmentCapabilities } from '../types/environment';
+import { ContextSummary } from '../../shared/types/prompt-context';
+import { EnvironmentReport, RHealthCheck, EnvironmentCapabilities } from '../../shared/types/environment';
 
 /**
  * Format environment summary as a styled box for CLI display

@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { CLIError, DirectoryNotFoundError, InvalidDirectoryError } from '../src/utils/errors';
+import { CLIError, DirectoryNotFoundError, InvalidDirectoryError } from '../src/shared/utils/errors';
 
 describe('CLI Errors', () => {
     describe('CLIError', () => {
