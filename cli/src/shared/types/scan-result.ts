@@ -10,6 +10,8 @@ export interface RFileCollection {
     rMarkdown: FileInfo[];
     rData: FileInfo[];
     rProject: FileInfo[];
+    dataFiles: FileInfo[];
+    documents: FileInfo[];
 }
 
 export interface ScanResult {
@@ -32,7 +34,9 @@ export function createScanResult(props: ScanResultProps): ScanResult {
         props.files.rScripts.length +
         props.files.rMarkdown.length +
         props.files.rData.length +
-        props.files.rProject.length;
+        props.files.rProject.length +
+        props.files.dataFiles.length +
+        props.files.documents.length;
 
     const result: ScanResult = {
         scannedAt: props.scannedAt || new Date(),

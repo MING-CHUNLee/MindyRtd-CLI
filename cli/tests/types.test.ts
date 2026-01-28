@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { FileInfo, ProjectInfo, ScanResult, ScanOptions } from '../src/types';
+import { FileInfo, ProjectInfo, ScanResult, ScanOptions } from '../src/shared/types';
 
 describe('Types', () => {
     describe('FileInfo', () => {
@@ -56,6 +56,8 @@ describe('Types', () => {
                     rMarkdown: [],
                     rData: [],
                     rProject: [],
+                    dataFiles: [],
+                    documents: [],
                 },
                 totalFiles: 0,
             };

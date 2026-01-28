@@ -23,6 +23,8 @@ interface RFilesByType {
     rMarkdown: FileInfo[];
     rData: FileInfo[];
     rProject: FileInfo[];
+    dataFiles: FileInfo[];
+    documents: FileInfo[];
 }
 
 /**
@@ -45,7 +47,9 @@ export async function scanDirectory(options: ScanOptions): Promise<ScanResult> {
         files.rScripts.length +
         files.rMarkdown.length +
         files.rData.length +
-        files.rProject.length;
+        files.rProject.length +
+        files.dataFiles.length +
+        files.documents.length;
 
     return {
         scannedAt: new Date(),
@@ -82,12 +86,39 @@ async function findAllRFiles(baseDir: string, options: ScanOptions): Promise<RFi
     };
 
     // Parallel search for all file types
-    const [rScripts, rMarkdown, rData, rds, rProject] = await Promise.all([
+    const [
+        rScripts,
+        rMarkdown,
+        rData,
+        rds,
+        rProject,
+        csv,
+        xlsx,
+        xls,
+        json,
+        tsv,
+        parquet,
+        pdf,
+        html,
+        tex,
+    ] = await Promise.all([
+        // R files
         findFiles(`${pattern}.R`, searchOptions),
         findFiles(`${pattern}.Rmd`, searchOptions),
         findFiles(`${pattern}.RData`, searchOptions),
         findFiles(`${pattern}.rds`, searchOptions),
         findFiles(`${pattern}.Rproj`, searchOptions),
+        // Data files
+        findFiles(`${pattern}.csv`, searchOptions),
+        findFiles(`${pattern}.xlsx`, searchOptions),
+        findFiles(`${pattern}.xls`, searchOptions),
+        findFiles(`${pattern}.json`, searchOptions),
+        findFiles(`${pattern}.tsv`, searchOptions),
+        findFiles(`${pattern}.parquet`, searchOptions),
+        // Documents
+        findFiles(`${pattern}.pdf`, searchOptions),
+        findFiles(`${pattern}.html`, searchOptions),
+        findFiles(`${pattern}.tex`, searchOptions),
     ]);
 
     return {
@@ -95,6 +126,8 @@ async function findAllRFiles(baseDir: string, options: ScanOptions): Promise<RFi
         rMarkdown,
         rData: [...rData, ...rds],
         rProject,
+        dataFiles: [...csv, ...xlsx, ...xls, ...json, ...tsv, ...parquet],
+        documents: [...pdf, ...html, ...tex],
     };
 }
 

@@ -100,7 +100,7 @@ export class REnvironmentService {
                 scannedAt: new Date(),
                 baseDirectory: this.options.workingDir,
                 projectInfo: null,
-                files: { rScripts: [], rMarkdown: [], rData: [], rProject: [] },
+                files: { rScripts: [], rMarkdown: [], rData: [], rProject: [], dataFiles: [], documents: [] },
                 totalFiles: 0,
             };
         }

@@ -27,7 +27,7 @@ interface ScanCommandOptions {
 // ============================================
 
 export const scanCommand = new Command('scan')
-    .description('Scan current directory for R-related files (.R, .Rmd, .RData, .Rproj)')
+    .description('Scan current directory for R-related files, data files, and documents')
     .option('-d, --directory <path>', 'Target directory to scan', '.')
     .option('-r, --recursive', 'Scan subdirectories recursively', true)
     .option('--no-recursive', 'Only scan top-level directory')
@@ -43,7 +43,7 @@ export const scanCommand = new Command('scan')
 
 async function executeScanCommand(options: ScanCommandOptions): Promise<void> {
     const spinner = ora({
-        text: 'Scanning for R files...',
+        text: 'Scanning for files...',
         color: 'cyan',
     }).start();
 

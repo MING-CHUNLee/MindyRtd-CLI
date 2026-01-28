@@ -29,6 +29,8 @@ const FILE_CATEGORIES: FileCategory[] = [
     { key: 'rMarkdown', label: 'R Markdown (.Rmd)', icon: '📝', color: chalk.magenta },
     { key: 'rData', label: 'R Data (.RData/.rds)', icon: '💾', color: chalk.blue },
     { key: 'rProject', label: 'R Project (.Rproj)', icon: '📦', color: chalk.green },
+    { key: 'dataFiles', label: 'Data Files (.csv/.xlsx/.json/...)', icon: '📊', color: chalk.cyan },
+    { key: 'documents', label: 'Documents (.pdf/.html/.tex)', icon: '📄', color: chalk.white },
 ];
 
 // ============================================
