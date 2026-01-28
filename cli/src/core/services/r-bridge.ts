@@ -45,9 +45,13 @@ function getLockFile(): string {
 
 interface Command {
     id: string;
-    action?: 'run_current' | 'run_code' | 'run_file' | 'render_rmd';
+    action?: 'run_current' | 'run_code' | 'run_file' | 'render_rmd' | 'install_packages';
     code?: string;
     file?: string;
+    packages?: string[];
+    repos?: string;
+    dependencies?: boolean;
+    source?: string;
     timestamp: string;
 }
 
@@ -153,6 +157,35 @@ export class RBridge {
             id,
             action: 'render_rmd',
             file: path.resolve(filePath),
+            timestamp: new Date().toISOString(),
+        };
+
+        return this.sendCommandAndWait(command);
+    }
+
+    /**
+     * Install R packages in RStudio
+     */
+    async installPackages(
+        packages: string[],
+        options?: {
+            repos?: string;
+            dependencies?: boolean;
+            source?: string;
+        }
+    ): Promise<ExecutionResponse> {
+        if (!this.isListenerRunning()) {
+            throw new PlumberConnectionError('localhost', 0);
+        }
+
+        const id = this.generateId();
+        const command: Command = {
+            id,
+            action: 'install_packages',
+            packages,
+            repos: options?.repos ?? 'https://cran.rstudio.com',
+            dependencies: options?.dependencies ?? true,
+            source: options?.source ?? 'cran',
             timestamp: new Date().toISOString(),
         };
 

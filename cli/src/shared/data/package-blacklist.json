@@ -1,0 +1,9 @@
+[
+    {
+        "package": "example-malicious-package",
+        "reason": "Example blacklist entry - contains known security vulnerabilities",
+        "dateAdded": "2026-01-28",
+        "severity": "critical",
+        "reference": "https://example.com/security-advisory"
+    }
+]

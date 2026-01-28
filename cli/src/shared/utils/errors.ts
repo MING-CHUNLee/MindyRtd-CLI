@@ -77,3 +77,41 @@ export class ExecutionRejectedError extends CLIError {
         this.name = 'ExecutionRejectedError';
     }
 }
+
+// ============================================
+// Package Installation Errors
+// ============================================
+
+export class PackageInstallationError extends CLIError {
+    constructor(
+        public readonly packageName: string,
+        public readonly reason?: string
+    ) {
+        super(
+            `Failed to install package: ${packageName}${reason ? ` (${reason})` : ''}`
+        );
+        this.name = 'PackageInstallationError';
+    }
+}
+
+export class PackageNotFoundError extends CLIError {
+    constructor(
+        public readonly packageName: string,
+        public readonly source: string
+    ) {
+        super(`Package '${packageName}' not found in ${source}`);
+        this.name = 'PackageNotFoundError';
+    }
+}
+
+export class PackageValidationError extends CLIError {
+    constructor(
+        public readonly packageName: string,
+        public readonly validationErrors: string[]
+    ) {
+        super(
+            `Package '${packageName}' failed validation:\n${validationErrors.join('\n')}`
+        );
+        this.name = 'PackageValidationError';
+    }
+}

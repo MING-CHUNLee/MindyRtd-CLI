@@ -1,0 +1,112 @@
+[
+    {
+        "identifier": "Hadley Wickham",
+        "organization": "Posit (RStudio)",
+        "trustLevel": "verified",
+        "notablePackages": [
+            "ggplot2",
+            "dplyr",
+            "tidyr",
+            "purrr",
+            "stringr",
+            "forcats"
+        ]
+    },
+    {
+        "identifier": "Yihui Xie",
+        "organization": "Posit (RStudio)",
+        "trustLevel": "verified",
+        "notablePackages": [
+            "knitr",
+            "rmarkdown",
+            "blogdown",
+            "bookdown",
+            "xaringan"
+        ]
+    },
+    {
+        "identifier": "Lionel Henry",
+        "organization": "Posit (RStudio)",
+        "trustLevel": "verified",
+        "notablePackages": [
+            "rlang",
+            "vctrs",
+            "tidyselect"
+        ]
+    },
+    {
+        "identifier": "Jim Hester",
+        "organization": "Posit (RStudio)",
+        "trustLevel": "verified",
+        "notablePackages": [
+            "readr",
+            "vroom",
+            "fs",
+            "withr"
+        ]
+    },
+    {
+        "identifier": "Jennifer Bryan",
+        "organization": "Posit (RStudio)",
+        "trustLevel": "verified",
+        "notablePackages": [
+            "readxl",
+            "googlesheets4",
+            "reprex",
+            "usethis"
+        ]
+    },
+    {
+        "identifier": "Kirill Müller",
+        "organization": "R Consortium",
+        "trustLevel": "verified",
+        "notablePackages": [
+            "DBI",
+            "tibble",
+            "pillar"
+        ]
+    },
+    {
+        "identifier": "Gábor Csárdi",
+        "organization": "Posit (RStudio)",
+        "trustLevel": "verified",
+        "notablePackages": [
+            "pak",
+            "cli",
+            "processx",
+            "callr"
+        ]
+    },
+    {
+        "identifier": "Winston Chang",
+        "organization": "Posit (RStudio)",
+        "trustLevel": "verified",
+        "notablePackages": [
+            "shiny",
+            "R6",
+            "webshot"
+        ]
+    },
+    {
+        "identifier": "r-lib",
+        "organization": "R-Lib",
+        "trustLevel": "verified",
+        "notablePackages": [
+            "devtools",
+            "usethis",
+            "testthat",
+            "pkgdown"
+        ]
+    },
+    {
+        "identifier": "tidyverse",
+        "organization": "Tidyverse",
+        "trustLevel": "verified",
+        "notablePackages": [
+            "tidyverse",
+            "ggplot2",
+            "dplyr",
+            "tidyr"
+        ]
+    }
+]

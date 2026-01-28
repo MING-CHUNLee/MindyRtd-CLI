@@ -160,6 +160,8 @@ process_command <- function(pending_file) {
             execute_file_in_console(cmd$file, cmd$id)
         } else if (action == "render_rmd") {
             render_rmd_file(cmd$file, cmd$id)
+        } else if (action == "install_packages") {
+            install_packages_handler(cmd)
         } else {
             write_error_result(paste("Unknown action:", action))
         }
@@ -237,15 +239,24 @@ execute_code_in_console <- function(code, id) {
     start_time <- Sys.time()
 
     tryCatch({
-        # Send to console
-        rstudioapi::sendToConsole(code, execute = TRUE, echo = TRUE)
+        # Capture the output of the code execution
+        output <- capture.output({
+            result <- eval(parse(text = code), envir = .GlobalEnv)
+            # If result is not NULL, print it
+            if (!is.null(result)) {
+                print(result)
+            }
+        })
+        
+        # Also send to console for visibility
+        rstudioapi::sendToConsole(code, execute = FALSE, echo = TRUE)
 
         end_time <- Sys.time()
         duration <- as.numeric(difftime(end_time, start_time, units = "secs")) * 1000
 
         write_success_result(
             id = id,
-            output = "(Code sent to console)",
+            output = paste(output, collapse = "\n"),
             duration = duration
         )
     }, error = function(e) {
@@ -310,5 +321,78 @@ write_error_result <- function(error_message, id = NULL) {
         timestamp = format(Sys.time(), "%Y-%m-%dT%H:%M:%S%z")
     )
 
+    jsonlite::write_json(result, get_result_file(), auto_unbox = TRUE, pretty = TRUE)
+}
+
+# Internal: Install R packages
+install_packages_handler <- function(cmd) {
+    start_time <- Sys.time()
+    
+    result <- list(
+        id = cmd$id,
+        status = "installing",
+        installed = character(0),
+        failed = character(0),
+        output = "",
+        error = NULL
+    )
+    
+    tryCatch({
+        packages <- cmd$packages
+        repos <- if (!is.null(cmd$repos)) cmd$repos else "https://cran.rstudio.com"
+        dependencies <- if (!is.null(cmd$dependencies)) cmd$dependencies else TRUE
+        source <- if (!is.null(cmd$source)) cmd$source else "cran"
+        
+        # Capture output
+        output <- capture.output({
+            for (pkg in packages) {
+                tryCatch({
+                    if (source == "cran") {
+                        install.packages(pkg, repos = repos, dependencies = dependencies)
+                    } else if (source == "github") {
+                        # Install remotes if not available
+                        if (!requireNamespace("remotes", quietly = TRUE)) {
+                            install.packages("remotes", repos = repos)
+                        }
+                        remotes::install_github(pkg, dependencies = dependencies)
+                    } else if (source == "bioconductor") {
+                        # Install BiocManager if not available
+                        if (!requireNamespace("BiocManager", quietly = TRUE)) {
+                            install.packages("BiocManager", repos = repos)
+                        }
+                        BiocManager::install(pkg, dependencies = dependencies)
+                    } else {
+                        stop("Unsupported source: ", source)
+                    }
+                    
+                    result$installed <- c(result$installed, pkg)
+                    cat("Successfully installed:", pkg, "\n")
+                }, error = function(e) {
+                    result$failed <<- c(result$failed, pkg)
+                    cat("Error installing", pkg, ":", e$message, "\n")
+                })
+            }
+        })
+        
+        result$output <- paste(output, collapse = "\n")
+        
+        # Determine final status
+        if (length(result$failed) == 0) {
+            result$status <- "completed"
+        } else if (length(result$installed) > 0) {
+            result$status <- "partial"
+        } else {
+            result$status <- "error"
+        }
+        
+    }, error = function(e) {
+        result$status <- "error"
+        result$error <- e$message
+    })
+    
+    end_time <- Sys.time()
+    result$duration <- as.numeric(difftime(end_time, start_time, units = "secs")) * 1000
+    
+    # Write result
     jsonlite::write_json(result, get_result_file(), auto_unbox = TRUE, pretty = TRUE)
 }

@@ -12,6 +12,7 @@ A command-line interface for intelligent R file analysis powered by LLM in RStud
   - [library](#library---r-environment-analysis)
   - [context](#context---llm-prompt-preview)
   - [run](#run---execute-r-code)
+  - [install](#install---package-installation)
   - [tui](#tui---interactive-mode)
 - [Configuration](#configuration)
 - [Usage in RStudio](#usage-in-rstudio)
@@ -286,6 +287,121 @@ mindy::start()
 
 ---
 
+### install - Package Installation
+
+Install R packages in the active RStudio session with built-in safety checks.
+
+```bash
+mindy-cli install <packages...> [options]
+```
+
+**Arguments:**
+
+| Argument | Description |
+|----------|-------------|
+| `<packages...>` | One or more package names to install |
+
+**Options:**
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `-y, --yes` | Skip confirmation prompt | `false` |
+| `-r, --repos <url>` | CRAN repository URL | `https://cran.rstudio.com` |
+| `-s, --source <type>` | Installation source: `cran`, `github`, or `bioconductor` | `cran` |
+| `--no-dependencies` | Do not install dependencies | - |
+| `-t, --timeout <ms>` | Installation timeout in milliseconds | `300000` |
+| `-j, --json` | Output result as JSON | `false` |
+| `--skip-safety` | Skip safety checks (not recommended) | `false` |
+
+**Installation Modes:**
+
+```bash
+# Install single package from CRAN
+mindy-cli install dplyr
+
+# Install multiple packages
+mindy-cli install dplyr ggplot2 tidyr
+
+# Install from GitHub
+mindy-cli install tidyverse/dplyr --source github
+mindy-cli install hadley/ggplot2 --source github
+
+# Install from Bioconductor
+mindy-cli install GenomicRanges --source bioconductor
+
+# Skip confirmation
+mindy-cli install dplyr --yes
+
+# Custom CRAN mirror
+mindy-cli install dplyr --repos https://cloud.r-project.org
+
+# Install without dependencies
+mindy-cli install dplyr --no-dependencies
+
+# Skip safety checks (not recommended)
+mindy-cli install unknown-package --skip-safety
+
+# JSON output
+mindy-cli install dplyr --json
+```
+
+**Safety Checks:**
+
+The install command performs comprehensive safety checks before installation:
+
+- **Blacklist Check**: Verifies package is not on the blacklist
+- **CRAN Status**: Checks if package is archived or outdated
+- **Maintenance Status**: Verifies active maintainer and trusted developers
+- **Dependencies**: Warns about excessive dependencies
+- **Community Trust**: Evaluates download statistics
+- **License**: Verifies standard open-source license
+
+**Safety Levels:**
+
+- ✅ **Safe**: Fully safe to install
+- ⚠️ **Warning**: Minor issues, but installable
+- ⚠️ **Risky**: Has risks, requires user confirmation
+- ❌ **Dangerous**: Strongly discouraged
+- 🚫 **Blocked**: Installation prevented
+
+**Example Output:**
+
+```
+Package Installation
+Source: cran
+Repository: https://cran.rstudio.com
+Dependencies: Yes
+
+✓ Performing safety checks...
+
+Safety Check Results:
+
+✅ dplyr - SAFE
+  ✓ Not blacklisted
+  ✓ Active on CRAN
+  ✓ Maintained by trusted developer (Hadley Wickham)
+  ✓ Popular package (5,234,567 downloads/month)
+  ✓ Standard open-source license: MIT
+
+✓ Checking package status...
+
+Already installed:
+  ✓ dplyr (1.1.4)
+
+All packages are already installed!
+```
+
+**Prerequisite:**
+
+The Mindy R package listener must be running in RStudio:
+
+```r
+# In RStudio Console
+mindy::start()
+```
+
+---
+
 ### tui - Interactive Mode
 
 Launch the interactive Terminal User Interface.
@@ -460,6 +576,7 @@ mindy-cli context --json --summary
 | `library` | `lib`, `packages` | List installed R packages |
 | `context` | `ctx`, `prompt` | Preview LLM system prompt |
 | `run` | - | Execute R code in RStudio |
+| `install` | - | Install R packages with safety checks |
 | `tui` | `interactive` | Launch interactive TUI |
 
 **Global Options:**

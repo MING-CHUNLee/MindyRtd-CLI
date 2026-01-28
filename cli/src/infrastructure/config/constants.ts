@@ -119,3 +119,37 @@ export const EXECUTION = {
     /** Connection retry delay (1 second) */
     CONNECTION_RETRY_DELAY_MS: 1000,
 } as const;
+
+// ============================================
+// Package Installation
+// ============================================
+
+export const INSTALLATION = {
+    /** Default CRAN repository */
+    DEFAULT_REPOS: 'https://cran.rstudio.com',
+    /** Default installation timeout (5 minutes) */
+    DEFAULT_TIMEOUT_MS: 5 * 60 * 1000,
+    /** Maximum installation timeout (30 minutes) */
+    MAX_TIMEOUT_MS: 30 * 60 * 1000,
+    /** Package check timeout (10 seconds) */
+    CHECK_TIMEOUT_MS: 10_000,
+} as const;
+
+// ============================================
+// Package Safety
+// ============================================
+
+export const SAFETY = {
+    /** Maximum days since last update before warning */
+    MAX_DAYS_SINCE_UPDATE: 730, // 2 years
+    /** Maximum number of dependencies before warning */
+    MAX_DEPENDENCIES: 50,
+    /** Minimum monthly downloads to be considered trusted */
+    MIN_MONTHLY_DOWNLOADS: 100,
+    /** Metadata fetch timeout */
+    METADATA_FETCH_TIMEOUT_MS: 10_000,
+    /** Stats fetch timeout */
+    STATS_FETCH_TIMEOUT_MS: 5_000,
+    /** Enable safety checks by default */
+    ENABLE_SAFETY_CHECKS: true,
+} as const;

@@ -22,6 +22,7 @@ import { scanCommand } from './presentation/commands/scan';
 import { libraryCommand } from './presentation/commands/library';
 import { contextCommand } from './presentation/commands/context';
 import { runCommand } from './presentation/commands/run';
+import { installCommand } from './presentation/commands/install';
 import { tuiCommand } from './presentation/commands/tui';
 import { displayBanner } from './presentation/views/banner';
 import fs from 'fs';
@@ -47,6 +48,7 @@ program.addCommand(scanCommand);
 program.addCommand(libraryCommand);
 program.addCommand(contextCommand);
 program.addCommand(runCommand);
+program.addCommand(installCommand);
 program.addCommand(tuiCommand);
 
 // Default action - Launch TUI when no command is specified
@@ -90,8 +92,9 @@ program.action(async () => {
         console.log(`📂 Using TUI from: ${tuiPath}\n`);
 
         // Quote the path to handle spaces in directory names (e.g., "OneDrive - NTHU")
-        const quotedTuiPath = `"${tuiPath}"`;
-        const tsx = spawn('npx', ['tsx', quotedTuiPath], {
+        // Pass entire command as string to avoid DEP0190 deprecation warning
+        const command = `npx tsx "${tuiPath}"`;
+        const tsx = spawn(command, [], {
             stdio: 'inherit',
             shell: true,
             cwd: process.cwd(),
