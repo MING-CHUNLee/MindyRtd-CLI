@@ -14,12 +14,19 @@ import {
 import { PackageSafetyChecker } from './package-safety-checker';
 import { SAFETY } from '../../infrastructure/config/constants';
 
-export class PackageValidator {
-    private safetyChecker: PackageSafetyChecker;
+/**
+ * HTTP client interface for dependency injection.
+ * Compatible with axios — allows mock injection in tests.
+ */
+export interface HttpClient {
+    get(url: string, options?: { timeout?: number; headers?: Record<string, string> }): Promise<{ data: any }>;
+}
 
-    constructor() {
-        this.safetyChecker = new PackageSafetyChecker();
-    }
+export class PackageValidator {
+    constructor(
+        private safetyChecker: PackageSafetyChecker = new PackageSafetyChecker(),
+        private httpClient: HttpClient = axios
+    ) { }
 
     /**
      * Validate a package before installation
@@ -147,7 +154,7 @@ export class PackageValidator {
         try {
             // CRAN API endpoint
             const url = `https://crandb.r-pkg.org/${packageName}`;
-            const response = await axios.get(url, {
+            const response = await this.httpClient.get(url, {
                 timeout: SAFETY.METADATA_FETCH_TIMEOUT_MS,
             });
 
@@ -198,7 +205,7 @@ export class PackageValidator {
 
         try {
             const url = `https://api.github.com/repos/${owner}/${repo}`;
-            const response = await axios.get(url, {
+            const response = await this.httpClient.get(url, {
                 timeout: SAFETY.METADATA_FETCH_TIMEOUT_MS,
                 headers: {
                     Accept: 'application/vnd.github.v3+json',
@@ -233,7 +240,7 @@ export class PackageValidator {
         try {
             // Use cranlogs API for download stats (last month)
             const url = `https://cranlogs.r-pkg.org/downloads/total/last-month/${packageName}`;
-            const response = await axios.get(url, {
+            const response = await this.httpClient.get(url, {
                 timeout: SAFETY.STATS_FETCH_TIMEOUT_MS,
             });
 

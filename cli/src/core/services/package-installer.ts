@@ -13,11 +13,7 @@ import {
 import { ExecutionResponse } from '../../shared/types/execution';
 
 export class PackageInstaller {
-    private bridge: RBridge;
-
-    constructor(timeout?: number) {
-        this.bridge = new RBridge(timeout);
-    }
+    constructor(private bridge: RBridge) { }
 
     /**
      * Check if packages are already installed
