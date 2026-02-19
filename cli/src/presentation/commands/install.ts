@@ -15,6 +15,7 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import ora from 'ora';
 import inquirer from 'inquirer';
+import { RBridge } from '../../core/services/r-bridge';
 import { PackageInstaller } from '../../core/services/package-installer';
 import { PackageValidator } from '../../core/services/package-validator';
 import {
@@ -32,6 +33,15 @@ import {
 } from '../../infrastructure/config/constants';
 import { handleError } from '../../shared/utils/error-handler';
 import { PlumberConnectionError } from '../../shared/utils/errors';
+
+// ============================================
+// Types
+// ============================================
+
+interface InstallServices {
+    installer: PackageInstaller;
+    validator: PackageValidator;
+}
 
 // ============================================
 // Command Definition
@@ -73,7 +83,7 @@ export const installCommand = new Command('install')
     });
 
 // ============================================
-// Command Execution
+// Command Execution (Orchestrator)
 // ============================================
 
 async function executeInstallCommand(
@@ -81,99 +91,15 @@ async function executeInstallCommand(
     options: InstallCommandOptions
 ): Promise<void> {
     try {
-        const installer = new PackageInstaller(options.timeout);
-        const validator = new PackageValidator();
+        const services = createServices(options);
+        ensureListenerRunning(services.installer);
 
-        // Check if listener is running
-        if (!installer.isListenerRunning()) {
-            console.log('');
-            console.log(
-                chalk.red('Mindy listener is not running in RStudio.')
-            );
-            console.log('');
-            console.log(
-                chalk.yellow('To start the listener, run this in RStudio Console:')
-            );
-            console.log(chalk.cyan('  mindy::start()'));
-            console.log('');
-            throw new PlumberConnectionError('localhost', 0);
-        }
-
-        // Display installation info
         if (!options.json) {
             displayInstallationInfo(packages, options);
         }
 
-        // Safety checks
-        if (SAFETY.ENABLE_SAFETY_CHECKS && !options.skipSafety) {
-            const safetyReports = await performSafetyChecks(
-                packages,
-                options,
-                validator
-            );
-
-            // Check if any package is blocked
-            const blocked = safetyReports.filter((r) => !r.allowInstallation);
-            if (blocked.length > 0) {
-                console.log('');
-                console.log(
-                    chalk.red(
-                        '❌ Installation blocked for the following packages:'
-                    )
-                );
-                blocked.forEach((r) => {
-                    console.log(
-                        chalk.red(`  • ${r.packageName}: ${r.errors.join(', ')}`)
-                    );
-                });
-                return;
-            }
-
-            // Warn about risky packages
-            const risky = safetyReports.filter(
-                (r) =>
-                    r.safetyLevel === 'risky' || r.safetyLevel === 'dangerous'
-            );
-
-            if (risky.length > 0 && !options.yes) {
-                console.log('');
-                console.log(
-                    chalk.yellow(
-                        '⚠️  Warning: Some packages have safety concerns'
-                    )
-                );
-
-                const { confirm } = await inquirer.prompt([
-                    {
-                        type: 'confirm',
-                        name: 'confirm',
-                        message: 'Do you still want to proceed?',
-                        default: false,
-                    },
-                ]);
-
-                if (!confirm) {
-                    console.log(chalk.yellow('Installation cancelled.'));
-                    return;
-                }
-            }
-        }
-
-        // Check which packages are already installed
-        const checkSpinner = ora('Checking package status...').start();
-        const packageInfo = await installer.checkPackages(packages);
-        checkSpinner.succeed();
-
-        const toInstall = packageInfo.filter((p) => !p.installed);
-        const alreadyInstalled = packageInfo.filter((p) => p.installed);
-
-        if (alreadyInstalled.length > 0 && !options.json) {
-            console.log('');
-            console.log(chalk.yellow('Already installed:'));
-            alreadyInstalled.forEach((p) => {
-                console.log(chalk.gray(`  ✓ ${p.name} (${p.version})`));
-            });
-        }
+        await runSafetyChecksPhase(packages, options, services.validator);
+        const toInstall = await checkAndFilterPackages(packages, services.installer, options);
 
         if (toInstall.length === 0) {
             console.log('');
@@ -181,57 +107,172 @@ async function executeInstallCommand(
             return;
         }
 
-        // Confirm installation
-        if (!options.yes) {
-            console.log('');
-            console.log(chalk.cyan('Packages to install:'));
-            toInstall.forEach((p) => console.log(chalk.white(`  • ${p.name}`)));
-            console.log('');
-
-            const { confirm } = await inquirer.prompt([
-                {
-                    type: 'confirm',
-                    name: 'confirm',
-                    message: 'Proceed with installation?',
-                    default: true,
-                },
-            ]);
-
-            if (!confirm) {
-                console.log(chalk.yellow('Installation cancelled.'));
-                return;
-            }
-        }
-
-        // Install packages
-        const installSpinner = ora({
-            text: `Installing ${toInstall.length} package(s)...`,
-            color: 'cyan',
-        }).start();
-
-        const result = await installer.install({
-            packages: toInstall.map((p) => p.name),
-            repos: options.repos,
-            dependencies: options.dependencies,
-            source: options.source,
-            timeout: options.timeout,
-        });
-
-        // Handle result
-        if (result.status === 'completed') {
-            installSpinner.succeed(chalk.green('Installation completed!'));
-            displayResult(result, options);
-        } else if (result.status === 'partial') {
-            installSpinner.warn(
-                chalk.yellow('Installation partially completed')
-            );
-            displayResult(result, options);
-        } else {
-            installSpinner.fail(chalk.red('Installation failed'));
-            displayError(result, options);
-        }
+        await confirmAndInstall(toInstall, services.installer, options);
     } catch (error) {
         handleError(error, 'package installation');
+    }
+}
+
+// ============================================
+// Phase Functions
+// ============================================
+
+/**
+ * Create service instances with injected dependencies.
+ */
+function createServices(options: InstallCommandOptions): InstallServices {
+    const bridge = new RBridge(options.timeout);
+    return {
+        installer: new PackageInstaller(bridge),
+        validator: new PackageValidator(),
+    };
+}
+
+/**
+ * Verify that the Mindy listener is running in RStudio.
+ * Throws PlumberConnectionError if not running.
+ */
+function ensureListenerRunning(installer: PackageInstaller): void {
+    if (!installer.isListenerRunning()) {
+        console.log('');
+        console.log(chalk.red('Mindy listener is not running in RStudio.'));
+        console.log('');
+        console.log(chalk.yellow('To start the listener, run this in RStudio Console:'));
+        console.log(chalk.cyan('  mindy::start()'));
+        console.log('');
+        throw new PlumberConnectionError('localhost', 0);
+    }
+}
+
+/**
+ * Run safety checks and block/warn as needed.
+ * Returns early (no-op) if safety checks are disabled.
+ */
+async function runSafetyChecksPhase(
+    packages: string[],
+    options: InstallCommandOptions,
+    validator: PackageValidator
+): Promise<void> {
+    if (!SAFETY.ENABLE_SAFETY_CHECKS || options.skipSafety) return;
+
+    const safetyReports = await performSafetyChecks(packages, options, validator);
+
+    // Block if any package is unsafe
+    const blocked = safetyReports.filter((report) => !report.allowInstallation);
+    if (blocked.length > 0) {
+        console.log('');
+        console.log(chalk.red('❌ Installation blocked for the following packages:'));
+        blocked.forEach((report) => {
+            console.log(chalk.red(`  • ${report.packageName}: ${report.errors.join(', ')}`));
+        });
+        throw new Error('Installation blocked by safety checks');
+    }
+
+    // Warn about risky packages
+    const risky = safetyReports.filter(
+        (report) => report.safetyLevel === 'risky' || report.safetyLevel === 'dangerous'
+    );
+
+    if (risky.length > 0 && !options.yes) {
+        console.log('');
+        console.log(chalk.yellow('⚠️  Warning: Some packages have safety concerns'));
+
+        const { confirm } = await inquirer.prompt([
+            {
+                type: 'confirm',
+                name: 'confirm',
+                message: 'Do you still want to proceed?',
+                default: false,
+            },
+        ]);
+
+        if (!confirm) {
+            console.log(chalk.yellow('Installation cancelled.'));
+            throw new Error('Installation cancelled by user');
+        }
+    }
+}
+
+/**
+ * Check which packages are already installed, display status, and return only those needing install.
+ */
+async function checkAndFilterPackages(
+    packages: string[],
+    installer: PackageInstaller,
+    options: InstallCommandOptions
+): Promise<PackageInfo[]> {
+    const checkSpinner = ora('Checking package status...').start();
+    const packageInfo = await installer.checkPackages(packages);
+    checkSpinner.succeed();
+
+    const alreadyInstalledPackages = packageInfo.filter((pkg) => pkg.installed);
+    const packagesToInstall = packageInfo.filter((pkg) => !pkg.installed);
+
+    if (alreadyInstalledPackages.length > 0 && !options.json) {
+        console.log('');
+        console.log(chalk.yellow('Already installed:'));
+        alreadyInstalledPackages.forEach((pkg) => {
+            console.log(chalk.gray(`  ✓ ${pkg.name} (${pkg.version})`));
+        });
+    }
+
+    return packagesToInstall;
+}
+
+/**
+ * Prompt for confirmation (if needed) and perform the installation.
+ */
+async function confirmAndInstall(
+    toInstall: PackageInfo[],
+    installer: PackageInstaller,
+    options: InstallCommandOptions
+): Promise<void> {
+    // Confirm installation
+    if (!options.yes) {
+        console.log('');
+        console.log(chalk.cyan('Packages to install:'));
+        toInstall.forEach((pkg) => console.log(chalk.white(`  • ${pkg.name}`)));
+        console.log('');
+
+        const { confirm } = await inquirer.prompt([
+            {
+                type: 'confirm',
+                name: 'confirm',
+                message: 'Proceed with installation?',
+                default: true,
+            },
+        ]);
+
+        if (!confirm) {
+            console.log(chalk.yellow('Installation cancelled.'));
+            return;
+        }
+    }
+
+    // Install packages
+    const installSpinner = ora({
+        text: `Installing ${toInstall.length} package(s)...`,
+        color: 'cyan',
+    }).start();
+
+    const result = await installer.install({
+        packages: toInstall.map((pkg) => pkg.name),
+        repos: options.repos,
+        dependencies: options.dependencies,
+        source: options.source,
+        timeout: options.timeout,
+    });
+
+    // Handle result
+    if (result.status === 'completed') {
+        installSpinner.succeed(chalk.green('Installation completed!'));
+        displayResult(result, options);
+    } else if (result.status === 'partial') {
+        installSpinner.warn(chalk.yellow('Installation partially completed'));
+        displayResult(result, options);
+    } else {
+        installSpinner.fail(chalk.red('Installation failed'));
+        displayError(result, options);
     }
 }
 
@@ -245,7 +286,6 @@ async function performSafetyChecks(
     validator: PackageValidator
 ): Promise<PackageSafetyReport[]> {
     if (options.json) {
-        // Silent mode for JSON output
         return Promise.all(
             packages.map((pkg) => validator.validate(pkg, options.source))
         );
@@ -259,8 +299,6 @@ async function performSafetyChecks(
     );
 
     safetySpinner.succeed();
-
-    // Display safety reports
     displaySafetyReports(safetyReports, options);
 
     return safetyReports;
@@ -307,14 +345,14 @@ function displaySafetyReports(
         );
 
         if (report.warnings.length > 0) {
-            report.warnings.forEach((w) => {
-                console.log(chalk.yellow(`    ⚠️  ${w}`));
+            report.warnings.forEach((warning) => {
+                console.log(chalk.yellow(`    ⚠️  ${warning}`));
             });
         }
 
         if (report.errors.length > 0) {
-            report.errors.forEach((e) => {
-                console.log(chalk.red(`    ❌ ${e}`));
+            report.errors.forEach((err) => {
+                console.log(chalk.red(`    ❌ ${err}`));
             });
         }
     });
