@@ -1,3 +1,27 @@
+---
+name: code-review
+version: 1.1.0
+triggers:
+  - review code
+  - code review
+  - review pr
+  - review pull request
+  - check architecture
+  - architecture review
+  - validate structure
+languages:
+  - typescript
+  - javascript
+  - ruby
+categories:
+  - code-quality
+  - architecture
+  - best-practices
+dependencies:
+  - typescript-clean-code
+description: Systematic architecture-level code review for MindyCLI project
+---
+
 # Code Review Skill
 
 A systematic skill for conducting **architecture-level** code reviews on this project.
@@ -52,71 +76,14 @@ This is a **multi-layer review skill** that orchestrates the entire code review 
 
 ### Step 2: Architecture Review
 
-Check if the change follows the **MVC-inspired CLI Architecture**:
+Check if the change follows the **MVC-inspired CLI Architecture**.
 
-```
-cli/
-├── src/
-│   ├── index.ts              # Entry point (Commander.js setup)
-│   │
-│   ├── commands/             # [Controller Layer] CLI command handlers
-│   │   ├── scan.ts           # File scanning command
-│   │   ├── library.ts        # R library scanning command
-│   │   └── context.ts        # Context/prompt preview command
-│   │
-│   ├── controllers/          # [Controller Layer] External API communication
-│   │   ├── index.ts          # Controller exports
-│   │   └── llm-controller.ts # LLM API gateway (OpenAI, Anthropic, Azure, Ollama)
-│   │
-│   ├── services/             # [Model Layer] Business logic & orchestration
-│   │   ├── file-scanner.ts   # File detection & scanning
-│   │   ├── library-scanner.ts # R package/library scanning (cross-platform)
-│   │   ├── context-builder.ts # System prompt generation orchestrator
-│   │   └── r-environment-service.ts # R environment health checks & facade
-│   │
-│   ├── types/                # [Model Layer] TypeScript type definitions
-│   │   ├── index.ts          # Main exports (barrel file)
-│   │   ├── file-info.ts      # FileInfo entity
-│   │   ├── project-info.ts   # ProjectInfo entity
-│   │   ├── scan-result.ts    # ScanResult data structure
-│   │   ├── library-info.ts   # LibraryInfo & package types
-│   │   ├── environment.ts    # R environment types
-│   │   └── prompt-context.ts # Context builder types
-│   │
-│   ├── views/                # [View Layer] Output formatting & display
-│   │   ├── index.ts          # View exports
-│   │   ├── banner.ts         # CLI banner display
-│   │   ├── scan-result.ts    # File scan result display
-│   │   ├── library-result.ts # Library scan result display
-│   │   └── environment-result.ts # Environment report display
-│   │
-│   ├── config/               # [Infrastructure] Configuration management
-│   │   └── index.ts          # Env vars, LLM config (12-Factor App pattern)
-│   │
-│   ├── templates/            # [Infrastructure] Prompt templates & i18n
-│   │   ├── index.ts          # Template exports
-│   │   ├── locale-loader.ts  # i18n loader (i18next pattern)
-│   │   ├── locales/          # Language JSON files (en.json, zh-TW.json)
-│   │   └── prompts/
-│   │       ├── index.ts      # Prompt template exports
-│   │       └── section-builders.ts # Pure functions for prompt sections
-│   │
-│   ├── data/                 # [Infrastructure] Static data
-│   │   └── package-capabilities.ts # R package → capability mapping
-│   │
-│   └── utils/                # [Shared] Helper functions
-│       ├── errors.ts         # Custom error classes (DomainError pattern)
-│       └── format.ts         # Formatting utilities
-│
-└── tests/                    # Unit tests (Vitest)
-    ├── types.test.ts         # Type definition tests
-    ├── errors.test.ts        # Error class tests
-    ├── file-scanner.test.ts  # File scanner tests
-    ├── library-info.test.ts  # Library info type tests
-    └── library-scanner.test.ts # Library scanner tests
-```
+**📖 See detailed architecture guidelines:**
+- [MVC Architecture Reference](./references/mvc-architecture.md) - Full architecture diagram and layer responsibilities
+- [Architecture Checklist](./references/architecture-checklist.md) - Complete checklist with examples
+- [Cross-Platform Guide](./references/cross-platform-guide.md) - Windows/macOS/Linux compatibility checks
 
-**Layer Responsibilities:**
+**Quick Architecture Check:**
 
 | Layer | Directories | Responsibility |
 |-------|-------------|----------------|
@@ -125,38 +92,10 @@ cli/
 | **View** | `views/`, `templates/` | Output formatting, prompt generation |
 | **Infrastructure** | `config/`, `data/`, `utils/` | Cross-cutting concerns |
 
-**Architecture Questions:**
+**Critical Questions:**
 - [ ] Is the code in the correct directory for its responsibility?
-- [ ] Commands only handle CLI interaction (parsing args, calling services)?
-- [ ] Controllers only handle external API communication?
-- [ ] Services contain reusable business logic (no I/O dependencies)?
-- [ ] Views only handle output formatting (no business logic)?
-- [ ] Types are properly defined and exported from `types/index.ts`?
-- [ ] Config uses environment variables following 12-Factor App?
-- [ ] Tests exist in `tests/` directory with `.test.ts` suffix?
-
-**Cross-Platform Considerations:**
-- [ ] Does the code handle Windows, macOS, and Linux paths correctly?
-- [ ] Are platform-specific paths using `process.platform` detection?
-- [ ] Is `path.join()` used instead of hardcoded path separators?
-- [ ] Are executable names platform-aware (e.g., `.exe` on Windows)?
-
-**Dependency Flow:**
-```
-commands/ ──→ services/ ──→ types/
-    │              │
-    └──→ views/    └──→ utils/
-    │
-controllers/ ──→ config/
-```
-
-**Note:** This architecture is a **pragmatic MVC adaptation** for CLI tools:
-- ✅ Clear separation of concerns (Controller/Model/View)
-- ✅ `controllers/` for external API gateways (not traditional MVC controllers)
-- ✅ `services/` as business logic layer (orchestrates multiple operations)
-- ✅ `templates/` for i18n and prompt generation (View helper)
-- ✅ Factory functions (`createXxx`) for entity construction
-- ✅ Tests use Vitest framework
+- [ ] Does it follow the dependency flow? (See [Architecture Checklist](./references/architecture-checklist.md#dependency-flow))
+- [ ] Is it cross-platform compatible? (See [Cross-Platform Guide](./references/cross-platform-guide.md))
 
 ### Step 3: Code Quality Review
 
@@ -232,6 +171,13 @@ After review, produce a report in this format:
 | `typescript-clean-code` | For TS/JS code quality |
 | (future) `ruby-clean-code` | For Ruby API code |
 | (future) `testing` | For test quality |
+
+## Reference Documentation
+
+- [MVC Architecture](./references/mvc-architecture.md) - Complete architecture overview
+- [Architecture Checklist](./references/architecture-checklist.md) - Detailed review checklist
+- [Cross-Platform Guide](./references/cross-platform-guide.md) - Platform compatibility guidelines
+- [CLI Structure Diagram](./references/cli-structure-diagram.md) - Visual architecture reference
 
 ## Example Usage
 

@@ -1,3 +1,25 @@
+---
+name: typescript-clean-code
+version: 1.1.0
+triggers:
+  - clean code review
+  - typescript review
+  - code quality check
+  - refactor typescript
+  - improve code quality
+  - evaluate clean code
+languages:
+  - typescript
+  - javascript
+categories:
+  - code-quality
+  - refactoring
+  - clean-code
+  - best-practices
+dependencies: []
+description: Comprehensive TypeScript/JavaScript Clean Code evaluation and automated fixing based on ES6+ standards
+---
+
 # TypeScript Clean Code Skill
 
 A comprehensive skill for evaluating and improving TypeScript/JavaScript code against ES6+ Clean Code standards.
@@ -32,23 +54,24 @@ This skill applies Clean Code principles from [ryanmcdermott/clean-code-javascri
 
 ## Step 1: Write Tests First
 
-Before any code changes, create tests for existing functionality:
+Before any code changes, create tests for existing functionality.
 
+**📖 See detailed testing guide:** [Testing Guide](./references/testing-guide.md)
+
+**Quick Example:**
 ```typescript
-// Example: tests/scan-service.test.ts
 import { describe, it, expect, vi } from 'vitest';
-import { ScanService } from '../src/application/services/scan-service';
+import { ScanService } from '../src/services/scan-service';
 
 describe('ScanService', () => {
   it('should detect R files in directory', async () => {
     // Arrange
-    const mockSearcher = { search: vi.fn().mockResolvedValue(['file.R']) };
-    const mockFs = { exists: vi.fn().mockReturnValue(true), ... };
-    const service = new ScanService(mockSearcher, mockFs);
-    
+    const mockFs = { readdir: vi.fn().mockResolvedValue(['file.R']) };
+    const service = new ScanService(mockFs);
+
     // Act
-    const result = await service.scan({ targetDir: '.', recursive: true });
-    
+    const result = await service.scan({ targetDir: '.' });
+
     // Assert
     expect(result.files.rScripts.length).toBeGreaterThan(0);
   });
@@ -57,93 +80,64 @@ describe('ScanService', () => {
 
 ## Step 2: Evaluation Criteria
 
-### Variables (15%)
-- [ ] Meaningful and pronounceable names
-- [ ] Consistent vocabulary
-- [ ] Searchable names (no magic numbers)
-- [ ] Explanatory variables
-- [ ] No single-letter variables
-- [ ] No redundant context
-- [ ] Default parameters used
+**📖 See complete evaluation checklist:** [Clean Code Checklist](./references/clean-code-checklist.md)
 
-### Functions (25%)
-- [ ] 2 or fewer arguments (or use object destructuring)
-- [ ] Single responsibility
-- [ ] Descriptive names
-- [ ] Single abstraction level
-- [ ] No duplicate code (DRY)
-- [ ] No flag parameters
-- [ ] No side effects
-- [ ] Encapsulated conditionals
+### 7 Categories (Scoring)
 
-### Classes (20%)
-- [ ] ES6 class syntax
-- [ ] Private members for internals
-- [ ] Method chaining where appropriate
-- [ ] Small, focused classes
+| Category | Weight | Key Focus |
+|----------|--------|-----------|
+| **Variables** | 15% | Meaningful names, no magic numbers |
+| **Functions** | 25% | Single responsibility, ≤2 parameters |
+| **Classes** | 20% | ES6 syntax, encapsulation |
+| **SOLID** | 20% | Single Responsibility, DI |
+| **Error Handling** | 10% | Custom errors, no silent failures |
+| **Async/Await** | 5% | Modern async patterns |
+| **Comments** | 5% | Self-documenting code |
 
-### SOLID (20%)
-- [ ] Single Responsibility
-- [ ] Open/Closed
-- [ ] Liskov Substitution
-- [ ] Interface Segregation
-- [ ] Dependency Inversion
-
-### Error Handling (10%)
-- [ ] No silent failures
-- [ ] Specific error messages
-- [ ] Custom error types
-- [ ] Promise rejections handled
-
-### Async/Await (5%)
-- [ ] Async/await over callbacks
-- [ ] Promise.all for parallel ops
-- [ ] Proper error handling
-
-### Comments (5%)
-- [ ] Self-documenting code
-- [ ] No commented-out code
-- [ ] JSDoc for public APIs
+**Quick Checklist:**
+- [ ] No magic numbers (extract constants)
+- [ ] Functions have ≤2 parameters (use object destructuring)
+- [ ] Single responsibility per function/class
+- [ ] Custom error classes for specific failures
+- [ ] Async/await instead of callbacks
+- [ ] Self-documenting code (minimal comments)
 
 ## Step 3: Common Fixes
 
-### Fix 1: Extract Magic Numbers
-```typescript
-// Before
-setTimeout(fn, 86400000);
+**📖 See complete fix catalog:** [Common Fixes Reference](./references/common-fixes.md)
 
-// After
+**📖 See good/bad examples:** [Examples Directory](./examples/)
+
+### Most Common Issues
+
+1. **Magic Numbers** → Extract constants
+2. **Too Many Parameters** → Object destructuring
+3. **Large Functions** → Extract smaller functions
+4. **Generic Errors** → Custom error classes
+5. **Callback Hell** → Async/await
+
+**Quick Example:**
+```typescript
+// ❌ Before
+function createUser(name, email, age, isAdmin) {
+  setTimeout(() => {
+    throw new Error('User creation failed');
+  }, 86400000);
+}
+
+// ✅ After
 const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000;
-setTimeout(fn, MILLISECONDS_PER_DAY);
-```
 
-### Fix 2: Object Destructuring for Parameters
-```typescript
-// Before
-function createUser(name, email, age, isAdmin) { }
+interface CreateUserOptions {
+  name: string;
+  email: string;
+  age: number;
+  isAdmin: boolean;
+}
 
-// After
-function createUser({ name, email, age, isAdmin }: CreateUserOptions) { }
-```
-
-### Fix 3: Custom Error Classes
-```typescript
-// Before
-throw new Error(`Directory not found: ${path}`);
-
-// After
-throw new DirectoryNotFoundError(path);
-```
-
-### Fix 4: Split Large Functions
-```typescript
-// Before: 100+ line function
-
-// After
-function processData(data) {
-  const validated = validateData(data);
-  const transformed = transformData(validated);
-  return formatOutput(transformed);
+async function createUser(options: CreateUserOptions): Promise<User> {
+  await delay(MILLISECONDS_PER_DAY);
+  throw new UserCreationError('User creation failed', options.email);
 }
 ```
 
@@ -159,7 +153,7 @@ All tests must pass before and after changes.
 
 ## Output Format
 
-After completing the review and fixes:
+After completing the review and fixes, generate a report following this format:
 
 ```markdown
 # Clean Code Review & Fix Report
@@ -173,7 +167,7 @@ After completing the review and fixes:
 - Tests: X passed, Y failed
 - Coverage: XX%
 
-### After Changes  
+### After Changes
 - Tests: X passed, 0 failed
 - Coverage: XX%
 
@@ -209,19 +203,24 @@ All review reports must be saved in `skills/typescript-clean-code/reviews/` foll
 - **suffix**: Always end with `-review.md`
 
 ### Examples
-- ✅ `cli-2026-01-26-review.md` - Full CLI review on Jan 26, 2026
-- ✅ `services-2026-01-20-review.md` - Services layer review
-- ✅ `commands-2026-02-15-review.md` - Commands review
-- ✅ `architecture-2026-01-26-review.md` - Architecture review
+- ✅ `cli-2026-02-19-review.md` - Full CLI review
+- ✅ `services-2026-02-15-review.md` - Services layer review
+- ✅ `commands-2026-03-01-review.md` - Commands review
 - ❌ `cli-v1.0.0-review.md` - Don't use version numbers
-- ❌ `review-2026-01-26.md` - Missing scope
+- ❌ `review-2026-02-19.md` - Missing scope
 - ❌ `services_review.md` - Missing date, wrong separator
 
 ### Rationale
-- **Date-based**: Reviews are point-in-time snapshots; dates are more meaningful than version numbers
-- **Chronological sorting**: Files naturally sort by date when using `YYYY-MM-DD` format
+- **Date-based**: Reviews are point-in-time snapshots
+- **Chronological sorting**: Files naturally sort by date
 - **Scope clarity**: Immediately identifies what was reviewed
-- **Consistency**: One standard format for all reviews
+
+## Reference Documentation
+
+- [Clean Code Checklist](./references/clean-code-checklist.md) - Complete 7-category evaluation criteria
+- [Common Fixes](./references/common-fixes.md) - Detailed fix patterns with before/after examples
+- [Testing Guide](./references/testing-guide.md) - How to write tests for Clean Code reviews
+- [Examples](./examples/) - Good and bad code examples
 
 ## Quick Command
 
@@ -235,4 +234,12 @@ The agent will:
 3. Evaluate against checklist
 4. Apply fixes
 5. Run tests again
-6. Generate report
+6. Generate report in `reviews/<scope>-<date>-review.md`
+
+## Integration with Other Skills
+
+This skill is typically invoked by:
+- **code-review/SKILL.md** - As part of Layer 2 (Code Quality Review)
+
+This skill can invoke:
+- (future) **testing/SKILL.md** - For advanced test coverage analysis
