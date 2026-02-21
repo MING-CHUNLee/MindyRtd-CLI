@@ -1,0 +1,5 @@
+b4ffb5f refactor(commands): extract executeInstallCommand into phase functions
+c0d7628 refactor(services): inject dependencies in PackageInstaller and PackageValidator
+de70550 refactor(services): split library-scanner into 3 focused modules
+686cd8a perf:claude code skill
+941b32a feat:install new R packages locally

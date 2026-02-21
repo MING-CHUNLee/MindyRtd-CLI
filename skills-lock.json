@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "auto-skill": {
+      "source": "toolsai/auto-skill",
+      "sourceType": "github",
+      "computedHash": "41614e3a31def0dc74217a06c6cc1be2691677adb32af35e4e1c435072776dff"
+    }
+  }
+}
