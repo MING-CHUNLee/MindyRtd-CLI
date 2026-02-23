@@ -1,11 +1,66 @@
-# Handle line endings automatically for files detected as text 
-# and leave binary files untouched
-* text=auto
+# =============================================
+# Git Attributes - Line Ending Normalization
+# Ensures consistent line endings across all
+# platforms (Windows/Mac/Linux) and OneDrive.
+# =============================================
 
-# Explicitly declare text files you want to always be LF or CRLF
-*.json text eol=lf
-*.md text eol=lf
-*.ts text eol=lf
-*.js text eol=lf
-*.css text eol=lf
-*.html text eol=lf
+# Default: auto-detect text and normalize to LF in repo
+* text=auto eol=lf
+
+# --- Source Code ---
+*.ts        text eol=lf
+*.tsx       text eol=lf
+*.js        text eol=lf
+*.jsx       text eol=lf
+*.mjs       text eol=lf
+*.cjs       text eol=lf
+
+# --- Config / Data ---
+*.json      text eol=lf
+*.yml       text eol=lf
+*.yaml      text eol=lf
+*.toml      text eol=lf
+*.env       text eol=lf
+*.lock      text eol=lf
+
+# --- Markup / Docs ---
+*.md        text eol=lf
+*.txt       text eol=lf
+*.html      text eol=lf
+*.css       text eol=lf
+
+# --- Git / Editor ---
+.gitignore      text eol=lf
+.gitattributes  text eol=lf
+.editorconfig   text eol=lf
+.npmrc          text eol=lf
+
+# --- Shell Scripts ---
+*.sh        text eol=lf
+Makefile    text eol=lf
+
+# --- Windows Scripts (keep CRLF) ---
+*.bat       text eol=crlf
+*.cmd       text eol=crlf
+*.ps1       text eol=crlf
+
+# --- Binary Files (do NOT touch) ---
+*.png       binary
+*.jpg       binary
+*.jpeg      binary
+*.gif       binary
+*.ico       binary
+*.webp      binary
+*.svg       binary
+*.woff      binary
+*.woff2     binary
+*.ttf       binary
+*.eot       binary
+*.otf       binary
+*.zip       binary
+*.gz        binary
+*.tar       binary
+*.pdf       binary
+*.db        binary
+*.sqlite    binary
+*.sqlite3   binary
