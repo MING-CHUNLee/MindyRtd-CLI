@@ -64,3 +64,27 @@ mrc run "head(mtcars)"
 # Render an RMarkdown file
 mrc run report.Rmd
 ```
+
+### `install` - Package Installation
+Installs R packages with multi-layered safety checks (CRAN status, trust metrics, dependencies, etc.) in your active RStudio session. **Requires `mindy::start()`**.
+
+```bash
+# Install a package from CRAN
+mrc install dplyr
+
+# Install multiple packages
+mrc install dplyr ggplot2
+
+# Install from GitHub
+mrc install tidyverse/dplyr --source github
+
+# Skip confirmation prompt
+mrc install dplyr --yes
+```
+
+### `tui` - Interactive Mode
+Launches the interactive Terminal User Interface. Equivalent to running `mrc` without arguments.
+
+```bash
+mrc tui
+```

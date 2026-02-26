@@ -7,6 +7,9 @@
 # Except markdown files in skills/code-review/
 !skills/**/*.md
 
+
+!.agents/**/*.md
+
 # Except docs in root docs/
 !docs/**/*.md
 

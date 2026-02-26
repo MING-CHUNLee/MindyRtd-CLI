@@ -1,0 +1,74 @@
+{
+    "categories": [
+        {
+            "id": "backend-dev",
+            "name": "後端開發",
+            "keywords": [
+                "backend",
+                "後端",
+                "api",
+                "database",
+                "伺服器",
+                "資料庫",
+                "架構"
+            ]
+        },
+        {
+            "id": "design-layout",
+            "name": "設計與排版",
+            "keywords": [
+                "design",
+                "ui",
+                "ux",
+                "css",
+                "排版",
+                "設計",
+                "樣式",
+                "動畫"
+            ]
+        },
+        {
+            "id": "frontend-dev",
+            "name": "前端開發",
+            "keywords": [
+                "frontend",
+                "前端",
+                "react",
+                "vue",
+                "javascript",
+                "typescript",
+                "組件",
+                "狀態管理"
+            ]
+        },
+        {
+            "id": "workflow",
+            "name": "工作流程",
+            "keywords": [
+                "workflow",
+                "流程",
+                "部署",
+                "工具",
+                "git",
+                "ci",
+                "cd",
+                "文件",
+                "同步",
+                "檢查"
+            ]
+        },
+        {
+            "id": "writing",
+            "name": "寫作與文案",
+            "keywords": [
+                "writing",
+                "文案",
+                "翻譯",
+                "內容",
+                "文章",
+                "報告",
+                "說明文件"
+            ]
+        }
+    ]
+}
