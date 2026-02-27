@@ -21,3 +21,12 @@ export {
     LLMControllerOptions,
     createLLMController,
 } from './llm-controller';
+
+export {
+    RubyApiClient,
+    FilePreview,
+    ResolveFilesRequest,
+    ResolveFilesResponse,
+    EditFileRequest,
+    EditFileResponse,
+} from './ruby-api-client';
