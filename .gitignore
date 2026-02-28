@@ -7,6 +7,7 @@
 # Except markdown files in skills/code-review/
 !skills/**/*.md
 
+!plan/**/*.md
 
 !.agents/**/*.md
 

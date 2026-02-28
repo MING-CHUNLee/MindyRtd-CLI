@@ -1,59 +1,141 @@
-import { FileInfo } from '../../shared/types';
-import * as fs from 'fs';
-import { LLMController } from '../../infrastructure/api/llm-controller';
+/**
+ * Service: FileResolver
+ *
+ * Answers the question: "Given a natural language instruction,
+ * which R files in the workspace are actually relevant?"
+ *
+ * This mirrors how Claude Code works:
+ *   1. Scan the workspace (Glob → list of paths)
+ *   2. Build lightweight previews (first N lines of each file)
+ *   3. Ask the LLM (via Ruby API) to pick the relevant ones
+ *   4. Return the resolved file paths
+ *
+ * The LLM only sees file names + short previews in Phase 1,
+ * so it is fast and cheap. Full content is only sent in Phase 2 (edit).
+ */
 
-export interface FileContext {
-    path: string;
-    content: string;
+import { readFile } from 'fs/promises';
+import { resolve, relative } from 'path';
+import { glob } from 'glob';
+import { RubyApiClient, FilePreview } from '../../infrastructure/api/ruby-api-client';
+
+// ============================================
+// Constants
+// ============================================
+
+/** R-related file extensions to include in resolution */
+const R_FILE_PATTERNS = ['**/*.R', '**/*.r', '**/*.Rmd', '**/*.rmd', '**/*.Rproj'];
+
+/** Directories to always skip */
+const IGNORE_PATTERNS = ['**/node_modules/**', '**/.git/**', '**/renv/**'];
+
+/** Lines to preview per file — enough for the LLM to judge relevance */
+const PREVIEW_LINES = 10;
+
+// ============================================
+// Types
+// ============================================
+
+export interface ResolveOptions {
+    /** Workspace root to scan. Defaults to process.cwd() */
+    workspaceDir?: string;
+    /** Max files to send to LLM (guards against huge workspaces) */
+    maxFiles?: number;
 }
 
-/**
- * Service: File Resolver (Agent CLI Phase 1 & 2)
- *
- * Scans file contents and uses LLM to determine which files need to be edited,
- * then retrieves updated contents.
- */
+export interface ResolvedFile {
+    /** Absolute path */
+    absolutePath: string;
+    /** Path relative to workspaceDir (shown to user) */
+    relativePath: string;
+}
+
+// ============================================
+// FileResolver Service
+// ============================================
+
 export class FileResolver {
-    private llmController: LLMController;
+    private client: RubyApiClient;
 
-    constructor(llmController?: LLMController) {
-        this.llmController = llmController || LLMController.fromEnv();
+    constructor(client?: RubyApiClient) {
+        this.client = client ?? new RubyApiClient();
     }
 
     /**
-     * Phase 1: Resolve files needed for the task
-     * Reads the first few lines of each file and asks LLM to filter them.
+     * Scan the workspace, preview each file, ask the LLM which ones
+     * are relevant to the instruction, and return the resolved paths.
      */
-    async resolveRelevantFiles(instruction: string, files: FileInfo[], previewLines = 10): Promise<string[]> {
-        console.log(`[Phase 1] Resolving relevant files out of ${files.length} files...`);
-        const fileContexts: FileContext[] = files.map(file => {
-            try {
-                const content = fs.readFileSync(file.path, 'utf8');
-                const preview = content.split('\n').slice(0, previewLines).join('\n');
-                return { path: file.path, content: preview };
-            } catch (e) {
-                return { path: file.path, content: '' };
-            }
-        }).filter(f => f.content.length > 0);
+    async resolve(instruction: string, options: ResolveOptions = {}): Promise<ResolvedFile[]> {
+        const workspaceDir = resolve(options.workspaceDir ?? process.cwd());
+        const maxFiles = options.maxFiles ?? 30;
 
-        return this.llmController.resolveFiles(instruction, fileContexts);
+        // Step 1: Glob all R files in the workspace
+        const allPaths = await this.scanWorkspace(workspaceDir, maxFiles);
+
+        if (allPaths.length === 0) {
+            return [];
+        }
+
+        // Step 2: Build previews (first N lines of each file)
+        const previews = await this.buildPreviews(allPaths, workspaceDir);
+
+        // Step 3: Ask LLM which files are relevant
+        const { targetFiles } = await this.client.resolveFiles({
+            instruction,
+            files: previews,
+        });
+
+        // Step 4: Map back to absolute paths
+        return targetFiles.map((relativePath) => ({
+            absolutePath: resolve(workspaceDir, relativePath),
+            relativePath,
+        }));
     }
 
-    /**
-     * Phase 2: Edit files based on instruction
-     * Reads full content of matched files and asks LLM to provide modified content.
-     */
-    async generateEdits(instruction: string, filePaths: string[]): Promise<FileContext[]> {
-        console.log(`[Phase 2] Generating edits for ${filePaths.length} files...`);
-        const fileContexts: FileContext[] = filePaths.map(filePath => {
-            try {
-                const content = fs.readFileSync(filePath, 'utf8');
-                return { path: filePath, content };
-            } catch (e) {
-                return { path: filePath, content: '' };
-            }
-        }).filter(f => f.content.length > 0);
+    // ============================================
+    // Helpers
+    // ============================================
 
-        return this.llmController.editFiles(instruction, fileContexts);
+    private async scanWorkspace(workspaceDir: string, maxFiles: number): Promise<string[]> {
+        const paths: string[] = [];
+
+        for (const pattern of R_FILE_PATTERNS) {
+            const matches = await glob(pattern, {
+                cwd: workspaceDir,
+                ignore: IGNORE_PATTERNS,
+                absolute: true,
+            });
+            paths.push(...matches);
+            if (paths.length >= maxFiles) break;
+        }
+
+        // Deduplicate and cap
+        return [...new Set(paths)].slice(0, maxFiles);
+    }
+
+    private async buildPreviews(
+        absolutePaths: string[],
+        workspaceDir: string
+    ): Promise<FilePreview[]> {
+        const previews: FilePreview[] = [];
+
+        for (const absPath of absolutePaths) {
+            try {
+                const content = await readFile(absPath, 'utf-8');
+                const preview = content
+                    .split('\n')
+                    .slice(0, PREVIEW_LINES)
+                    .join('\n');
+
+                previews.push({
+                    path: relative(workspaceDir, absPath),
+                    preview,
+                });
+            } catch {
+                // Skip unreadable files silently
+            }
+        }
+
+        return previews;
     }
 }

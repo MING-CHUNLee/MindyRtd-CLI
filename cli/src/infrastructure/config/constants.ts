@@ -136,6 +136,19 @@ export const INSTALLATION = {
 } as const;
 
 // ============================================
+// Ruby Backend API
+// ============================================
+
+export const RUBY_API = {
+    /** Default Ruby API host */
+    DEFAULT_HOST: 'localhost',
+    /** Default Ruby API port */
+    DEFAULT_PORT: 9090,
+    /** Default request timeout (60 seconds — LLM calls can be slow) */
+    DEFAULT_TIMEOUT_MS: 60_000,
+} as const;
+
+// ============================================
 // Package Safety
 // ============================================
 
