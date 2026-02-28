@@ -82,6 +82,18 @@ mrc install tidyverse/dplyr --source github
 mrc install dplyr --yes
 ```
 
+### `agent` - AI-Powered File Editor
+Runs the autonomous Agent workflow to edit project files based on natural language instructions.
+
+```bash
+# Ask the agent to perform a coding task
+mrc agent "Add error handling to the data loading functions"
+
+# Specify a directory
+mrc agent "Add comments to logger" -d ./src
+```
+The agent operates in three phases: resolving relevant files from the workspace, generating modifications via LLM, and presenting a diff review for interactive confirmation.
+
 ### `tui` - Interactive Mode
 Launches the interactive Terminal User Interface. Equivalent to running `mrc` without arguments.
 

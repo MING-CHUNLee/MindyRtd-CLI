@@ -13,6 +13,7 @@ A command-line interface for intelligent R file analysis powered by LLM in RStud
   - [context](#context---llm-prompt-preview)
   - [run](#run---execute-r-code)
   - [install](#install---package-installation)
+  - [agent](#agent---ai-powered-file-editor)
   - [tui](#tui---interactive-mode)
 - [Configuration](#configuration)
 - [Usage in RStudio](#usage-in-rstudio)
@@ -402,6 +403,46 @@ mindy::start()
 
 ---
 
+### agent - AI-Powered File Editor
+
+Runs the intelligent Agent workflow to autonomously edit your project files based on natural language instructions. 
+
+This command bypasses the R backend using an off-critical-path design to directly communicate with the LLM (like Google Gemini). The agent executes a three-phase workflow:
+1. **Resolve**: Scans your workspace and determines which files require changes, drastically saving context tokens.
+2. **Edit**: Generates required modifications using the configured LLM.
+3. **Review**: Shows a color-coded diff in the terminal and waits for your confirmation (`[Y/n]`) before writing the edits to disk.
+
+```bash
+mindy-cli agent <instruction> [options]
+```
+
+**Arguments:**
+
+| Argument | Description |
+|----------|-------------|
+| `<instruction>` | The natural language instruction describing what you want the agent to do. |
+
+**Options:**
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `-d, --directory <path>` | Workspace directory to scan and edit | `.` (current) |
+
+**Examples:**
+
+```bash
+# Add JSDoc comments to a specific service
+mindy-cli agent "Add JSDoc comments to session-logger.ts"
+
+# Request a feature addition across the codebase
+mindy-cli agent "Implement error handling for missing config files"
+
+# Restrict the agent scope to a specific directory
+mindy-cli agent "Change the button colors to red" -d ./src/presentation/views
+```
+
+---
+
 ### tui - Interactive Mode
 
 Launch the interactive Terminal User Interface.
@@ -430,13 +471,14 @@ Configuration is loaded from environment variables, which can be set in a `.env`
 **LLM Provider Configuration:**
 
 ```bash
-# Provider selection (openai, anthropic, azure, ollama)
-LLM_PROVIDER=openai
+# Provider selection (openai, anthropic, azure, google, ollama)
+LLM_PROVIDER=google
 
 # API Keys
 OPENAI_API_KEY=sk-...
 ANTHROPIC_API_KEY=sk-ant-...
 AZURE_OPENAI_API_KEY=...
+GEMINI_API_KEY=...
 
 # Model settings
 LLM_MODEL=gpt-4
@@ -577,6 +619,7 @@ mindy-cli context --json --summary
 | `context` | `ctx`, `prompt` | Preview LLM system prompt |
 | `run` | - | Execute R code in RStudio |
 | `install` | - | Install R packages with safety checks |
+| `agent` | - | Edit project files using LLM Agent |
 | `tui` | `interactive` | Launch interactive TUI |
 
 **Global Options:**
