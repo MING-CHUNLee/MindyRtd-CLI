@@ -1,74 +1,81 @@
 {
     "categories": [
         {
+            "id": "agentic-cli-architecture",
+            "keyword": [
+                "agent",
+                "cli",
+                "architecture",
+                "claude code",
+                "llm"
+            ],
+            "title": "Agentic CLI Architecture",
+            "file": "agentic-cli-architecture.md"
+        },
+        {
             "id": "backend-dev",
-            "name": "後端開發",
-            "keywords": [
+            "keyword": [
                 "backend",
-                "後端",
                 "api",
                 "database",
-                "伺服器",
-                "資料庫",
-                "架構"
-            ]
+                "server",
+                "data",
+                "fetch",
+                "timeout"
+            ],
+            "title": "Backend Development",
+            "file": "backend-dev.md"
         },
         {
             "id": "design-layout",
-            "name": "設計與排版",
-            "keywords": [
+            "keyword": [
                 "design",
+                "layout",
                 "ui",
                 "ux",
                 "css",
-                "排版",
-                "設計",
-                "樣式",
-                "動畫"
-            ]
+                "style"
+            ],
+            "title": "Design & Layout",
+            "file": "design-layout.md"
         },
         {
             "id": "frontend-dev",
-            "name": "前端開發",
-            "keywords": [
+            "keyword": [
                 "frontend",
-                "前端",
                 "react",
                 "vue",
-                "javascript",
-                "typescript",
-                "組件",
-                "狀態管理"
-            ]
+                "web",
+                "browser",
+                "component"
+            ],
+            "title": "Frontend Development",
+            "file": "frontend-dev.md"
         },
         {
             "id": "workflow",
-            "name": "工作流程",
-            "keywords": [
+            "keyword": [
                 "workflow",
-                "流程",
-                "部署",
-                "工具",
+                "process",
                 "git",
                 "ci",
                 "cd",
-                "文件",
-                "同步",
-                "檢查"
-            ]
+                "deployment"
+            ],
+            "title": "Workflow & Process",
+            "file": "workflow.md"
         },
         {
             "id": "writing",
-            "name": "寫作與文案",
-            "keywords": [
+            "keyword": [
                 "writing",
-                "文案",
-                "翻譯",
-                "內容",
-                "文章",
-                "報告",
-                "說明文件"
-            ]
+                "doc",
+                "documentation",
+                "readme",
+                "comment"
+            ],
+            "title": "Writing & Documentation",
+            "file": "writing.md"
         }
     ]
 }

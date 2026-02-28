@@ -24,6 +24,7 @@ import { contextCommand } from './presentation/commands/context';
 import { runCommand } from './presentation/commands/run';
 import { installCommand } from './presentation/commands/install';
 import { tuiCommand } from './presentation/commands/tui';
+import { agentCommand } from './presentation/commands/agent';
 import { displayBanner } from './presentation/views/banner';
 import fs from 'fs';
 import path from 'path';
@@ -50,6 +51,7 @@ program.addCommand(contextCommand);
 program.addCommand(runCommand);
 program.addCommand(installCommand);
 program.addCommand(tuiCommand);
+program.addCommand(agentCommand);
 
 // Default action - Launch TUI when no command is specified
 program.action(async () => {

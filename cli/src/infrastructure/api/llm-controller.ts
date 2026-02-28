@@ -19,6 +19,7 @@
 import { GeneratedPrompt } from '../../shared/types/prompt-context';
 import { LLMConfig, getLLMConfigFromEnv, LLMProvider } from '../config';
 import { LLM } from '../config/constants';
+import { SessionLogger } from './session-logger';
 
 // ============================================
 // Error Classes
@@ -86,6 +87,8 @@ export interface LLMControllerOptions {
     enableRetry?: boolean;
     /** Maximum retry attempts */
     maxRetries?: number;
+    /** Session ID for analytics */
+    sessionId?: string;
 }
 
 // Internal types for API responses
@@ -111,6 +114,8 @@ export class LLMController {
     private config: LLMConfig;
     private enableRetry: boolean;
     private maxRetries: number;
+    private sessionLogger: SessionLogger;
+    public readonly sessionId: string;
 
     /**
      * Create an LLM Controller
@@ -133,13 +138,15 @@ export class LLMController {
         };
         this.enableRetry = options.enableRetry ?? true;
         this.maxRetries = options.maxRetries ?? 3;
+        this.sessionLogger = new SessionLogger();
+        this.sessionId = options.sessionId || `session-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
     }
 
     /**
      * Factory method: Create controller from environment variables
      */
-    static fromEnv(): LLMController {
-        return new LLMController();
+    static fromEnv(sessionId?: string): LLMController {
+        return new LLMController({ sessionId });
     }
 
     /**
@@ -161,10 +168,23 @@ export class LLMController {
             this.sendToProvider(messages, model)
         );
 
-        return {
+        const responseTimeMs = Date.now() - startTime;
+        const fullResult = {
             ...result,
-            responseTimeMs: Date.now() - startTime,
+            responseTimeMs,
         };
+
+        // Fire-and-forget analytics logging
+        this.sessionLogger.log({
+            sessionId: this.sessionId,
+            prompt: request.userMessage,
+            response: fullResult.content,
+            responseTimeMs: fullResult.responseTimeMs,
+            provider: fullResult.provider,
+            model: fullResult.model,
+        }).catch(() => { });
+
+        return fullResult;
     }
 
     // ============================================
@@ -248,6 +268,72 @@ export class LLMController {
     }
 
     // ============================================
+    // Agent CLI Phase 1 & Phase 2
+    // ============================================
+
+    /**
+     * Phase 1: Resolve files needed for the task
+     * @returns Array of file paths predicted by LLM
+     */
+    async resolveFiles(instruction: string, fileContexts: { path: string, content: string }[]): Promise<string[]> {
+        const systemPrompt = `You are an expert software engineer resolving task references. 
+Given a user instruction and a list of file excerpts, output ONLY a JSON array of file paths that likely need modification. 
+Example Output: ["src/index.ts", "package.json"]
+Do not output any explanation blocks or markdown formatting outside the JSON array.`;
+
+        const fileItems = fileContexts.map(f => `FILE: ${f.path}\nLINES:\n${f.content}\n---`).join('\n');
+        const userMessage = `INSTRUCTION: ${instruction}\n\nFILES TO EVALUATE:\n${fileItems}`;
+
+        const response = await this.sendPrompt({
+            systemPrompt,
+            userMessage,
+        });
+
+        try {
+            // Find JSON array in the response string
+            const match = response.content.match(/\[([\s\S]*)\]/);
+            if (match) {
+                return JSON.parse(match[0]);
+            }
+            return JSON.parse(response.content);
+        } catch (e) {
+            console.warn('Failed to parse JSON from LLM resolveFiles output:', response.content);
+            return [];
+        }
+    }
+
+    /**
+     * Phase 2: Edit files based on instruction
+     * @returns Array of modified file contents
+     */
+    async editFiles(instruction: string, fileContexts: { path: string, content: string }[]): Promise<{ path: string, content: string }[]> {
+        const systemPrompt = `You are an expert AI software engineer. You are about to modify a codebase.
+You will be provided with an instruction and the full contents of files that you decided to edit.
+For EACH file, output its full modified content wrapped in a markdown block with the file path as the lang attribute (e.g. \`\`\`src/file.ts).
+Output ONLY the requested file markdown blocks.`;
+
+        const fileItems = fileContexts.map(f => `--- ${f.path} ---\n\`\`\`\n${f.content}\n\`\`\`\n`).join('\n');
+        const userMessage = `INSTRUCTION: ${instruction}\n\nFILES:\n${fileItems}`;
+
+        const response = await this.sendPrompt({
+            systemPrompt,
+            userMessage,
+        });
+
+        return this.parseMarkdownFileBlocks(response.content);
+    }
+
+    private parseMarkdownFileBlocks(content: string): { path: string, content: string }[] {
+        const results: { path: string, content: string }[] = [];
+        const regex = /```([\w\/\.\-]+)\n([\s\S]*?)```/g;
+        let match;
+        while ((match = regex.exec(content)) !== null) {
+            results.push({ path: match[1].trim(), content: match[2] });
+        }
+        return results;
+    }
+
+    // ============================================
     // Provider Router
     // ============================================
 
@@ -262,6 +348,8 @@ export class LLMController {
                 return this.sendToAnthropic(messages, model);
             case 'azure':
                 return this.sendToAzure(messages, model);
+            case 'google':
+                return this.sendToGoogle(messages, model);
             case 'ollama':
                 return this.sendToOllama(messages, model);
             default:
@@ -415,6 +503,59 @@ export class LLMController {
             content: data.message?.content || '',
             model,
             provider: 'ollama',
+        };
+    }
+
+    private async sendToGoogle(
+        messages: LLMMessage[],
+        model: string
+    ): Promise<Omit<LLMResponse, 'responseTimeMs'>> {
+        const url = `${this.config.endpoint}/${model}:generateContent?key=${this.config.apiKey}`;
+
+        let systemPrompt = '';
+        const systemMessage = messages.find(m => m.role === 'system');
+        if (systemMessage) {
+            systemPrompt = systemMessage.content;
+        }
+
+        const contents = messages
+            .filter(m => m.role !== 'system')
+            .map(m => ({
+                role: m.role === 'user' ? 'user' : 'model',
+                parts: [{ text: m.content }]
+            }));
+
+        const body: any = {
+            contents,
+            generationConfig: {
+                maxOutputTokens: this.config.maxTokens,
+            }
+        };
+
+        if (systemPrompt) {
+            body.systemInstruction = {
+                parts: [{ text: systemPrompt }]
+            };
+        }
+
+        const response = await this.fetchWithTimeout(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Google API error: ${response.statusText} - ${errorText}`);
+        }
+
+        const data = await response.json() as any;
+        const outText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+        return {
+            content: outText,
+            model,
+            provider: 'google',
         };
     }
 
