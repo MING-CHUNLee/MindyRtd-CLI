@@ -27,7 +27,7 @@ if (fs.existsSync(envPath)) {
 // Types
 // ============================================
 
-export type LLMProvider = 'openai' | 'anthropic' | 'azure' | 'ollama';
+export type LLMProvider = 'openai' | 'anthropic' | 'azure' | 'ollama' | 'google';
 
 export interface LLMConfig {
     provider: LLMProvider;
@@ -59,6 +59,7 @@ export const ENV_VARS = {
     OPENAI_API_KEY: 'OPENAI_API_KEY',
     ANTHROPIC_API_KEY: 'ANTHROPIC_API_KEY',
     AZURE_OPENAI_API_KEY: 'AZURE_OPENAI_API_KEY',
+    GEMINI_API_KEY: 'GEMINI_API_KEY',
 
     // Model configuration
     LLM_MODEL: 'LLM_MODEL',
@@ -89,11 +90,13 @@ const DEFAULTS = {
         anthropic: 'claude-3-opus-20240229',
         azure: 'gpt-4',
         ollama: 'llama2',
+        google: 'gemini-2.5-flash',
     },
     endpoints: {
         openai: 'https://api.openai.com/v1/chat/completions',
         anthropic: 'https://api.anthropic.com/v1/messages',
         ollama: 'http://localhost:11434/api/chat',
+        google: 'https://generativelanguage.googleapis.com/v1beta/models',
     },
 };
 
@@ -136,6 +139,7 @@ export function detectProvider(): LLMProvider {
     if (getEnv(ENV_VARS.OPENAI_API_KEY)) return 'openai';
     if (getEnv(ENV_VARS.ANTHROPIC_API_KEY)) return 'anthropic';
     if (getEnv(ENV_VARS.AZURE_OPENAI_API_KEY)) return 'azure';
+    if (getEnv(ENV_VARS.GEMINI_API_KEY)) return 'google';
     if (getEnv(ENV_VARS.OLLAMA_HOST)) return 'ollama';
 
     // Default to OpenAI
@@ -153,6 +157,8 @@ export function getApiKeyForProvider(provider: LLMProvider): string {
             return requireEnv(ENV_VARS.ANTHROPIC_API_KEY);
         case 'azure':
             return requireEnv(ENV_VARS.AZURE_OPENAI_API_KEY);
+        case 'google':
+            return requireEnv(ENV_VARS.GEMINI_API_KEY);
         case 'ollama':
             return ''; // Ollama doesn't require API key
         default:
@@ -171,6 +177,8 @@ export function getEndpointForProvider(provider: LLMProvider): string {
             return DEFAULTS.endpoints.anthropic;
         case 'azure':
             return requireEnv(ENV_VARS.AZURE_OPENAI_ENDPOINT);
+        case 'google':
+            return DEFAULTS.endpoints.google;
         case 'ollama':
             return getEnv(ENV_VARS.OLLAMA_HOST) || DEFAULTS.endpoints.ollama;
         default:
@@ -259,7 +267,7 @@ export function getConfigSummary(): Record<string, string> {
 // ============================================
 
 function isValidProvider(value: string): value is LLMProvider {
-    return ['openai', 'anthropic', 'azure', 'ollama'].includes(value);
+    return ['openai', 'anthropic', 'azure', 'ollama', 'google'].includes(value);
 }
 
 function getApiKeyEnvVar(provider: LLMProvider): string {
@@ -267,6 +275,7 @@ function getApiKeyEnvVar(provider: LLMProvider): string {
         case 'openai': return ENV_VARS.OPENAI_API_KEY;
         case 'anthropic': return ENV_VARS.ANTHROPIC_API_KEY;
         case 'azure': return ENV_VARS.AZURE_OPENAI_API_KEY;
+        case 'google': return ENV_VARS.GEMINI_API_KEY;
         default: return '';
     }
 }
