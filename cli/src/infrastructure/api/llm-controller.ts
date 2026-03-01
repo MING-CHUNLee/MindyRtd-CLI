@@ -297,7 +297,7 @@ Do not output any explanation blocks or markdown formatting outside the JSON arr
             }
             return JSON.parse(response.content);
         } catch (e) {
-            console.warn('Failed to parse JSON from LLM resolveFiles output:', response.content);
+            console.warn('[DEBUG] LLM resolveFiles raw response:', response.content);
             return [];
         }
     }
@@ -320,12 +320,13 @@ Output ONLY the requested file markdown blocks.`;
             userMessage,
         });
 
+        console.log('[DEBUG] editFiles raw response (first 500 chars):', response.content.slice(0, 500));
         return this.parseMarkdownFileBlocks(response.content);
     }
 
     private parseMarkdownFileBlocks(content: string): { path: string, content: string }[] {
         const results: { path: string, content: string }[] = [];
-        const regex = /```([\w\/\.\-]+)\n([\s\S]*?)```/g;
+        const regex = /```([\w\/\.\-]+)\n([\s\S]*?)(?:```|$)/g;
         let match;
         while ((match = regex.exec(content)) !== null) {
             results.push({ path: match[1].trim(), content: match[2] });

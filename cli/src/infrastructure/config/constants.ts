@@ -38,12 +38,12 @@ export const DISPLAY = {
 // ============================================
 
 export const LLM = {
-    /** Default request timeout (30 seconds) */
-    DEFAULT_TIMEOUT_MS: 30_000,
+    /** Default request timeout (90 seconds) */
+    DEFAULT_TIMEOUT_MS: 90_000,
     /** Maximum timeout allowed (5 minutes) */
     MAX_TIMEOUT_MS: 5 * 60 * 1000,
     /** Default max tokens */
-    DEFAULT_MAX_TOKENS: 4096,
+    DEFAULT_MAX_TOKENS: 8192,
     /** Maximum retry attempts */
     MAX_RETRIES: 3,
     /** Maximum backoff delay (10 seconds) */

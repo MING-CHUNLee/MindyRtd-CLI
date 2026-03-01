@@ -14,7 +14,7 @@ import ora from 'ora';
 import fs from 'fs';
 import path from 'path';
 import { glob } from 'glob';
-import { FileResolver } from '../../core/services/file-resolver';
+import { LLMController } from '../../infrastructure/api/llm-controller';
 import { handleError } from '../../shared/utils/error-handler';
 import * as diff from 'diff';
 import readline from 'readline';
@@ -54,14 +54,19 @@ async function executeAgentCommand(instruction: string, options: AgentCommandOpt
         return;
     }
 
-    const resolver = new FileResolver();
+    const llm = LLMController.fromEnv();
 
     // Phase 1: Resolve
     const phase1Spinner = ora('Phase 1: Agent is resolving relevant files...').start();
     let targets: string[] = [];
     try {
-        // We pretend these are FileInfos. The resolver only needs `.path`. 
-        targets = await resolver.resolveRelevantFiles(instruction, candidates as any, 15);
+        // Send all file paths to LLM for relevance scoring (no content needed for path-based resolution)
+        const previews = candidates.map(c => ({
+            path: path.relative(options.directory, c.path),
+            content: '',
+        }));
+
+        targets = await llm.resolveFiles(instruction, previews);
 
         if (targets.length > 0) {
             phase1Spinner.succeed(`Phase 1 Complete. LLM identified ${targets.length} files to modify.`);
@@ -80,8 +85,15 @@ async function executeAgentCommand(instruction: string, options: AgentCommandOpt
     const phase2Spinner = ora('Phase 2: Generating code modifications...').start();
     let editedFiles: { path: string, content: string }[] = [];
     try {
-        editedFiles = await resolver.generateEdits(instruction, targets);
-        phase2Spinner.succeed(`Phase 2 Complete. Received format edits for ${editedFiles.length} files.`);
+        const fileContexts = targets.map(targetPath => {
+            const absolutePath = path.resolve(options.directory, targetPath);
+            let content = '';
+            try { content = fs.readFileSync(absolutePath, 'utf8'); } catch { }
+            return { path: targetPath, content };
+        });
+
+        editedFiles = await llm.editFiles(instruction, fileContexts);
+        phase2Spinner.succeed(`Phase 2 Complete. Received edits for ${editedFiles.length} files.`);
     } catch (e) {
         phase2Spinner.fail('Phase 2 failed.');
         handleError(e, 'phase 2 edit');
