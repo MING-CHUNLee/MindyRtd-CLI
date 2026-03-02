@@ -11,11 +11,13 @@ Mindy CLI uses a **File-Based Bridge** pattern to communicate with RStudio:
 
 ## LLM Agent Architecture
 
-For advanced coding tasks, Mindy CLI implements an **Agentic Loop** for autonomous file editing, emphasizing an off-critical-path design to maximize speed and developer experience:
+For advanced coding tasks, Mindy CLI implements an **Agentic Loop** for autonomous file editing. To maintain clean separation of concerns, the CLI defines clear roles for API and LLM communication:
 
-- **Direct API Communication**: For agent operations, the CLI communicates directly with LLM providers (e.g., Google Gemini, Anthropic, OpenAI) via the `LLMController`, bypassing the Ruby/R backend bridge entirely.
+- **Primary Gateway (`ruby-api-client.ts`)**: The dedicated entry point for all agentic business logic (like `resolveFiles` and `editFiles`). It delegates agent orchestrations to the Ruby backend.
+- **Generic LLM Utility (`llm-controller.ts`)**: A low-level utility responsible strictly for direct LLM interactions (e.g., `sendPrompt`, `analyzeCode`). It should not contain any domain-specific logic like file resolution.
+- **Standalone Interface Option**: For scenarios without the Ruby server, an `IAgentClient` interface standardizes operations, implemented by `ruby-api-client.ts` for the backend path and an optional `direct-llm-agent.ts` for a standalone path.
 - **Three-Phase Tool Calling**:
-  1. **Phase 1: Resolve**: Scans the workspace and sends short file snippets (e.g., first 15 lines) to the LLM to identify which files need modification, saving enormous amounts of context tokens.
+  1. **Phase 1: Resolve**: Scans the workspace and sends short file snippets (e.g., first 15 lines) to identify which files need modification, saving enormous amounts of context tokens.
   2. **Phase 2: Edit**: Sends the full contents of only the chosen target files to generate the precise edits.
   3. **Phase 3: Review**: Displays a local terminal patch diff (`+`/`-`) and requests user confirmation (`[Y/n]`) before committing any writes.
 - **Async Telemetry (Side-effect Logging)**: Telemetry and session logs are posted asynchronously (`SessionLogger`) to the backend via fire-and-forget, without blocking the CLI's rapid critical path.
