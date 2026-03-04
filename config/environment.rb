@@ -10,12 +10,26 @@ Dotenv.load(
 )
 
 # ----------------------------------------------------------------
-# Load infrastructure layer first (no dependencies on other layers)
+# Infrastructure: Database (must load before domain models)
+# ----------------------------------------------------------------
+require File.join(project_root, 'app', 'infrastructure', 'database', 'db')
+
+# Auto-run pending migrations on startup (safe — skips already-applied ones)
+Sequel.extension :migration
+Sequel::Migrator.run(DB, File.join(project_root, 'db', 'migrations'))
+
+# ----------------------------------------------------------------
+# Infrastructure: External API gateways
 # ----------------------------------------------------------------
 require File.join(project_root, 'app', 'infrastructure', 'gateways', 'gemini_api')
 
 # ----------------------------------------------------------------
-# Load application services (depend on infrastructure)
+# Domain: Models (depend on DB connection)
+# ----------------------------------------------------------------
+require File.join(project_root, 'app', 'domain', 'models', 'prompt_log')
+
+# ----------------------------------------------------------------
+# Application: Services (depend on infrastructure + domain)
 # ----------------------------------------------------------------
 require File.join(project_root, 'app', 'application', 'services', 'resolve_service')
 require File.join(project_root, 'app', 'application', 'services', 'edit_service')

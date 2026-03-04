@@ -15,6 +15,10 @@ gem 'rack-cors', '~> 2.0'
 gem 'faraday', '~> 2.7'
 gem 'faraday-retry', '~> 2.2'
 
+# Database ORM + SQLite (analytics / prompt logging)
+gem 'sequel',  '~> 5.0'
+gem 'sqlite3', '~> 2.0'
+
 # JSON serialization
 gem 'multi_json', '~> 1.15'
 
