@@ -257,6 +257,65 @@ export class LLMController {
     }
 
     /**
+     * Phase 1 of agent workflow: ask the LLM which files are relevant.
+     * Returns matched file paths + raw usage for token tracking.
+     */
+    async resolveFiles(
+        instruction: string,
+        previews: Array<{ path: string; content: string }>,
+        history?: LLMMessage[],
+    ): Promise<{ targets: string[]; usage?: LLMResponse['usage'] }> {
+        const fileList = previews.map(p => `- ${p.path}`).join('\n');
+        const response = await this.sendPrompt({
+            systemPrompt:
+                'You are a file relevance analyzer. Given a list of file paths and a user instruction, ' +
+                'return ONLY a JSON array of the most relevant file paths (strings). No explanation.',
+            userMessage:
+                `Instruction: ${instruction}\n\nFiles:\n${fileList}\n\n` +
+                'Return a JSON array of relevant file paths.',
+            history,
+        });
+
+        let targets: string[] = [];
+        try {
+            const match = response.content.match(/\[[\s\S]*?\]/);
+            if (match) targets = JSON.parse(match[0]) as string[];
+        } catch {
+            targets = previews.slice(0, 5).map(p => p.path);
+        }
+        return { targets, usage: response.usage };
+    }
+
+    /**
+     * Phase 2 of agent workflow: ask the LLM to edit target files.
+     * Returns modified file contents + raw usage for token tracking.
+     */
+    async editFiles(
+        instruction: string,
+        fileContexts: Array<{ path: string; content: string }>,
+        history?: LLMMessage[],
+    ): Promise<{ files: Array<{ path: string; content: string }>; usage?: LLMResponse['usage'] }> {
+        const filesJson = JSON.stringify(fileContexts);
+        const response = await this.sendPrompt({
+            systemPrompt:
+                'You are a code editor. Given file contents and a user instruction, ' +
+                'return ONLY a JSON array: [{"path":"...","content":"..."}]. ' +
+                'Preserve formatting. No markdown fences around the JSON.',
+            userMessage: `Instruction: ${instruction}\n\nFiles:\n${filesJson}`,
+            history,
+        });
+
+        let files: Array<{ path: string; content: string }> = [];
+        try {
+            const match = response.content.match(/\[[\s\S]*\]/);
+            if (match) files = JSON.parse(match[0]) as Array<{ path: string; content: string }>;
+        } catch {
+            files = [];
+        }
+        return { files, usage: response.usage };
+    }
+
+    /**
      * Get current provider info (safe to log, no secrets)
      */
     getProviderInfo(): { provider: LLMProvider; model: string; endpoint: string } {

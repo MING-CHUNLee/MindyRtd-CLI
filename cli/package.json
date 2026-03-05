@@ -10,6 +10,7 @@
     "scripts": {
         "build": "tsc",
         "dev": "tsx src/index.ts",
+        "mindy": "tsx src/index.ts",
         "start": "node dist/index.js",
         "mindy-cli": "node dist/index.js",
         "test": "vitest",
