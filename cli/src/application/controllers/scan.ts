@@ -8,7 +8,7 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import ora from 'ora';
 import { scanDirectory } from '../../core/services/file-scanner';
-import { displayScanResult } from '../views/scan-result';
+import { displayScanResult } from '../../presentation/views/scan-result';
 import { handleError } from '../../shared/utils/error-handler';
 
 // ============================================

@@ -18,14 +18,14 @@
  */
 
 import { Command } from 'commander';
-import { scanCommand } from './presentation/commands/scan';
-import { libraryCommand } from './presentation/commands/library';
-import { contextCommand } from './presentation/commands/context';
-import { runCommand } from './presentation/commands/run';
-import { installCommand } from './presentation/commands/install';
-import { tuiCommand } from './presentation/commands/tui';
-import { editCommand } from './presentation/commands/edit';
-import { agentCommand } from './presentation/commands/agent';
+import { scanCommand } from './application/controllers/scan';
+import { libraryCommand } from './application/controllers/library';
+import { contextCommand } from './application/controllers/context';
+import { runCommand } from './application/controllers/run';
+import { installCommand } from './application/controllers/install';
+import { tuiCommand } from './application/controllers/tui';
+import { editCommand } from './application/controllers/edit';
+import { agentCommand } from './application/controllers/agent';
 import { displayBanner } from './presentation/views/banner';
 import fs from 'fs';
 import path from 'path';
