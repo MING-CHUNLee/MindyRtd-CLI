@@ -26,6 +26,7 @@ import { installCommand } from './application/controllers/install';
 import { tuiCommand } from './application/controllers/tui';
 import { editCommand } from './application/controllers/edit';
 import { agentCommand } from './application/controllers/agent';
+import { askCommand } from './application/controllers/ask';
 import { displayBanner } from './presentation/views/banner';
 import fs from 'fs';
 import path from 'path';
@@ -54,6 +55,7 @@ program.addCommand(installCommand);
 program.addCommand(tuiCommand);
 program.addCommand(editCommand);
 program.addCommand(agentCommand);
+program.addCommand(askCommand);
 
 // Default action - Launch TUI when no command is specified
 program.action(async () => {

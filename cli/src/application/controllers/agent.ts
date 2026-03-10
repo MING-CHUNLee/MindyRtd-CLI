@@ -35,6 +35,8 @@ import { ContextStatusBar } from '../../presentation/views/context-status-bar';
 import { isFilenameEditable, isContentEditable } from '../../core/domain/lib/agent-file-filters';
 import { handleError } from '../../shared/utils/error-handler';
 
+import { executeAskCommand } from './ask';
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface AgentOptions {
@@ -74,10 +76,30 @@ async function executeAgentCommand(
     instruction: string,
     options: AgentOptions,
 ): Promise<void> {
-    const repo      = new SessionRepository();
+    const repo = new SessionRepository();
     const statusBar = new ContextStatusBar();
-    const llm       = LLMController.fromEnv();
-    const model     = llm.getProviderInfo().model;
+    const llm = LLMController.fromEnv();
+    const model = llm.getProviderInfo().model;
+
+    // ── 0.5 Detect Intent ─────────────────────────────────────────────────
+    const intentSpinner = ora('Classifying instruction intent...').start();
+    let intent = 'edit';
+    try {
+        const intentResponse = await llm.sendPrompt({
+            systemPrompt: 'You are an intent classifier. Determine if the user wants to JUST ASK A QUESTION about the codebase (reply ONLY "ask") or if they want to MAKE CHANGES/CREATE FILES/WRITE CODE (reply ONLY "edit"). Default to "edit" if unsure.',
+            userMessage: instruction
+        });
+        const output = intentResponse.content.trim().toLowerCase();
+        if (output.includes('ask')) intent = 'ask';
+        intentSpinner.succeed(`Intent classified as: ${chalk.cyan(intent)}`);
+    } catch {
+        intentSpinner.stop();
+    }
+
+    if (intent === 'ask') {
+        const { executeAskCommand } = await import('./ask');
+        return executeAskCommand(instruction, options);
+    }
 
     // ── 1. Load or create session ─────────────────────────────────────────
     let session: ConversationSession;
@@ -264,10 +286,10 @@ function accumulateUsage(
     usage: { promptTokens?: number; completionTokens?: number; cacheCreationTokens?: number; cacheReadTokens?: number } | undefined,
 ): void {
     if (!usage) return;
-    acc.inputTokens         += usage.promptTokens         ?? 0;
-    acc.outputTokens        += usage.completionTokens     ?? 0;
-    acc.cacheCreationTokens += usage.cacheCreationTokens  ?? 0;
-    acc.cacheReadTokens     += usage.cacheReadTokens      ?? 0;
+    acc.inputTokens += usage.promptTokens ?? 0;
+    acc.outputTokens += usage.completionTokens ?? 0;
+    acc.cacheCreationTokens += usage.cacheCreationTokens ?? 0;
+    acc.cacheReadTokens += usage.cacheReadTokens ?? 0;
 }
 
 function promptConfirm(question: string): Promise<boolean> {

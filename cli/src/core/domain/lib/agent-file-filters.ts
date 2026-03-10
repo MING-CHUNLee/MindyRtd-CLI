@@ -50,9 +50,9 @@ const EDITABLE_EXTENSIONS = new Set([
 
 // ── Size threshold ────────────────────────────────────────────────────────────
 // Files larger than this are skipped in Phase 2 to stay well under token limits.
-// 10 000 chars ≈ 2 500 tokens — large enough for most source files.
+// 100 000 chars ≈ 25 000 tokens — large enough for most source files.
 
-export const MAX_FILE_CONTENT_CHARS = 10_000;
+export const MAX_FILE_CONTENT_CHARS = 100_000;
 
 // ── Public helpers ────────────────────────────────────────────────────────────
 
@@ -62,11 +62,11 @@ export const MAX_FILE_CONTENT_CHARS = 10_000;
  */
 export function isFilenameEditable(filePath: string): boolean {
     const basename = path.basename(filePath);
-    const ext      = path.extname(filePath).toLowerCase();
+    const ext = path.extname(filePath).toLowerCase();
 
-    if (NEVER_EDIT_FILENAMES.has(basename))                    return false;
-    if (NEVER_EDIT_PATTERNS.some(p => p.test(filePath)))       return false;
-    if (ext && !EDITABLE_EXTENSIONS.has(ext))                  return false;
+    if (NEVER_EDIT_FILENAMES.has(basename)) return false;
+    if (NEVER_EDIT_PATTERNS.some(p => p.test(filePath))) return false;
+    if (ext && !EDITABLE_EXTENSIONS.has(ext)) return false;
 
     return true;
 }
