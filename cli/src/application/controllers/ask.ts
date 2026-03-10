@@ -40,12 +40,12 @@ export async function executeAskCommand(
     const llm = LLMController.fromEnv();
     const model = llm.getProviderInfo().model;
 
-    // ── 1. Load or create session ─────────────────────────────────────────
     let session: ConversationSession;
 
     if (options.session) {
         session = (await repo.load(options.session)) ?? ConversationSession.create(model);
-    } else if (options.resume && !options.new) {
+    } else if (!options.new) {
+        // By default, try to resume the last session to maintain context
         const last = await repo.loadLast();
         session = last ?? ConversationSession.create(model);
     } else {
@@ -158,5 +158,5 @@ export async function executeAskCommand(
     session.addTurn(question, answer, turnUsage);
     await repo.save(session);
 
-    // statusBar.render(session);
+    statusBar.render(session);
 }

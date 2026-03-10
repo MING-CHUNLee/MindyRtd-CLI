@@ -81,13 +81,48 @@ async function executeAgentCommand(
     const llm = LLMController.fromEnv();
     const model = llm.getProviderInfo().model;
 
+    // ── 1. Load or create session ─────────────────────────────────────────
+    let session: ConversationSession;
+
+    if (options.session) {
+        session = (await repo.load(options.session)) ?? ConversationSession.create(model);
+        if (session.turnCount > 0) {
+            console.log(chalk.cyan(`\n↩  Resuming session ${session.id.slice(-6)} (${session.turnCount} previous turns)`));
+            statusBar.render(session);
+        }
+    } else if (!options.new) {
+        // By default, try to resume the last session to maintain context
+        const last = await repo.loadLast();
+        if (last) {
+            session = last;
+            if (session.turnCount > 0) {
+                console.log(chalk.cyan(`\n↩  Resuming last session ${session.id.slice(-6)} (${session.turnCount} previous turns)`));
+                statusBar.render(session);
+            }
+        } else {
+            session = ConversationSession.create(model);
+            console.log(chalk.dim(`\n  New session ${session.id.slice(-6)}`));
+        }
+    } else {
+        session = ConversationSession.create(model);
+        console.log(chalk.dim(`\n  New session ${session.id.slice(-6)}`));
+    }
+
+    // History from all previous turns — passed to every LLM call so the
+    // model knows what was done before (this is the "memory").
+    const history = session.getHistory().map(m => ({
+        role: m.role as 'user' | 'assistant',
+        content: m.content,
+    }));
+
     // ── 0.5 Detect Intent ─────────────────────────────────────────────────
     const intentSpinner = ora('Classifying instruction intent...').start();
     let intent = 'edit';
     try {
         const intentResponse = await llm.sendPrompt({
-            systemPrompt: 'You are an intent classifier. Determine if the user wants to JUST ASK A QUESTION about the codebase (reply ONLY "ask") or if they want to MAKE CHANGES/CREATE FILES/WRITE CODE (reply ONLY "edit"). Default to "edit" if unsure.',
-            userMessage: instruction
+            systemPrompt: 'You are an intent classifier. Determine if the user wants to JUST ASK A QUESTION about the codebase/conversation (reply ONLY "ask") or if they want to MAKE CHANGES/CREATE FILES (reply ONLY "edit"). Default to "edit" if unsure.',
+            userMessage: instruction,
+            history: history
         });
         const output = intentResponse.content.trim().toLowerCase();
         if (output.includes('ask')) intent = 'ask';
@@ -101,35 +136,7 @@ async function executeAgentCommand(
         return executeAskCommand(instruction, options);
     }
 
-    // ── 1. Load or create session ─────────────────────────────────────────
-    let session: ConversationSession;
-
-    if (options.session) {
-        session = (await repo.load(options.session)) ?? ConversationSession.create(model);
-        if (session.turnCount > 0) {
-            console.log(chalk.cyan(`\n↩  Resuming session ${session.id.slice(-6)} (${session.turnCount} previous turns)`));
-            statusBar.render(session);
-        }
-    } else if (options.resume && !options.new) {
-        const last = await repo.loadLast();
-        session = last ?? ConversationSession.create(model);
-        if (session.turnCount > 0) {
-            console.log(chalk.cyan(`\n↩  Resuming last session ${session.id.slice(-6)} (${session.turnCount} previous turns)`));
-            statusBar.render(session);
-        }
-    } else {
-        session = ConversationSession.create(model);
-        console.log(chalk.dim(`\n  New session ${session.id.slice(-6)}`));
-    }
-
     console.log(chalk.blue(`\n🤖 Instruction: "${instruction}"\n`));
-
-    // History from all previous turns — passed to every LLM call so the
-    // model knows what was done before (this is the "memory").
-    const history = session.getHistory().map(m => ({
-        role: m.role as 'user' | 'assistant',
-        content: m.content,
-    }));
 
     // Accumulate token usage across Phase 1 + Phase 2 for this turn
     const turnUsage: TurnUsage = {

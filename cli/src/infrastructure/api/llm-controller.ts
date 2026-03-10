@@ -545,8 +545,18 @@ export class LLMController {
         const data = await response.json() as any;
         const outText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
+        let usage;
+        if (data.usageMetadata) {
+            usage = {
+                promptTokens: data.usageMetadata.promptTokenCount || 0,
+                completionTokens: data.usageMetadata.candidatesTokenCount || 0,
+                totalTokens: data.usageMetadata.totalTokenCount || 0,
+            };
+        }
+
         return {
             content: outText,
+            usage,
             model,
             provider: 'google',
         };

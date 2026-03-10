@@ -20,7 +20,7 @@ import * as fs from 'fs';
 // Load .env file if it exists
 const envPath = path.resolve(process.cwd(), '.env');
 if (fs.existsSync(envPath)) {
-    dotenv.config({ path: envPath });
+    dotenv.config({ path: envPath, override: true });
 }
 
 // ============================================
