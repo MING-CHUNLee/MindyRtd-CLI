@@ -23,6 +23,10 @@ import {
     GeneratedPrompt,
     ContextSummary,
 } from '../../shared/types/prompt-context';
+import { LLMRequestPayload } from '../../shared/types/llm-types';
+import { ToolSchema } from '../domain/interfaces/i-tool';
+import { SessionMessage } from '../domain/entities/conversation-session';
+import { KnowledgeEntry } from '../domain/entities/knowledge-entry';
 import { loadLocale } from '../../presentation/i18n';
 import {
     buildRoleSection,
@@ -127,6 +131,61 @@ export class ContextBuilder {
             systemPrompt,
             contextSummary,
             estimatedTokens: estimateTokens(systemPrompt),
+        };
+    }
+
+    /**
+     * Build a complete LLMRequestPayload from environment context.
+     *
+     * Unifies system prompt generation, optional tool schema injection,
+     * and history assembly into a single call for the orchestrator.
+     *
+     * @param context     - Current environment context
+     * @param instruction - User instruction (becomes userMessage)
+     * @param history     - Session history messages (user/assistant pairs)
+     * @param options     - Optional tool schemas and model override
+     */
+    buildRequest(
+        context: EnvironmentContext,
+        instruction: string,
+        history: SessionMessage[],
+        options?: { toolSchemas?: ToolSchema[]; model?: string; knowledgeEntries?: KnowledgeEntry[] },
+    ): LLMRequestPayload {
+        const generated = this.generatePrompt(context);
+        let systemPrompt = generated.systemPrompt;
+
+        if (options?.toolSchemas?.length) {
+            const toolsSection = [
+                '## Available Tools',
+                '',
+                ...options.toolSchemas.map(s => {
+                    const params = Object.entries(s.parameters)
+                        .map(([k, v]) => `  - ${k} (${v.type}${v.required ? ', required' : ''}): ${v.description}`)
+                        .join('\n');
+                    return `### ${s.name}\n${s.description}\nParameters:\n${params}` +
+                        (s.example ? `\nExample: ${s.example}` : '');
+                }),
+            ].join('\n');
+            systemPrompt = systemPrompt + '\n\n' + toolsSection;
+        }
+
+        if (options?.knowledgeEntries?.length) {
+            const kbSection = [
+                '## Relevant Knowledge',
+                '',
+                ...options.knowledgeEntries.map(e =>
+                    `### ${e.title}\n${e.content}` +
+                    (e.tags.length ? `\nTags: ${e.tags.join(', ')}` : ''),
+                ),
+            ].join('\n\n');
+            systemPrompt = systemPrompt + '\n\n' + kbSection;
+        }
+
+        return {
+            systemPrompt,
+            userMessage: instruction,
+            history: history.map(m => ({ role: m.role, content: m.content })),
+            model: options?.model,
         };
     }
 

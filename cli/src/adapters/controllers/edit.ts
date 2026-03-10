@@ -25,8 +25,8 @@ import { resolve, basename } from 'path';
 import * as readline from 'readline';
 import chalk from 'chalk';
 import ora from 'ora';
-import { DiffEngine } from '../../core/services/diff-engine';
-import { FileResolver } from '../../core/services/file-resolver';
+import { DiffEngine } from '../../application/services/diff-engine';
+import { FileResolver } from '../../application/services/file-resolver';
 import { RubyApiClient } from '../../infrastructure/api/ruby-api-client';
 import { handleError } from '../../shared/utils/error-handler';
 

@@ -24,10 +24,20 @@ For advanced coding tasks, Mindy CLI implements an **Agentic Loop** for autonomo
 
 ## Project Structure
 
-- `src/commands/` - CLI command definitions & handlers
-- `src/services/` - Business logic (File scanning, R-Bridge, Context building)
-- `src/config/` - Environment configuration
-- `src/types/` - TypeScript definitions
+Our project structure follows **Clean Architecture** terminology to maintain a clear separation of concerns:
+
+```text
+src/
+├── application/      ← Business logic (was core/) — no framework deps
+│   ├── domain/
+│   ├── services/
+│   └── tools/
+├── adapters/         ← CLI adapters (was application/) — Commander, chalk, ora
+│   └── controllers/
+├── infrastructure/   ← External I/O (API, persistence)
+├── presentation/     ← Views, status bar
+└── shared/           ← Types, utils
+```
 
 ## Setup for Development
 

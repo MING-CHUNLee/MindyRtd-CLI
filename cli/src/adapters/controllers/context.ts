@@ -16,7 +16,7 @@ import chalk from 'chalk';
 import ora from 'ora';
 import * as fs from 'fs';
 import * as path from 'path';
-import { REnvironmentService, EnvironmentReport } from '../../core/services/r-environment-service';
+import { REnvironmentService, EnvironmentReport } from '../../application/services/r-environment-service';
 import { formatEnvironmentSummary } from '../../presentation/views/environment-result';
 import { DISPLAY } from '../../infrastructure/config/constants';
 import { handleError } from '../../shared/utils/error-handler';

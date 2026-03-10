@@ -62,6 +62,8 @@ export interface Suggestion {
     explanation?: string;
 }
 
+export type { LLMRequestPayload } from './llm-types';
+
 /**
  * CLI configuration
  */

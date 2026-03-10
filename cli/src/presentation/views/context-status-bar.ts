@@ -11,8 +11,8 @@
  */
 
 import chalk from 'chalk';
-import { ConversationSession } from '../../core/domain/entities/conversation-session';
-import { ContextHealth } from '../../core/domain/values/token-budget';
+import { ConversationSession } from '../../application/domain/entities/conversation-session';
+import { ContextHealth } from '../../application/domain/values/token-budget';
 
 const BAR_WIDTH = 20;
 

@@ -10,6 +10,7 @@
  */
 
 import { ConversationTurn, TurnUsage, TurnJSON } from './conversation-turn';
+import { Artifact } from './artifact';
 import { TokenBudget, TokenUsageSnapshot } from '../values/token-budget';
 import { CacheStatus } from '../values/cache-status';
 
@@ -95,16 +96,69 @@ export class ConversationSession {
 
     // ── Write ───────────────────────────────────────────────────────────
 
-    addTurn(userMessage: string, assistantMessage: string, usage: TurnUsage): ConversationTurn {
+    addTurn(
+        userMessage: string,
+        assistantMessage: string,
+        usage: TurnUsage,
+        artifacts?: Artifact[],
+    ): ConversationTurn {
         const turn = new ConversationTurn(
             this._turns.length + 1,
             userMessage,
             assistantMessage,
             usage,
+            undefined,
+            artifacts ?? [],
         );
         this._turns.push(turn);
         this.accumulate(usage);
         return turn;
+    }
+
+    /**
+     * Return all artifacts across all turns, optionally filtered by type.
+     */
+    getArtifacts(type?: Artifact['type']): Artifact[] {
+        const all = this._turns.flatMap(t => t.artifacts);
+        return type ? all.filter(a => a.type === type) : all;
+    }
+
+    // ── Checkpoint / Rollback ────────────────────────────────────────────
+
+    /**
+     * Create a lightweight checkpoint by returning the current turn count.
+     * Callers should persist this before a risky multi-step operation so
+     * they can call rollbackTo() if it fails.
+     *
+     * @returns The checkpoint handle (= current turn count, 0-based exclusive)
+     */
+    checkpoint(): number {
+        return this._turns.length;
+    }
+
+    /**
+     * Roll back the session to the state immediately after turn `turnNumber`.
+     * All turns with index >= turnNumber are removed and cumulative stats
+     * are recomputed from scratch.
+     *
+     * @param turnNumber  0 = empty session; N = keep first N turns
+     */
+    rollbackTo(turnNumber: number): void {
+        if (turnNumber < 0 || turnNumber > this._turns.length) {
+            throw new RangeError(
+                `Invalid rollback target ${turnNumber}. ` +
+                `Session has ${this._turns.length} turn(s); valid range: 0–${this._turns.length}.`,
+            );
+        }
+        // Truncate turns array in-place
+        this._turns.splice(turnNumber);
+        // Recompute cumulative stats from the surviving turns
+        this._cumulative = {
+            inputTokens: 0, outputTokens: 0,
+            cacheCreationTokens: 0, cacheReadTokens: 0,
+            totalCostUSD: 0,
+        };
+        for (const t of this._turns) this.accumulate(t.usage);
     }
 
     // ── Serialization ───────────────────────────────────────────────────

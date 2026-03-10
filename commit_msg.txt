@@ -1,0 +1,46 @@
+refactor: restructure CLI to Clean Architecture with agentic runtime
+
+Reorganize the entire CLI source tree to follow Clean Architecture
+layer conventions, and introduce the full Agent Harness runtime
+(Orchestrator + ReAct loop + Tool system).
+
+Architecture layer migration:
+- Move controllers from application/controllers/ → adapters/controllers/
+  (agent, ask, context, edit, install, library, run, scan, tui)
+- Move domain entities from core/domain/ → application/domain/
+  (conversation-session, conversation-turn, artifact, knowledge-entry,
+  cache-status, token-budget, model-limits, token-pricing,
+  agent-file-filters, i-session-repository, i-tool)
+- Move services from core/services/ → application/services/
+  (code-confirmer, context-builder, diff-engine, file-resolver,
+  file-scanner, library-scanner, package-installer,
+  package-safety-checker, package-validator, r-bridge,
+  r-environment-service, r-path-resolver, r-script-runner)
+- Move prompts from core/prompts/ → application/prompts/
+- Delete old core/ and application/controllers/ directories
+
+New Agent Harness runtime (application layer):
+- Add Orchestrator service for multi-step agent task decomposition
+- Add ReAct loop (react-loop.ts) for Thought→Action→Observation cycles
+- Add Evaluator service for output validation with LLM retry
+- Add HistorySummarizer for context window compression
+- Add KnowledgeBase service for persistent learning
+- Add ToolRegistry with ITool interface for extensible tool system
+- Add concrete tools: FileScanTool, FileReadTool, RExecTool
+- Add Artifact domain entity for structured output tracking
+
+New controller: rollback
+- Allow rolling back session to any previous turn
+- Interactive turn selection with history display
+
+Infrastructure enhancements:
+- Add LLM streaming support (streamPrompt) for OpenAI and Anthropic SSE
+- Add readSSEStream helper for token-by-token response processing
+- Extract LLMRequestPayload to shared/types/llm-types.ts to avoid
+  circular dependencies between layers
+- Update import paths in session-repository, context-status-bar
+
+Documentation:
+- Update docs/architecture.md with new Clean Architecture directory map
+- Add agent harness architecture diagram (agent harness.jpg)
+- Add project-structure category to knowledge-base/_index.json

@@ -3,7 +3,10 @@
  *
  * Immutable snapshot of one user-instruction → agent-response exchange.
  * Stored append-only inside ConversationSession.
+ * Optionally carries structured Artifacts produced during this turn.
  */
+
+import { Artifact, ArtifactJSON } from './artifact';
 
 export interface TurnUsage {
     inputTokens: number;
@@ -18,6 +21,7 @@ export interface TurnJSON {
     assistantMessage: string;
     usage: TurnUsage;
     timestamp: string;
+    artifacts: ArtifactJSON[];
 }
 
 export class ConversationTurn {
@@ -29,6 +33,7 @@ export class ConversationTurn {
         readonly assistantMessage: string,
         readonly usage: TurnUsage,
         timestamp?: Date,
+        readonly artifacts: Artifact[] = [],
     ) {
         this.timestamp = timestamp ?? new Date();
     }
@@ -48,16 +53,19 @@ export class ConversationTurn {
             assistantMessage: this.assistantMessage,
             usage: { ...this.usage },
             timestamp: this.timestamp.toISOString(),
+            artifacts: this.artifacts.map(a => a.toJSON()),
         };
     }
 
     static fromJSON(data: TurnJSON): ConversationTurn {
+        const artifacts = (data.artifacts ?? []).map(a => Artifact.fromJSON(a));
         return new ConversationTurn(
             data.turnNumber,
             data.userMessage,
             data.assistantMessage,
             data.usage,
             new Date(data.timestamp),
+            artifacts,
         );
     }
 }

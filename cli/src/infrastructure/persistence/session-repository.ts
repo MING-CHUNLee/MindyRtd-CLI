@@ -9,8 +9,8 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { ConversationSession } from '../../core/domain/entities/conversation-session';
-import { ISessionRepository, SessionSummary } from '../../core/domain/repositories/i-session-repository';
+import { ConversationSession } from '../../application/domain/entities/conversation-session';
+import { ISessionRepository, SessionSummary } from '../../application/domain/repositories/i-session-repository';
 
 export class SessionRepository implements ISessionRepository {
     private readonly sessionsDir: string;

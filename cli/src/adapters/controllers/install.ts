@@ -15,9 +15,9 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import ora from 'ora';
 import inquirer from 'inquirer';
-import { RBridge } from '../../core/services/r-bridge';
-import { PackageInstaller } from '../../core/services/package-installer';
-import { PackageValidator } from '../../core/services/package-validator';
+import { RBridge } from '../../application/services/r-bridge';
+import { PackageInstaller } from '../../application/services/package-installer';
+import { PackageValidator } from '../../application/services/package-validator';
 import {
     InstallCommandOptions,
     InstallationResponse,

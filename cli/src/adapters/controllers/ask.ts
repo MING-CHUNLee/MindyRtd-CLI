@@ -7,11 +7,12 @@ import { glob } from 'glob';
 
 import { LLMController } from '../../infrastructure/api/llm-controller';
 import { SessionRepository } from '../../infrastructure/persistence/session-repository';
-import { ConversationSession } from '../../core/domain/entities/conversation-session';
-import { TurnUsage } from '../../core/domain/entities/conversation-turn';
+import { ConversationSession } from '../../application/domain/entities/conversation-session';
+import { TurnUsage } from '../../application/domain/entities/conversation-turn';
 import { ContextStatusBar } from '../../presentation/views/context-status-bar';
-import { isFilenameEditable, isContentEditable } from '../../core/domain/lib/agent-file-filters';
+import { isFilenameEditable, isContentEditable } from '../../application/domain/lib/agent-file-filters';
 import { handleError } from '../../shared/utils/error-handler';
+import { HistorySummarizer } from '../../application/services/history-summarizer';
 
 export interface AskOptions {
     directory: string;
@@ -55,10 +56,11 @@ export async function executeAskCommand(
 
     console.log(chalk.blue(`\n❓ Question: "${question}"\n`));
 
-    const history = session.getHistory().map(m => ({
-        role: m.role as 'user' | 'assistant',
-        content: m.content,
-    }));
+    // History Summarization — compress if context window is near limit
+    const summarizer = new HistorySummarizer();
+    const history = summarizer.shouldSummarize(session)
+        ? await summarizer.summarize(session, llm)
+        : session.getHistory().map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }));
 
     const turnUsage: TurnUsage = {
         inputTokens: 0, outputTokens: 0,
@@ -130,26 +132,28 @@ export async function executeAskCommand(
 
     let answer = '';
     try {
-        const response = await llm.sendPrompt({
-            systemPrompt: 'You are an expert developer assistant. Answer the user\'s question clearly and concisely. Use the provided file contents as context for your answer.',
-            userMessage: `Question: ${question}\n\nRelevant Files:\n${fileContents || 'None'}`,
-            history: history,
-        });
+        answerSpinner.stop();
+        console.log('\n======================================================');
+
+        const response = await llm.streamPrompt(
+            {
+                systemPrompt: 'You are an expert developer assistant. Answer the user\'s question clearly and concisely. Use the provided file contents as context for your answer.',
+                userMessage: `Question: ${question}\n\nRelevant Files:\n${fileContents || 'None'}`,
+                history,
+            },
+            (token) => process.stdout.write(chalk.green(token)),
+        );
 
         if (response.usage) {
-            turnUsage.inputTokens += response.usage.promptTokens ?? 0;
+            turnUsage.inputTokens  += response.usage.promptTokens    ?? 0;
             turnUsage.outputTokens += response.usage.completionTokens ?? 0;
         }
 
         answer = response.content;
-        answerSpinner.stop();
-
-        console.log('\n======================================================');
-        console.log(chalk.green(answer));
-        console.log('======================================================\n');
+        console.log('\n======================================================\n');
 
     } catch (e) {
-        answerSpinner.fail('Failed to generate answer');
+        console.log(); // newline after partial stream
         handleError(e, 'ask phase 2');
         return;
     }
