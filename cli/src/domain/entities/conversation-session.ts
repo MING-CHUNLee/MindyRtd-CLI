@@ -86,6 +86,28 @@ export class ConversationSession {
     /** Cumulative USD cost for the entire session */
     get totalCostUSD(): number { return this._cumulative.totalCostUSD; }
 
+    /** Milliseconds since session started */
+    get elapsedMs(): number { return Date.now() - this.startedAt.getTime(); }
+
+    /** Rolling requests per minute based on turn timestamps */
+    get requestsPerMinute(): number {
+        if (this._turns.length === 0) return 0;
+        const elapsedMin = this.elapsedMs / 60_000;
+        return elapsedMin > 0 ? +(this._turns.length / elapsedMin).toFixed(1) : 0;
+    }
+
+    /** Output tokens per second for the last turn (undefined if no timing data) */
+    get lastTokensPerSecond(): number | undefined {
+        const last = this._turns.at(-1);
+        if (!last?.usage.responseTimeMs || last.usage.responseTimeMs <= 0) return undefined;
+        return +(last.usage.outputTokens / (last.usage.responseTimeMs / 1_000)).toFixed(1);
+    }
+
+    /** Last turn's response latency in ms (undefined if no timing data) */
+    get lastResponseTimeMs(): number | undefined {
+        return this._turns.at(-1)?.usage.responseTimeMs;
+    }
+
     /**
      * Flattened [user, assistant, user, assistant, …] history
      * ready to be passed as LLMRequest.history.

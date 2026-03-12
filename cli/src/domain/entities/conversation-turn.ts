@@ -13,6 +13,7 @@ export interface TurnUsage {
     outputTokens: number;
     cacheCreationTokens: number;
     cacheReadTokens: number;
+    responseTimeMs?: number;
 }
 
 export interface TurnJSON {

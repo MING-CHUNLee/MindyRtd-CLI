@@ -89,7 +89,7 @@ export class ReActLoop {
         ];
 
         const steps: ReActStep[] = [];
-        const usage: TurnUsage = { inputTokens: 0, outputTokens: 0, cacheCreationTokens: 0, cacheReadTokens: 0 };
+        const usage: TurnUsage = { inputTokens: 0, outputTokens: 0, cacheCreationTokens: 0, cacheReadTokens: 0, responseTimeMs: 0 };
         let consecutiveErrors = 0;
         const MAX_CONSECUTIVE_ERRORS = 3;
 
@@ -114,6 +114,9 @@ export class ReActLoop {
                 if (response.usage) {
                     usage.inputTokens += response.usage.promptTokens ?? 0;
                     usage.outputTokens += response.usage.completionTokens ?? 0;
+                }
+                if (response.responseTimeMs) {
+                    usage.responseTimeMs = (usage.responseTimeMs ?? 0) + response.responseTimeMs;
                 }
             } catch (err) {
                 const msg = err instanceof Error ? err.message : String(err);

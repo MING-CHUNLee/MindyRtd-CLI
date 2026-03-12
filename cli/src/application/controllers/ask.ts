@@ -148,6 +148,9 @@ export async function executeAskCommand(
             turnUsage.inputTokens  += response.usage.promptTokens    ?? 0;
             turnUsage.outputTokens += response.usage.completionTokens ?? 0;
         }
+        if (response.responseTimeMs) {
+            turnUsage.responseTimeMs = (turnUsage.responseTimeMs ?? 0) + response.responseTimeMs;
+        }
 
         answer = response.content;
         console.log('\n======================================================\n');

@@ -445,6 +445,9 @@ export class AgentService {
                 turnUsage.inputTokens += response.usage.promptTokens ?? 0;
                 turnUsage.outputTokens += response.usage.completionTokens ?? 0;
             }
+            if (response.responseTimeMs) {
+                turnUsage.responseTimeMs = response.responseTimeMs;
+            }
 
             this.emit('text_output', { content: response.content });
             this.emit('phase_end', { phase: 'ask', success: true });

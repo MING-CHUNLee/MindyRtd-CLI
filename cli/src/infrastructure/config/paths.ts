@@ -29,3 +29,7 @@ export function getKnowledgeFile(): string {
 export function getCommandsDir(): string {
     return path.join(getProjectBase(), 'commands');
 }
+
+export function getSettingsFile(): string {
+    return path.join(getProjectBase(), 'settings.json');
+}
