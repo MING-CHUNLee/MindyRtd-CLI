@@ -2,34 +2,41 @@
 
 /**
  * Mindy RStudio CLI
- * 
- * A CLI tool for detecting and analyzing R files in RStudio projects.
- * 
- * Architecture:
- * - commands/     : CLI command handlers (user-facing)
- * - controllers/  : API communication (LLM, external services)
- * - services/     : Business logic
- * - views/        : Output formatting
- * - types/        : TypeScript type definitions
- * - config/       : Environment configuration
- * - templates/    : Prompt templates + i18n
- * - data/         : Static data
- * - utils/        : Helper functions
+ *
+ * An agentic CLI tool for detecting, analyzing, and editing R files
+ * in RStudio projects, powered by LLM-based workflows.
+ *
+ * Entry point:
+ *   mindy-cli              → Agent mode (default, interactive)
+ *   mindy-cli agent "..."  → Agent mode (one-shot instruction)
+ *   mindy-cli <command>    → Direct utility commands (scan, run, install, …)
+ *
+ * Clean Architecture (dependency flows inward):
+ *
+ * - domain/          : Core entities, value objects, interfaces (zero deps)
+ * - application/
+ *     - controllers/ : CLI command handlers (Commander-based)
+ *     - services/    : Business logic (Orchestrator, DiffEngine, RBridge, …)
+ *     - tools/       : Agent tool implementations (FileScan, FileRead, RExec)
+ *     - prompts/     : Prompt templates & section builders
+ * - infrastructure/  : External I/O — API clients, persistence, plugins, config
+ * - presentation/    : Views, status bar, Ink-based TUI, i18n
+ * - shared/          : Cross-cutting types, utils, static data
  */
 
 import { Command } from 'commander';
+import { agentCommand } from './application/controllers/agent';
+import { askCommand } from './application/controllers/ask';
 import { scanCommand } from './application/controllers/scan';
 import { libraryCommand } from './application/controllers/library';
 import { contextCommand } from './application/controllers/context';
 import { runCommand } from './application/controllers/run';
 import { installCommand } from './application/controllers/install';
-import { tuiCommand } from './application/controllers/tui';
 import { editCommand } from './application/controllers/edit';
-import { agentCommand } from './application/controllers/agent';
-import { askCommand } from './application/controllers/ask';
 import { rollbackCommand } from './application/controllers/rollback';
 import { knowledgeCommand } from './application/controllers/knowledge';
 import { pluginsCommand } from './application/controllers/plugins';
+import { tuiCommand } from './application/controllers/tui';
 import { displayBanner } from './presentation/views/banner';
 import fs from 'fs';
 import path from 'path';
@@ -43,45 +50,42 @@ const program = new Command();
 
 program
     .name('mindy-cli')
-    .description('CLI tool for detecting and analyzing R files in RStudio projects')
+    .description('Agentic CLI for R/RStudio projects — powered by LLM workflows')
     .version(version, '-v, --version', 'Display version number')
     .hook('preAction', () => {
         displayBanner();
     });
 
-// Register commands
+// ── Primary: Agent ────────────────────────────────────────────────────────────
+program.addCommand(agentCommand);
+program.addCommand(askCommand);
+
+// ── Utility commands (also available as agent tools) ──────────────────────────
 program.addCommand(scanCommand);
 program.addCommand(libraryCommand);
 program.addCommand(contextCommand);
 program.addCommand(runCommand);
 program.addCommand(installCommand);
-program.addCommand(tuiCommand);
 program.addCommand(editCommand);
-program.addCommand(agentCommand);
-program.addCommand(askCommand);
 program.addCommand(rollbackCommand);
 program.addCommand(knowledgeCommand);
 program.addCommand(pluginsCommand);
+program.addCommand(tuiCommand);
 
-// Default action - Launch TUI when no command is specified
+// ── Default action: Launch interactive TUI REPL ──────────────────────────────
 program.action(async () => {
-    displayBanner();
     console.log('\n🚀 Launching interactive mode...\n');
 
-    // Import and start TUI dynamically
+    // The TUI uses Ink (ESM-only) + JSX, so it must run through tsx.
+    // We spawn tsx to execute the TUI source file directly.
     try {
         const { spawn } = await import('child_process');
-        const path = await import('path');
-        const fs = await import('fs');
 
-        // Try multiple possible locations for TUI files
+        // Resolve the TUI entry point (source .tsx, not compiled .js)
         const possiblePaths = [
-            // Development mode (from project root)
-            path.join(process.cwd(), 'src', 'presentation', 'tui', 'index.tsx'),
-            // Development mode (from cli directory)
-            path.join(process.cwd(), 'cli', 'src', 'presentation', 'tui', 'index.tsx'),
-            // Relative to this file (when running from dist)
             path.join(__dirname, '..', 'src', 'presentation', 'tui', 'index.tsx'),
+            path.join(process.cwd(), 'src', 'presentation', 'tui', 'index.tsx'),
+            path.join(process.cwd(), 'cli', 'src', 'presentation', 'tui', 'index.tsx'),
         ];
 
         let tuiPath: string | null = null;
@@ -93,18 +97,13 @@ program.action(async () => {
         }
 
         if (!tuiPath) {
-            console.error('❌ TUI source files not found.');
-            console.log('\n💡 Searched in:');
+            console.error('TUI source files not found.');
+            console.log('\nSearched in:');
             possiblePaths.forEach(p => console.log(`   - ${p}`));
-            console.log('\n💡 Available commands:');
-            program.help();
+            console.log('\nUse: mindy-cli agent "your instruction"');
             return;
         }
 
-        console.log(`📂 Using TUI from: ${tuiPath}\n`);
-
-        // Quote the path to handle spaces in directory names (e.g., "OneDrive - NTHU")
-        // Pass entire command as string to avoid DEP0190 deprecation warning
         const command = `npx tsx "${tuiPath}"`;
         const tsx = spawn(command, [], {
             stdio: 'inherit',
@@ -113,8 +112,7 @@ program.action(async () => {
         });
 
         tsx.on('error', (error) => {
-            console.error('❌ Error starting TUI:', error);
-            console.log('\n💡 Falling back to command list:');
+            console.error('Error starting TUI:', error);
             program.help();
         });
 
@@ -122,8 +120,8 @@ program.action(async () => {
             process.exit(code || 0);
         });
     } catch (error) {
-        console.error('❌ Error launching TUI:', error);
-        console.log('\n💡 Available commands:');
+        console.error('Failed to launch interactive TUI:', error instanceof Error ? error.message : error);
+        console.log('\nUse: mindy-cli agent "your instruction"');
         program.help();
     }
 });

@@ -1,0 +1,16 @@
+{
+  "skills": [
+    {
+      "skill-id": "remotion-best-practices",
+      "file": "skill-remotion-best-practices.md",
+      "summary": "Remotion 動畫最佳實踐：Spring/Easing/Series/Transitions/提示詞框架",
+      "keywords": ["remotion", "spring", "easing", "animation", "transitions"]
+    },
+    {
+      "skill-id": "ink-tui-repl",
+      "file": "skill-ink-tui-repl.md",
+      "summary": "Ink TUI 互動式 REPL：ESM/CJS 互通、Windows 路徑、Event-driven AgentService、狀態機設計",
+      "keywords": ["ink", "tui", "repl", "esm", "cjs", "interop", "windows", "agent-service", "state-machine", "dynamic-import"]
+    }
+  ]
+}
