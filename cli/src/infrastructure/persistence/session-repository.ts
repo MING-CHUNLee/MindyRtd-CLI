@@ -2,14 +2,14 @@
  * Infrastructure: SessionRepository
  *
  * File-based implementation of ISessionRepository.
- * Sessions are stored as JSON at ~/.mindy/sessions/<id>.json
- * The last-used session ID is tracked at ~/.mindy/last-session
+ * Sessions are stored as JSON at <cwd>/.mindy/sessions/<id>.json
+ * The last-used session ID is tracked at <cwd>/.mindy/last-session
  */
 
 import fs from 'fs';
 import path from 'path';
-import os from 'os';
 import { ConversationSession } from '../../domain/entities/conversation-session';
+import { getSessionsDir, getLastSessionFile } from '../config/paths';
 import { ISessionRepository, SessionSummary } from '../../domain/repositories/i-session-repository';
 
 export class SessionRepository implements ISessionRepository {
@@ -17,8 +17,8 @@ export class SessionRepository implements ISessionRepository {
     private readonly lastSessionFile: string;
 
     constructor() {
-        this.sessionsDir = path.join(os.homedir(), '.mindy', 'sessions');
-        this.lastSessionFile = path.join(os.homedir(), '.mindy', 'last-session');
+        this.sessionsDir = getSessionsDir();
+        this.lastSessionFile = getLastSessionFile();
         fs.mkdirSync(this.sessionsDir, { recursive: true });
     }
 

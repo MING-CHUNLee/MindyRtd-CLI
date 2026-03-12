@@ -4,7 +4,7 @@
  * Manage the agent's local knowledge base — add facts, project notes,
  * preferences, or any text the agent should remember across sessions.
  *
- * Stored at: ~/.mindy/knowledge.json
+ * Stored at: <cwd>/.mindy/knowledge.json
  *
  * Sub-commands:
  *   mindy knowledge add <title> <content>   add a new entry

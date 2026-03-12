@@ -7,8 +7,8 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import * as os from 'os';
 import { ExecutionResponse } from '../../shared/types/execution';
+import { getCommandsDir } from '../../infrastructure/config/paths';
 import { EXECUTION } from '../../infrastructure/config/constants';
 import {
     PlumberConnectionError,
@@ -20,7 +20,7 @@ import {
 // ============================================
 
 function getMindyDir(): string {
-    const dir = path.join(os.homedir(), '.mindy', 'commands');
+    const dir = getCommandsDir();
     if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });
     }

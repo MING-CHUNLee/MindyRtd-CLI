@@ -90,6 +90,8 @@ export class ReActLoop {
 
         const steps: ReActStep[] = [];
         const usage: TurnUsage = { inputTokens: 0, outputTokens: 0, cacheCreationTokens: 0, cacheReadTokens: 0 };
+        let consecutiveErrors = 0;
+        const MAX_CONSECUTIVE_ERRORS = 3;
 
         for (let step = 1; step <= maxSteps; step++) {
             const stepRecord: ReActStep = { stepNumber: step };
@@ -139,6 +141,18 @@ export class ReActLoop {
                 );
                 const observation = toolResult.content;
                 stepRecord.observation = observation;
+
+                // Track consecutive errors — abort if stuck in a failure loop
+                if (toolResult.isError) {
+                    consecutiveErrors++;
+                    if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+                        stepRecord.isError = true;
+                        stepRecord.answer = `Aborting: ${consecutiveErrors} consecutive tool errors. Last error: ${observation}`;
+                        return { result: stepRecord.answer, steps, usage };
+                    }
+                } else {
+                    consecutiveErrors = 0;
+                }
 
                 // Append to workingMessages as assistant + observation user turn
                 workingMessages.push({ role: 'assistant', content: rawResponse });

@@ -144,7 +144,10 @@ export class AgentService {
         let intent = 'edit';
         try {
             const intentResponse = await this.llm.sendPrompt({
-                systemPrompt: 'You are an intent classifier. Determine if the user wants to JUST ASK A QUESTION about the codebase/conversation (reply ONLY "ask") or if they want to MAKE CHANGES/CREATE FILES (reply ONLY "edit"). Default to "edit" if unsure.',
+                systemPrompt: 'You are an intent classifier. Determine the user\'s intent and reply with ONLY one word:\n' +
+                    '- "ask" — the user wants to ASK A QUESTION, get an explanation, do a code review, analyze code, or understand something\n' +
+                    '- "edit" — the user wants to CREATE or MODIFY files, fix bugs, add features, or refactor code\n' +
+                    'Default to "ask" if unsure.',
                 userMessage: instruction,
                 history,
             });
@@ -170,7 +173,13 @@ export class AgentService {
         const orchestrator = new Orchestrator(this.llm, this.registry);
 
         const toolSchemas = this.registry.getSchemas();
-        const toolsText = toolSchemas.map(s => `- ${s.name}: ${s.description}`).join('\n');
+        const toolsText = toolSchemas.map(s => {
+            const params = Object.entries(s.parameters)
+                .map(([k, v]) => `    - ${k} (${v.type}${v.required ? ', required' : ''}): ${v.description}`)
+                .join('\n');
+            return `- ${s.name}: ${s.description}\n  Parameters:\n${params}` +
+                (s.example ? `\n  Example: ${s.example}` : '');
+        }).join('\n\n');
         let systemPrompt =
             'You are an expert coding agent that can edit files and analyze R code. ' +
             'You have access to tools to explore the workspace before making edits.\n\n' +
@@ -363,6 +372,52 @@ export class AgentService {
         instruction: string,
         history: Array<{ role: 'user' | 'assistant'; content: string }>,
     ): Promise<void> {
+        // Scan workspace for project context + collect file paths
+        this.emit('phase_start', { phase: 'scan', description: 'Scanning workspace for context' });
+        let projectContext = '';
+        let scannedFiles: Array<{ name: string; path: string }> = [];
+        try {
+            const scanTool = this.registry.get('file_scan');
+            if (scanTool) {
+                const scanResult = await scanTool.execute({ directory: this.directory });
+                projectContext = scanResult.content;
+                // Collect all file names/paths from scan data
+                if (scanResult.data) {
+                    const data = scanResult.data as { files?: Record<string, Array<{ name: string; path: string }>> };
+                    if (data.files) {
+                        for (const group of Object.values(data.files)) {
+                            if (Array.isArray(group)) {
+                                scannedFiles.push(...group.map(f => ({ name: f.name, path: f.path })));
+                            }
+                        }
+                    }
+                }
+            }
+        } catch { /* continue without scan */ }
+        this.emit('phase_end', { phase: 'scan', success: true });
+
+        // Auto-read files mentioned in the instruction
+        let fileContents = '';
+        const instructionLower = instruction.toLowerCase();
+        const matchedFiles = scannedFiles.filter(f => instructionLower.includes(f.name.toLowerCase()));
+
+        // If no specific file mentioned but user asks about "project"/"code", read all code files (up to 5)
+        const readTargets = matchedFiles.length > 0
+            ? matchedFiles
+            : scannedFiles.slice(0, 5);
+
+        for (const f of readTargets) {
+            try {
+                const readTool = this.registry.get('file_read');
+                if (readTool) {
+                    const result = await readTool.execute({ path: f.path });
+                    if (!result.isError) {
+                        fileContents += result.content + '\n\n';
+                    }
+                }
+            } catch { /* skip unreadable files */ }
+        }
+
         this.emit('phase_start', { phase: 'ask', description: 'Generating answer' });
 
         const turnUsage: TurnUsage = {
@@ -370,10 +425,16 @@ export class AgentService {
             cacheCreationTokens: 0, cacheReadTokens: 0,
         };
 
+        const systemPrompt =
+            'You are an expert developer assistant. Answer the user\'s question clearly and concisely.\n\n' +
+            `Working directory: ${this.directory}\n\n` +
+            (projectContext ? `## Project Context\n${projectContext}\n\n` : '') +
+            (fileContents ? `## File Contents\n${fileContents}` : '');
+
         try {
             const response = await this.llm.streamPrompt(
                 {
-                    systemPrompt: 'You are an expert developer assistant. Answer the user\'s question clearly and concisely.',
+                    systemPrompt,
                     userMessage: instruction,
                     history,
                 },

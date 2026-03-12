@@ -1,22 +1,20 @@
 /**
  * Infrastructure: KnowledgeRepository
  *
- * Stores the knowledge base as a JSON file at ~/.mindy/knowledge.json.
+ * Stores the knowledge base as a JSON file at <cwd>/.mindy/knowledge.json.
  * Provides load/save/list/delete operations.
  */
 
 import fs from 'fs';
-import path from 'path';
-import os from 'os';
 import { KnowledgeEntry, KnowledgeEntryJSON } from '../../domain/entities/knowledge-entry';
+import { getProjectBase, getKnowledgeFile } from '../config/paths';
 
 export class KnowledgeRepository {
     private readonly filePath: string;
 
     constructor() {
-        const dir = path.join(os.homedir(), '.mindy');
-        fs.mkdirSync(dir, { recursive: true });
-        this.filePath = path.join(dir, 'knowledge.json');
+        getProjectBase(); // ensures .mindy/ dir exists
+        this.filePath = getKnowledgeFile();
     }
 
     load(): KnowledgeEntry[] {
