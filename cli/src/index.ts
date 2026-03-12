@@ -18,18 +18,18 @@
  */
 
 import { Command } from 'commander';
-import { scanCommand } from './adapters/controllers/scan';
-import { libraryCommand } from './adapters/controllers/library';
-import { contextCommand } from './adapters/controllers/context';
-import { runCommand } from './adapters/controllers/run';
-import { installCommand } from './adapters/controllers/install';
-import { tuiCommand } from './adapters/controllers/tui';
-import { editCommand } from './adapters/controllers/edit';
-import { agentCommand } from './adapters/controllers/agent';
-import { askCommand } from './adapters/controllers/ask';
-import { rollbackCommand } from './adapters/controllers/rollback';
-import { knowledgeCommand } from './adapters/controllers/knowledge';
-import { pluginsCommand } from './adapters/controllers/plugins';
+import { scanCommand } from './application/controllers/scan';
+import { libraryCommand } from './application/controllers/library';
+import { contextCommand } from './application/controllers/context';
+import { runCommand } from './application/controllers/run';
+import { installCommand } from './application/controllers/install';
+import { tuiCommand } from './application/controllers/tui';
+import { editCommand } from './application/controllers/edit';
+import { agentCommand } from './application/controllers/agent';
+import { askCommand } from './application/controllers/ask';
+import { rollbackCommand } from './application/controllers/rollback';
+import { knowledgeCommand } from './application/controllers/knowledge';
+import { pluginsCommand } from './application/controllers/plugins';
 import { displayBanner } from './presentation/views/banner';
 import fs from 'fs';
 import path from 'path';

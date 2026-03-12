@@ -18,7 +18,7 @@ import chalk from 'chalk';
 import readline from 'readline';
 import { KnowledgeRepository } from '../../infrastructure/persistence/knowledge-repository';
 import { KnowledgeBase } from '../../application/services/knowledge-base';
-import { KnowledgeEntry } from '../../application/domain/entities/knowledge-entry';
+import { KnowledgeEntry } from '../../domain/entities/knowledge-entry';
 
 const repo = new KnowledgeRepository();
 

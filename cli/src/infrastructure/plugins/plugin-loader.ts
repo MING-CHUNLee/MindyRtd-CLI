@@ -22,7 +22,7 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { ITool, ToolInput, ToolResult, ToolSchema } from '../../application/domain/interfaces/i-tool';
+import { ITool, ToolInput, ToolResult, ToolSchema } from '../../domain/interfaces/i-tool';
 import { ToolRegistry } from '../../application/services/tool-registry';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -136,8 +136,8 @@ function isITool(obj: unknown): obj is ITool {
     if (typeof obj !== 'object' || obj === null) return false;
     const o = obj as Record<string, unknown>;
     return (
-        typeof o.name     === 'string'   &&
-        typeof o.schema   === 'object'   && o.schema !== null &&
-        typeof o.execute  === 'function'
+        typeof o.name === 'string' &&
+        typeof o.schema === 'object' && o.schema !== null &&
+        typeof o.execute === 'function'
     );
 }

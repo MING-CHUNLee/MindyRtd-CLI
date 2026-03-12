@@ -6,7 +6,7 @@
  * so the ReAct loop always receives an observation, never a thrown exception.
  */
 
-import { ITool, ToolInput, ToolResult, ToolSchema } from '../domain/interfaces/i-tool';
+import { ITool, ToolInput, ToolResult, ToolSchema } from '../../domain/interfaces/i-tool';
 
 export class ToolRegistry {
     private readonly _tools = new Map<string, ITool>();

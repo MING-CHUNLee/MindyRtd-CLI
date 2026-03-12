@@ -13,7 +13,7 @@
  * It holds entries in memory for fast repeated queries.
  */
 
-import { KnowledgeEntry } from '../domain/entities/knowledge-entry';
+import { KnowledgeEntry } from '../../domain/entities/knowledge-entry';
 
 export class KnowledgeBase {
     private _entries: KnowledgeEntry[] = [];
@@ -68,9 +68,9 @@ export class KnowledgeBase {
     private score(entry: KnowledgeEntry, tokens: string[]): number {
         let score = 0;
         for (const token of tokens) {
-            if (entry.tags.some(t => t.toLowerCase().includes(token)))    score += 3;
-            if (entry.title.toLowerCase().includes(token))                 score += 2;
-            if (entry.content.toLowerCase().includes(token))               score += 1;
+            if (entry.tags.some(t => t.toLowerCase().includes(token))) score += 3;
+            if (entry.title.toLowerCase().includes(token)) score += 2;
+            if (entry.content.toLowerCase().includes(token)) score += 1;
         }
         return score;
     }
@@ -80,8 +80,8 @@ export class KnowledgeBase {
 
 /** Tokenize a string into lowercase words, filtering stop words */
 const STOP_WORDS = new Set([
-    'a','an','the','is','it','in','on','at','to','for','of','and','or','but','not',
-    'how','what','why','when','where','do','does','did','can','will','should','please',
+    'a', 'an', 'the', 'is', 'it', 'in', 'on', 'at', 'to', 'for', 'of', 'and', 'or', 'but', 'not',
+    'how', 'what', 'why', 'when', 'where', 'do', 'does', 'did', 'can', 'will', 'should', 'please',
 ]);
 
 function tokenize(text: string): string[] {

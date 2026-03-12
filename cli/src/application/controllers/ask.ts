@@ -7,10 +7,10 @@ import { glob } from 'glob';
 
 import { LLMController } from '../../infrastructure/api/llm-controller';
 import { SessionRepository } from '../../infrastructure/persistence/session-repository';
-import { ConversationSession } from '../../application/domain/entities/conversation-session';
-import { TurnUsage } from '../../application/domain/entities/conversation-turn';
+import { ConversationSession } from '../../domain/entities/conversation-session';
+import { TurnUsage } from '../../domain/entities/conversation-turn';
 import { ContextStatusBar } from '../../presentation/views/context-status-bar';
-import { isFilenameEditable, isContentEditable } from '../../application/domain/lib/agent-file-filters';
+import { isFilenameEditable, isContentEditable } from '../../domain/lib/agent-file-filters';
 import { handleError } from '../../shared/utils/error-handler';
 import { HistorySummarizer } from '../../application/services/history-summarizer';
 

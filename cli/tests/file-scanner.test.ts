@@ -29,7 +29,7 @@ describe('File Scanner Service', () => {
 
     describe('scanDirectory - Directory Validation', () => {
         it('should throw DirectoryNotFoundError for non-existent directory', async () => {
-            const { scanDirectory } = await import('../src/core/services/file-scanner');
+            const { scanDirectory } = await import('../src/application/services/file-scanner');
             const { DirectoryNotFoundError } = await import('../src/shared/utils/errors');
 
             vi.mocked(fs.existsSync).mockReturnValue(false);
@@ -44,7 +44,7 @@ describe('File Scanner Service', () => {
         });
 
         it('should throw InvalidDirectoryError when path is a file', async () => {
-            const { scanDirectory } = await import('../src/core/services/file-scanner');
+            const { scanDirectory } = await import('../src/application/services/file-scanner');
             const { InvalidDirectoryError } = await import('../src/shared/utils/errors');
 
             vi.mocked(fs.existsSync).mockReturnValue(true);
@@ -63,7 +63,7 @@ describe('File Scanner Service', () => {
         });
 
         it('should accept valid directory path', async () => {
-            const { scanDirectory } = await import('../src/core/services/file-scanner');
+            const { scanDirectory } = await import('../src/application/services/file-scanner');
 
             vi.mocked(fs.existsSync).mockReturnValue(true);
             vi.mocked(fs.statSync).mockReturnValue({
@@ -108,7 +108,7 @@ describe('File Scanner Service', () => {
         });
 
         it('should find R script files', async () => {
-            const { scanDirectory } = await import('../src/core/services/file-scanner');
+            const { scanDirectory } = await import('../src/application/services/file-scanner');
 
             vi.mocked(glob).mockImplementation(async (pattern: string | string[], _options?: GlobOptions) => {
                 if (typeof pattern === 'string' && pattern.includes('.R')) {
@@ -129,7 +129,7 @@ describe('File Scanner Service', () => {
         });
 
         it('should find R Markdown files', async () => {
-            const { scanDirectory } = await import('../src/core/services/file-scanner');
+            const { scanDirectory } = await import('../src/application/services/file-scanner');
 
             vi.mocked(glob).mockImplementation(async (pattern: string | string[], _options?: GlobOptions) => {
                 if (typeof pattern === 'string' && pattern.includes('.Rmd')) {
@@ -149,7 +149,7 @@ describe('File Scanner Service', () => {
         });
 
         it('should find R data files (RData and rds)', async () => {
-            const { scanDirectory } = await import('../src/core/services/file-scanner');
+            const { scanDirectory } = await import('../src/application/services/file-scanner');
 
             vi.mocked(glob).mockImplementation(async (pattern: string | string[], _options?: GlobOptions) => {
                 if (typeof pattern === 'string' && pattern.includes('.RData')) {
@@ -171,7 +171,7 @@ describe('File Scanner Service', () => {
         });
 
         it('should find R project files', async () => {
-            const { scanDirectory } = await import('../src/core/services/file-scanner');
+            const { scanDirectory } = await import('../src/application/services/file-scanner');
 
             vi.mocked(glob).mockImplementation(async (pattern: string | string[], _options?: GlobOptions) => {
                 if (typeof pattern === 'string' && pattern.includes('.Rproj')) {
@@ -191,7 +191,7 @@ describe('File Scanner Service', () => {
         });
 
         it('should find data files (csv, xlsx, json, etc.)', async () => {
-            const { scanDirectory } = await import('../src/core/services/file-scanner');
+            const { scanDirectory } = await import('../src/application/services/file-scanner');
 
             vi.mocked(glob).mockImplementation(async (pattern: string | string[], _options?: GlobOptions) => {
                 if (typeof pattern === 'string' && pattern.includes('.csv')) return ['/test/data.csv'];
@@ -210,7 +210,7 @@ describe('File Scanner Service', () => {
         });
 
         it('should find document files (pdf, html, tex)', async () => {
-            const { scanDirectory } = await import('../src/core/services/file-scanner');
+            const { scanDirectory } = await import('../src/application/services/file-scanner');
 
             vi.mocked(glob).mockImplementation(async (pattern: string | string[], _options?: GlobOptions) => {
                 if (typeof pattern === 'string' && pattern.includes('.pdf')) return ['/test/report.pdf'];
@@ -238,7 +238,7 @@ describe('File Scanner Service', () => {
         });
 
         it('should use recursive pattern when recursive is true', async () => {
-            const { scanDirectory } = await import('../src/core/services/file-scanner');
+            const { scanDirectory } = await import('../src/application/services/file-scanner');
 
             vi.mocked(glob).mockResolvedValue([]);
 
@@ -255,7 +255,7 @@ describe('File Scanner Service', () => {
         });
 
         it('should use top-level pattern when recursive is false', async () => {
-            const { scanDirectory } = await import('../src/core/services/file-scanner');
+            const { scanDirectory } = await import('../src/application/services/file-scanner');
 
             vi.mocked(glob).mockResolvedValue([]);
 
@@ -272,7 +272,7 @@ describe('File Scanner Service', () => {
         });
 
         it('should exclude hidden files when includeHidden is false', async () => {
-            const { scanDirectory } = await import('../src/core/services/file-scanner');
+            const { scanDirectory } = await import('../src/application/services/file-scanner');
 
             vi.mocked(glob).mockResolvedValue([]);
 
@@ -309,7 +309,7 @@ describe('File Scanner Service', () => {
         });
 
         it('should detect R project from .Rproj file', async () => {
-            const { scanDirectory } = await import('../src/core/services/file-scanner');
+            const { scanDirectory } = await import('../src/application/services/file-scanner');
 
             vi.mocked(glob).mockImplementation(async (pattern: string | string[], _options?: GlobOptions) => {
                 if (typeof pattern === 'string' && pattern.includes('.Rproj')) {
@@ -330,7 +330,7 @@ describe('File Scanner Service', () => {
         });
 
         it('should infer project from directory name when no .Rproj exists', async () => {
-            const { scanDirectory } = await import('../src/core/services/file-scanner');
+            const { scanDirectory } = await import('../src/application/services/file-scanner');
 
             vi.mocked(glob).mockResolvedValue([]);
 
@@ -366,7 +366,7 @@ describe('File Scanner Service', () => {
         });
 
         it('should return correct result structure', async () => {
-            const { scanDirectory } = await import('../src/core/services/file-scanner');
+            const { scanDirectory } = await import('../src/application/services/file-scanner');
 
             vi.mocked(glob).mockResolvedValue([]);
 
@@ -385,7 +385,7 @@ describe('File Scanner Service', () => {
         });
 
         it('should calculate total files correctly', async () => {
-            const { scanDirectory } = await import('../src/core/services/file-scanner');
+            const { scanDirectory } = await import('../src/application/services/file-scanner');
 
             vi.mocked(glob).mockImplementation(async (pattern: string | string[], _options?: GlobOptions) => {
                 // Match only .R files (not .Rmd, .RData, .rds, .Rproj)
@@ -405,7 +405,7 @@ describe('File Scanner Service', () => {
         });
 
         it('should include file metadata', async () => {
-            const { scanDirectory } = await import('../src/core/services/file-scanner');
+            const { scanDirectory } = await import('../src/application/services/file-scanner');
 
             vi.mocked(glob).mockImplementation(async (pattern: string | string[], _options?: GlobOptions) => {
                 if (typeof pattern === 'string' && pattern.includes('.R')) {

@@ -24,19 +24,36 @@ For advanced coding tasks, Mindy CLI implements an **Agentic Loop** for autonomo
 
 ## Project Structure
 
-Our project structure follows **Clean Architecture** terminology to maintain a clear separation of concerns:
+Our project structure follows **Clean Architecture** terminology to maintain a clear separation of concerns.
+The dependency rule flows **inward**: `infrastructure/presentation → application → domain`. The `domain` layer has zero external dependencies.
 
 ```text
 src/
-├── application/      ← Business logic (was core/) — no framework deps
-│   ├── domain/
-│   ├── services/
-│   └── tools/
-├── adapters/         ← CLI adapters (was application/) — Commander, chalk, ora
-│   └── controllers/
-├── infrastructure/   ← External I/O (API, persistence)
-├── presentation/     ← Views, status bar
-└── shared/           ← Types, utils
+├── domain/               ← Core domain — entities, value objects, interfaces (zero deps)
+│   ├── entities/         ← Artifact, ConversationSession, ConversationTurn, KnowledgeEntry
+│   ├── interfaces/       ← ITool (port)
+│   ├── lib/              ← Domain logic helpers (agent-file-filters, model-limits, token-pricing)
+│   ├── repositories/     ← Repository interfaces (ISessionRepository)
+│   └── values/           ← Value objects (CacheStatus, TokenBudget)
+├── application/          ← Use cases & orchestration — depends only on domain
+│   ├── controllers/      ← CLI command handlers (Commander-based: agent, ask, edit, scan, …)
+│   ├── services/         ← Business services (Orchestrator, DiffEngine, FileResolver, RBridge, …)
+│   ├── tools/            ← Agent tool implementations (FileScanTool, FileReadTool, RExecTool)
+│   └── prompts/          ← Prompt templates & section builders
+├── infrastructure/       ← External I/O — APIs, persistence, plugins
+│   ├── api/              ← LLMController, RubyApiClient, SessionLogger
+│   ├── config/           ← Environment config & constants
+│   ├── persistence/      ← SessionRepository, KnowledgeRepository (concrete impls)
+│   └── plugins/          ← PluginLoader
+├── presentation/         ← Views & TUI
+│   ├── views/            ← Banner, ContextStatusBar, ScanResult, LibraryResult, EnvironmentResult
+│   ├── tui/              ← Ink-based interactive TUI (App, ChatHistory, Header, Footer)
+│   └── i18n/             ← Internationalization
+├── shared/               ← Cross-cutting utilities
+│   ├── types/            ← TypeScript type definitions (FileInfo, LLMTypes, Execution, …)
+│   ├── utils/            ← Error handler, formatter
+│   └── data/             ← Static data (package-capabilities)
+└── index.ts              ← CLI entry point (Commander program setup)
 ```
 
 ## Setup for Development

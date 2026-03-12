@@ -21,7 +21,7 @@
 
 import { LLMController } from '../../infrastructure/api/llm-controller';
 import { LLMRequestPayload } from '../../shared/types/llm-types';
-import { TurnUsage } from '../domain/entities/conversation-turn';
+import { TurnUsage } from '../../domain/entities/conversation-turn';
 import { ToolRegistry } from './tool-registry';
 import { ReActLoop, ReActResult, ReActStep } from './react-loop';
 
@@ -114,10 +114,10 @@ export class Orchestrator {
 
             allArtifacts.push(...extractArtifacts(loopResult.result));
             allSteps.push(...loopResult.steps);
-            cumUsage.inputTokens  += loopResult.usage.inputTokens;
+            cumUsage.inputTokens += loopResult.usage.inputTokens;
             cumUsage.outputTokens += loopResult.usage.outputTokens;
             cumUsage.cacheCreationTokens += loopResult.usage.cacheCreationTokens;
-            cumUsage.cacheReadTokens     += loopResult.usage.cacheReadTokens;
+            cumUsage.cacheReadTokens += loopResult.usage.cacheReadTokens;
         }
 
         return {

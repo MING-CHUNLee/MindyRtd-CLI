@@ -22,7 +22,7 @@
 import { LLMController } from '../../infrastructure/api/llm-controller';
 import { LLMRequestPayload } from '../../shared/types/llm-types';
 import { ToolRegistry } from './tool-registry';
-import { TurnUsage } from '../domain/entities/conversation-turn';
+import { TurnUsage } from '../../domain/entities/conversation-turn';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -110,7 +110,7 @@ export class ReActLoop {
                 rawResponse = response.content;
                 // Accumulate usage
                 if (response.usage) {
-                    usage.inputTokens  += response.usage.promptTokens     ?? 0;
+                    usage.inputTokens += response.usage.promptTokens ?? 0;
                     usage.outputTokens += response.usage.completionTokens ?? 0;
                 }
             } catch (err) {

@@ -9,15 +9,15 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { ConversationSession } from '../../application/domain/entities/conversation-session';
-import { ISessionRepository, SessionSummary } from '../../application/domain/repositories/i-session-repository';
+import { ConversationSession } from '../../domain/entities/conversation-session';
+import { ISessionRepository, SessionSummary } from '../../domain/repositories/i-session-repository';
 
 export class SessionRepository implements ISessionRepository {
     private readonly sessionsDir: string;
     private readonly lastSessionFile: string;
 
     constructor() {
-        this.sessionsDir   = path.join(os.homedir(), '.mindy', 'sessions');
+        this.sessionsDir = path.join(os.homedir(), '.mindy', 'sessions');
         this.lastSessionFile = path.join(os.homedir(), '.mindy', 'last-session');
         fs.mkdirSync(this.sessionsDir, { recursive: true });
     }

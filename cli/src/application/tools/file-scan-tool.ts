@@ -6,7 +6,7 @@
  */
 
 import path from 'path';
-import { ITool, ToolInput, ToolResult, ToolSchema } from '../domain/interfaces/i-tool';
+import { ITool, ToolInput, ToolResult, ToolSchema } from '../../domain/interfaces/i-tool';
 import { scanDirectory } from '../services/file-scanner';
 
 export class FileScanTool implements ITool {
@@ -45,12 +45,12 @@ export class FileScanTool implements ITool {
         }
 
         const { files } = result;
-        if (files.rScripts.length)   lines.push(`R scripts (.R): ${files.rScripts.map(f => f.name).join(', ')}`);
-        if (files.rMarkdown.length)  lines.push(`R Markdown (.Rmd): ${files.rMarkdown.map(f => f.name).join(', ')}`);
-        if (files.rData.length)      lines.push(`R Data (.RData/.rds): ${files.rData.map(f => f.name).join(', ')}`);
-        if (files.rProject.length)   lines.push(`R Projects (.Rproj): ${files.rProject.map(f => f.name).join(', ')}`);
-        if (files.dataFiles.length)  lines.push(`Data files: ${files.dataFiles.map(f => f.name).join(', ')}`);
-        if (files.documents.length)  lines.push(`Documents: ${files.documents.map(f => f.name).join(', ')}`);
+        if (files.rScripts.length) lines.push(`R scripts (.R): ${files.rScripts.map(f => f.name).join(', ')}`);
+        if (files.rMarkdown.length) lines.push(`R Markdown (.Rmd): ${files.rMarkdown.map(f => f.name).join(', ')}`);
+        if (files.rData.length) lines.push(`R Data (.RData/.rds): ${files.rData.map(f => f.name).join(', ')}`);
+        if (files.rProject.length) lines.push(`R Projects (.Rproj): ${files.rProject.map(f => f.name).join(', ')}`);
+        if (files.dataFiles.length) lines.push(`Data files: ${files.dataFiles.map(f => f.name).join(', ')}`);
+        if (files.documents.length) lines.push(`Documents: ${files.documents.map(f => f.name).join(', ')}`);
 
         const content = lines.join('\n');
         return {

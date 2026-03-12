@@ -6,7 +6,7 @@
  * writing files, saving data, or invoking system commands.
  */
 
-import { ITool, ToolInput, ToolResult, ToolSchema } from '../domain/interfaces/i-tool';
+import { ITool, ToolInput, ToolResult, ToolSchema } from '../../domain/interfaces/i-tool';
 import { execRscriptCode } from '../services/r-script-runner';
 
 // Patterns that indicate potentially unsafe R code (write side-effects)

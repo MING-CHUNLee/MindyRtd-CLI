@@ -15,7 +15,7 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import readline from 'readline';
 import { SessionRepository } from '../../infrastructure/persistence/session-repository';
-import { ConversationSession } from '../../application/domain/entities/conversation-session';
+import { ConversationSession } from '../../domain/entities/conversation-session';
 
 export const rollbackCommand = new Command('rollback')
     .description('Roll back the current session to a previous turn')

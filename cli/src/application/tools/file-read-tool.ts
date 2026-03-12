@@ -7,8 +7,8 @@
 
 import fs from 'fs';
 import path from 'path';
-import { ITool, ToolInput, ToolResult, ToolSchema } from '../domain/interfaces/i-tool';
-import { isContentEditable } from '../domain/lib/agent-file-filters';
+import { ITool, ToolInput, ToolResult, ToolSchema } from '../../domain/interfaces/i-tool';
+import { isContentEditable } from '../../domain/lib/agent-file-filters';
 
 export class FileReadTool implements ITool {
     readonly name = 'file_read';

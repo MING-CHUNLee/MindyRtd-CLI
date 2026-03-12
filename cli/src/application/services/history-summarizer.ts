@@ -18,7 +18,7 @@
  *   }
  */
 
-import { ConversationSession } from '../domain/entities/conversation-session';
+import { ConversationSession } from '../../domain/entities/conversation-session';
 import { LLMController } from '../../infrastructure/api/llm-controller';
 
 export type SessionMessage = { role: 'user' | 'assistant'; content: string };
@@ -61,7 +61,7 @@ export class HistorySummarizer {
         // Nothing old enough to summarize — return as-is
         if (splitAt === 0) return allHistory;
 
-        const oldHistory  = allHistory.slice(0, splitAt);
+        const oldHistory = allHistory.slice(0, splitAt);
         const recentHistory = allHistory.slice(splitAt);
 
         const conversation = oldHistory
@@ -86,7 +86,7 @@ export class HistorySummarizer {
 
         // Inject summary as a synthetic exchange at the start of history
         const compressed: SessionMessage[] = [
-            { role: 'user',      content: '[Previous conversation compressed — summary follows]' },
+            { role: 'user', content: '[Previous conversation compressed — summary follows]' },
             { role: 'assistant', content: summary },
             ...recentHistory,
         ];

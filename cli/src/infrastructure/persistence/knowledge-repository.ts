@@ -8,7 +8,7 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { KnowledgeEntry, KnowledgeEntryJSON } from '../../application/domain/entities/knowledge-entry';
+import { KnowledgeEntry, KnowledgeEntryJSON } from '../../domain/entities/knowledge-entry';
 
 export class KnowledgeRepository {
     private readonly filePath: string;
