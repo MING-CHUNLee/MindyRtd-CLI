@@ -1,6 +1,12 @@
 {
   "skills": [
     {
+      "skill-id": "typescript-clean-code",
+      "file": "skill-typescript-clean-code.md",
+      "summary": "Clean Code Review 全流程：7大類別評估、分級問題、對比前次分數、產出 review report",
+      "keywords": ["clean code", "review", "refactor", "TypeScript", "code quality", "SOLID", "error-handling"]
+    },
+    {
       "skill-id": "remotion-best-practices",
       "file": "skill-remotion-best-practices.md",
       "summary": "Remotion 動畫最佳實踐：Spring/Easing/Series/Transitions/提示詞框架",

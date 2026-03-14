@@ -1,6 +1,20 @@
 {
     "categories": [
         {
+            "id": "git-commit-generation",
+            "keyword": ["git", "commit", "diff", "大量變更", "semantic", "提交", "生成"],
+            "title": "Git Commit Generation",
+            "file": "git-commit-generation.md",
+            "description": "處理大量檔案變更並透過讀取 diff 產生結構化、語意化 commit 訊息的最佳實踐"
+        },
+        {
+            "id": "project-structure",
+            "keyword": ["plan", "規劃", "架構", "目錄", "檔案位置"],
+            "title": "Project Structure Rules",
+            "file": "project-structure.md",
+            "description": "關於專案目錄結構與特定檔案存放位置（如 Plan 應放入 plans 目錄）的使用者偏好與規則"
+        },
+        {
             "id": "agentic-cli-architecture",
             "keyword": [
                 "agent",
