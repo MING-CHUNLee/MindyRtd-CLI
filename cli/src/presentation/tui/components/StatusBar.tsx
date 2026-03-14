@@ -38,7 +38,7 @@ function formatDuration(ms: number): string {
 }
 
 const StatusBar: React.FC<StatusBarProps> = (props) => {
-    const { items, health, usagePercent } = props;
+    const { items = ['model', 'context', 'rpm'], health, usagePercent } = props;
     const color = healthColor(health);
 
     const filled = Math.round((usagePercent / 100) * BAR_WIDTH);

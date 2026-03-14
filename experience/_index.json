@@ -1,0 +1,10 @@
+{
+    "skills": [
+        {
+            "skill-id": "typescript-clean-code",
+            "file": "skill-typescript-clean-code.md",
+            "keywords": ["clean code", "review", "refactor", "TypeScript", "code quality", "SOLID"],
+            "lastUpdated": "2026-03-14"
+        }
+    ]
+}
