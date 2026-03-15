@@ -5,7 +5,7 @@
  * Uses R commands to retrieve library information.
  *
  * Architecture Note:
- * - R path resolution is delegated to r-path-resolver.ts
+ * - R path finding is delegated to r-path-finder.ts
  * - R script execution is delegated to r-script-runner.ts
  * - This module focuses purely on package scanning logic
  */
@@ -18,7 +18,7 @@ import {
     createLibraryScanResult
 } from '../../shared/types/library-info';
 import { LibraryScanError } from '../../shared/utils/errors';
-import { findRscriptPath } from './r-path-resolver';
+import { findRscriptPath } from './r-path-finder';
 import { execRscriptCode } from './r-script-runner';
 
 // ============================================

@@ -15,6 +15,7 @@
 
 import { LLMController } from '../../infrastructure/api/llm-controller';
 import { LLMRequestPayload } from '../../shared/types/llm-types';
+import { extractJsonArray } from '../../shared/utils/json-extractor';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -37,14 +38,14 @@ export class Evaluator {
      *   [{"path": "...", "content": "..."}]
      */
     validateEditOutput(output: string): ValidationResult {
-        const match = output.match(/\[[\s\S]*\]/);
-        if (!match) {
+        const jsonStr = extractJsonArray(output);
+        if (!jsonStr) {
             return { valid: false, error: 'No JSON array found in output' };
         }
 
         let parsed: unknown;
         try {
-            parsed = JSON.parse(match[0]);
+            parsed = JSON.parse(jsonStr);
         } catch (e) {
             return { valid: false, error: `JSON parse error: ${e instanceof Error ? e.message : String(e)}` };
         }

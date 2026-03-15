@@ -1,5 +1,5 @@
 /**
- * Service: R Path Resolver
+ * Service: R Path Finder
  *
  * Discovers R installation paths across platforms (Windows, macOS, Linux).
  * Extracted from library-scanner.ts for single responsibility.
@@ -11,7 +11,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { RNotFoundError } from '../../shared/utils/errors';
 
-const execAsync = promisify(exec);
+export const execAsync = promisify(exec);
 
 // Cached Rscript path
 let cachedRscriptPath: string | null = null;

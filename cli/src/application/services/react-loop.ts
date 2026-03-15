@@ -21,6 +21,7 @@
 
 import { LLMController } from '../../infrastructure/api/llm-controller';
 import { LLMRequestPayload } from '../../shared/types/llm-types';
+import { SessionMessage } from '../../shared/types/messages';
 import { ToolRegistry } from './tool-registry';
 import { TurnUsage } from '../../domain/entities/conversation-turn';
 
@@ -84,7 +85,7 @@ export class ReActLoop {
         const systemPrompt = baseRequest.systemPrompt + '\n\n' + REACT_FORMAT_INSTRUCTIONS;
 
         // workingMessages is ephemeral — starts from baseRequest.history
-        const workingMessages: { role: 'user' | 'assistant'; content: string }[] = [
+        const workingMessages: SessionMessage[] = [
             ...(baseRequest.history ?? []),
         ];
 

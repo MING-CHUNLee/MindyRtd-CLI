@@ -33,6 +33,7 @@ import { Artifact } from '../../domain/entities/artifact';
 import { PluginLoader } from '../../infrastructure/plugins/plugin-loader';
 import { KnowledgeBase } from './knowledge-base';
 import { KnowledgeRepository } from '../../infrastructure/persistence/knowledge-repository';
+import { SessionMessage } from '../../shared/types/messages';
 
 /**
  * Maximum tokens to allow in the system prompt + history + user message.
@@ -84,8 +85,6 @@ export interface AgentServiceDeps {
     repo: SessionRepository;
     diffEngine: DiffEngine;
 }
-
-type SessionMessage = { role: 'user' | 'assistant'; content: string };
 
 // ── AgentService ─────────────────────────────────────────────────────────────
 

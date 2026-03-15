@@ -63,6 +63,7 @@ export interface Suggestion {
 }
 
 export type { LLMRequestPayload } from './llm-types';
+export type { SessionMessage } from './messages';
 
 /**
  * CLI configuration

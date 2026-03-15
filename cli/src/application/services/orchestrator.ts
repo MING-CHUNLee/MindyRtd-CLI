@@ -24,6 +24,7 @@ import { LLMRequestPayload } from '../../shared/types/llm-types';
 import { TurnUsage } from '../../domain/entities/conversation-turn';
 import { ToolRegistry } from './tool-registry';
 import { ReActLoop, ReActResult, ReActStep } from './react-loop';
+import { extractJsonArray } from '../../shared/utils/json-extractor';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -142,9 +143,9 @@ export class Orchestrator {
                 userMessage: `Decompose this instruction into sub-tasks:\n${instruction}`,
                 history: baseRequest.history,
             });
-            const match = response.content.match(/\[[\s\S]*\]/);
-            if (match) {
-                const tasks = JSON.parse(match[0]) as string[];
+            const jsonStr = extractJsonArray(response.content);
+            if (jsonStr) {
+                const tasks = JSON.parse(jsonStr) as string[];
                 if (Array.isArray(tasks) && tasks.length > 0) return tasks;
             }
         } catch {
@@ -161,10 +162,10 @@ export class Orchestrator {
  * If that fails, wrap it as a single text artifact.
  */
 function extractArtifacts(result: string): Artifact[] {
-    const match = result.match(/\[[\s\S]*\]/);
-    if (match) {
+    const jsonStr = extractJsonArray(result);
+    if (jsonStr) {
         try {
-            const parsed = JSON.parse(match[0]) as Array<{ path?: string; content?: string }>;
+            const parsed = JSON.parse(jsonStr) as Array<{ path?: string; content?: string }>;
             if (
                 Array.isArray(parsed) &&
                 parsed.length > 0 &&

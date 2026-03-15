@@ -5,14 +5,10 @@
  * Extracted from library-scanner.ts for single responsibility.
  */
 
-import { exec } from 'child_process';
-import { promisify } from 'util';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import { findRscriptPath } from './r-path-resolver';
-
-const execAsync = promisify(exec);
+import { findRscriptPath, execAsync } from './r-path-finder';
 
 const TEMP_SCRIPT_PREFIX = 'mindy_r_script_';
 const TEMP_SCRIPT_EXTENSION = '.R';

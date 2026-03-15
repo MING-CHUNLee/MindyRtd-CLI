@@ -20,8 +20,9 @@
 
 import { ConversationSession } from '../../domain/entities/conversation-session';
 import { LLMController } from '../../infrastructure/api/llm-controller';
+import { SessionMessage } from '../../shared/types/messages';
 
-export type SessionMessage = { role: 'user' | 'assistant'; content: string };
+export type { SessionMessage };
 
 export class HistorySummarizer {
     /** Trigger summarization when context window is ≥75% full */
