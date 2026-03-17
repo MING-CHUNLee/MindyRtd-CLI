@@ -21,6 +21,7 @@ import { LLMRequestPayload, LLMResponse } from '../../shared/types/llm-types';
 import { LLMConfig, getLLMConfigFromEnv, LLMProvider } from '../config';
 import { LLM } from '../config/constants';
 import { SessionLogger } from './session-logger';
+import { FILE_RELEVANCE_SYSTEM_PROMPT, CODE_EDITOR_SYSTEM_PROMPT } from '../../application/prompts/file-ops';
 
 // ============================================
 // Error Classes
@@ -242,9 +243,7 @@ export class LLMController {
     ): Promise<{ targets: string[]; usage?: LLMResponse['usage'] }> {
         const fileList = previews.map(p => `- ${p.path}`).join('\n');
         const response = await this.sendPrompt({
-            systemPrompt:
-                'You are a file relevance analyzer. Given a list of file paths and a user instruction, ' +
-                'return ONLY a JSON array of the most relevant file paths (strings). No explanation.',
+            systemPrompt: FILE_RELEVANCE_SYSTEM_PROMPT,
             userMessage:
                 `Instruction: ${instruction}\n\nFiles:\n${fileList}\n\n` +
                 'Return a JSON array of relevant file paths.',
@@ -272,10 +271,7 @@ export class LLMController {
     ): Promise<{ files: Array<{ path: string; content: string }>; usage?: LLMResponse['usage'] }> {
         const filesJson = JSON.stringify(fileContexts);
         const response = await this.sendPrompt({
-            systemPrompt:
-                'You are a code editor. Given file contents and a user instruction, ' +
-                'return ONLY a JSON array: [{"path":"...","content":"..."}]. ' +
-                'Preserve formatting. No markdown fences around the JSON.',
+            systemPrompt: CODE_EDITOR_SYSTEM_PROMPT,
             userMessage: `Instruction: ${instruction}\n\nFiles:\n${filesJson}`,
             history,
         });

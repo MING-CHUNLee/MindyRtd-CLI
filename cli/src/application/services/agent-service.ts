@@ -25,6 +25,7 @@ import { FileScanTool } from '../tools/file-scan-tool';
 import { FileReadTool } from '../tools/file-read-tool';
 import { RExecTool } from '../tools/r-exec-tool';
 import { HistorySummarizer } from './history-summarizer';
+import { INTENT_CLASSIFIER_SYSTEM_PROMPT } from '../prompts/intent-classifier';
 
 import { FileChange } from '../../domain/entities/file-change';
 import { PluginLoader } from '../../infrastructure/plugins/plugin-loader';
@@ -271,11 +272,7 @@ export class AgentService {
         let intent: 'ask' | 'edit' = 'edit';
         try {
             const intentResponse = await this.llm.sendPrompt({
-                systemPrompt:
-                    'You are an intent classifier. Determine the user\'s intent and reply with ONLY one word:\n' +
-                    '- "ask" — the user wants to ASK A QUESTION, get an explanation, do a code review, analyze code, or understand something\n' +
-                    '- "edit" — the user wants to CREATE or MODIFY files, fix bugs, add features, or refactor code\n' +
-                    'Default to "ask" if unsure.',
+                systemPrompt: INTENT_CLASSIFIER_SYSTEM_PROMPT,
                 userMessage: instruction,
                 history,
             });

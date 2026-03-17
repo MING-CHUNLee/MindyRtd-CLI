@@ -27,6 +27,7 @@ import { LLMOutput } from '../../domain/entities/llm-output';
 import { ToolRegistry } from './tool-registry';
 import { ReActLoop, ReActResult, ReActStep } from './react-loop';
 import { extractJsonArray } from '../../shared/utils/json-extractor';
+import { DECOMPOSER_SYSTEM_PROMPT } from '../prompts/decomposer';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -136,9 +137,7 @@ export class Orchestrator {
     ): Promise<string[]> {
         try {
             const response = await this.llm.sendPrompt({
-                systemPrompt:
-                    'You are a task decomposer. Given a complex instruction, split it into an ordered list of independent sub-tasks. ' +
-                    'Return ONLY a JSON array of strings. No explanation.',
+                systemPrompt: DECOMPOSER_SYSTEM_PROMPT,
                 userMessage: `Decompose this instruction into sub-tasks:\n${instruction}`,
                 history: baseRequest.history,
             });

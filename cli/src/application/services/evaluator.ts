@@ -16,6 +16,7 @@
 import { LLMController } from '../../infrastructure/api/llm-controller';
 import { LLMRequestPayload } from '../../shared/types/llm-types';
 import { extractJsonArray } from '../../shared/utils/json-extractor';
+import { JSON_FORMATTER_SYSTEM_PROMPT } from '../prompts/evaluator';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -89,10 +90,7 @@ export class Evaluator {
             const validationError = this.validateEditOutput(output).error ?? 'unknown error';
 
             const correctionRequest: LLMRequestPayload = {
-                systemPrompt:
-                    'You are a JSON formatter. The previous response was not valid. ' +
-                    'Return ONLY a valid JSON array: [{"path":"...","content":"..."}]. ' +
-                    'No markdown fences, no explanation.',
+                systemPrompt: JSON_FORMATTER_SYSTEM_PROMPT,
                 userMessage:
                     `Validation error: ${validationError}\n\n` +
                     `Previous (invalid) response:\n${output}\n\n` +

@@ -21,6 +21,7 @@
 import { ConversationSession } from '../../domain/entities/conversation-session';
 import { LLMController } from '../../infrastructure/api/llm-controller';
 import { SessionMessage } from '../../shared/types/messages';
+import { SUMMARIZER_SYSTEM_PROMPT } from '../prompts/summarizer';
 
 export type { SessionMessage };
 
@@ -72,11 +73,7 @@ export class HistorySummarizer {
         let summary: string;
         try {
             const response = await llm.sendPrompt({
-                systemPrompt:
-                    'You are a concise conversation summarizer. ' +
-                    'Summarize the conversation below in 3-5 sentences. ' +
-                    'Preserve: key decisions made, files changed, errors encountered, and any open tasks. ' +
-                    'Start your response with "Summary of previous conversation:"',
+                systemPrompt: SUMMARIZER_SYSTEM_PROMPT,
                 userMessage: conversation,
             });
             summary = response.content.trim();
