@@ -6,20 +6,20 @@
  * so the ReAct loop always receives an observation, never a thrown exception.
  */
 
-import { ITool, ToolInput, ToolResult, ToolSchema } from '../../domain/interfaces/i-tool';
+import { AgentTool, ToolInput, ToolResult, ToolSchema } from '../../domain/interfaces/agent-tool';
 
 export class ToolRegistry {
-    private readonly _tools = new Map<string, ITool>();
+    private readonly _tools = new Map<string, AgentTool>();
 
-    register(tool: ITool): void {
+    register(tool: AgentTool): void {
         this._tools.set(tool.name, tool);
     }
 
-    get(name: string): ITool | undefined {
+    get(name: string): AgentTool | undefined {
         return this._tools.get(name);
     }
 
-    list(): ITool[] {
+    list(): AgentTool[] {
         return Array.from(this._tools.values());
     }
 

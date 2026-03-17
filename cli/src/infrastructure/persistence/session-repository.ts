@@ -1,7 +1,7 @@
 /**
  * Infrastructure: SessionRepository
  *
- * File-based implementation of ISessionRepository.
+ * File-based implementation of SessionStore.
  * Sessions are stored as JSON at <cwd>/.mindy/sessions/<id>.json
  * The last-used session ID is tracked at <cwd>/.mindy/last-session
  */
@@ -10,9 +10,9 @@ import fs from 'fs';
 import path from 'path';
 import { ConversationSession } from '../../domain/entities/conversation-session';
 import { getSessionsDir, getLastSessionFile } from '../config/paths';
-import { ISessionRepository, SessionSummary } from '../../domain/repositories/i-session-repository';
+import { SessionStore, SessionSummary } from '../../domain/repositories/session-store';
 
-export class SessionRepository implements ISessionRepository {
+export class SessionRepository implements SessionStore {
     private readonly sessionsDir: string;
     private readonly lastSessionFile: string;
 

@@ -24,7 +24,7 @@ import {
     ContextSummary,
 } from '../../shared/types/prompt-context';
 import { LLMRequestPayload } from '../../shared/types/llm-types';
-import { ToolSchema } from '../../domain/interfaces/i-tool';
+import { ToolSchema } from '../../domain/interfaces/agent-tool';
 import { SessionMessage } from '../../domain/entities/conversation-session';
 import { KnowledgeEntry } from '../../domain/entities/knowledge-entry';
 import { loadLocale } from '../../presentation/i18n';

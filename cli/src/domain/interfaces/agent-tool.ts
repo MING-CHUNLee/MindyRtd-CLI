@@ -1,5 +1,5 @@
 /**
- * Domain Interface: ITool
+ * Domain Interface: AgentTool
  *
  * Contract that every ReAct tool must satisfy.
  * The ToolRegistry uses this interface to execute tools uniformly.
@@ -35,7 +35,7 @@ export interface ToolSchema {
     example?: string;
 }
 
-export interface ITool {
+export interface AgentTool {
     readonly name: string;
     readonly schema: ToolSchema;
     execute(input: ToolInput): Promise<ToolResult>;

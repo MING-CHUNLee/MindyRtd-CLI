@@ -5,14 +5,14 @@
  *
  * Plugins live at: ~/.mindy/plugins/<name>.js
  *
- * Each plugin file must export a default (or named) object/class satisfying ITool:
+ * Each plugin file must export a default (or named) object/class satisfying AgentTool:
  *   module.exports = { name, schema, execute }     // CommonJS
  *   module.exports.default = <class>               // or default export
  *
  * The PluginLoader:
  *   1. Discovers all .js files in the plugin directory
  *   2. require()s each one in a try/catch
- *   3. Validates the ITool contract (name + schema + execute)
+ *   3. Validates the AgentTool contract (name + schema + execute)
  *   4. Registers valid plugins with the ToolRegistry
  *
  * Security: plugins run with the same Node.js privileges as the CLI.
@@ -22,7 +22,7 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { ITool, ToolInput, ToolResult, ToolSchema } from '../../domain/interfaces/i-tool';
+import { AgentTool } from '../../domain/interfaces/agent-tool';
 import { ToolRegistry } from '../../application/services/tool-registry';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -57,10 +57,10 @@ export class PluginLoader {
     }
 
     /**
-     * Attempt to load a single plugin file and extract an ITool from it.
-     * Returns null (with warning) if the file doesn't satisfy the ITool contract.
+     * Attempt to load a single plugin file and extract an AgentTool from it.
+     * Returns null (with warning) if the file doesn't satisfy the AgentTool contract.
      */
-    loadOne(filePath: string): ITool | null {
+    loadOne(filePath: string): AgentTool | null {
         let mod: unknown;
         try {
             // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -71,7 +71,7 @@ export class PluginLoader {
             return null;
         }
 
-        // Support { default: ITool }, { name, schema, execute }, or a class instance
+        // Support { default: AgentTool }, { name, schema, execute }, or a class instance
         const candidate =
             (mod as Record<string, unknown>)?.default ??
             mod;
@@ -82,8 +82,8 @@ export class PluginLoader {
             try { tool = new (candidate as new () => unknown)(); } catch { tool = candidate; }
         }
 
-        if (!isITool(tool)) {
-            console.warn(`[plugin] "${path.basename(filePath)}" does not export a valid ITool (needs name, schema, execute).`);
+        if (!isAgentTool(tool)) {
+            console.warn(`[plugin] "${path.basename(filePath)}" does not export a valid AgentTool (needs name, schema, execute).`);
             return null;
         }
 
@@ -115,7 +115,7 @@ export class PluginLoader {
                     name: path.basename(filePath, '.js'),
                     description: '(failed to load)',
                     loaded: false,
-                    error: 'Invalid ITool export',
+                    error: 'Invalid AgentTool export',
                 });
             }
         }
@@ -130,9 +130,9 @@ export class PluginLoader {
     }
 }
 
-// ── ITool type guard ──────────────────────────────────────────────────────────
+// ── AgentTool type guard ──────────────────────────────────────────────────────────
 
-function isITool(obj: unknown): obj is ITool {
+function isAgentTool(obj: unknown): obj is AgentTool {
     if (typeof obj !== 'object' || obj === null) return false;
     const o = obj as Record<string, unknown>;
     return (

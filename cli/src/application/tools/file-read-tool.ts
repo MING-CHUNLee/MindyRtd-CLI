@@ -7,10 +7,10 @@
 
 import fs from 'fs';
 import path from 'path';
-import { ITool, ToolInput, ToolResult, ToolSchema } from '../../domain/interfaces/i-tool';
+import { AgentTool, ToolInput, ToolResult, ToolSchema } from '../../domain/interfaces/agent-tool';
 import { isContentEditable } from '../../domain/lib/agent-file-filters';
 
-export class FileReadTool implements ITool {
+export class FileReadTool implements AgentTool {
     readonly name = 'file_read';
 
     readonly schema: ToolSchema = {

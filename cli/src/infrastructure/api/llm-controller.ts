@@ -17,7 +17,7 @@
  */
 
 import { GeneratedPrompt } from '../../shared/types/prompt-context';
-import { LLMRequestPayload } from '../../shared/types/llm-types';
+import { LLMRequestPayload, LLMResponse } from '../../shared/types/llm-types';
 import { LLMConfig, getLLMConfigFromEnv, LLMProvider } from '../config';
 import { LLM } from '../config/constants';
 import { SessionLogger } from './session-logger';
@@ -53,24 +53,7 @@ export interface LLMMessage {
     content: string;
 }
 
-export type { LLMRequestPayload as LLMRequest } from '../../shared/types/llm-types';
-
-export interface LLMResponse {
-    /** LLM's response content */
-    content: string;
-    /** Token usage information */
-    usage?: {
-        promptTokens: number;
-        completionTokens: number;
-        totalTokens: number;
-    };
-    /** Model used for response */
-    model: string;
-    /** Provider used */
-    provider: LLMProvider;
-    /** Response time in ms */
-    responseTimeMs?: number;
-}
+export type { LLMRequestPayload as LLMRequest, LLMResponse } from '../../shared/types/llm-types';
 
 export interface LLMControllerOptions {
     /** Override config from environment */

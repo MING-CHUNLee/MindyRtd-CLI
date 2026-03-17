@@ -6,13 +6,13 @@
  * writing files, saving data, or invoking system commands.
  */
 
-import { ITool, ToolInput, ToolResult, ToolSchema } from '../../domain/interfaces/i-tool';
+import { AgentTool, ToolInput, ToolResult, ToolSchema } from '../../domain/interfaces/agent-tool';
 import { execRscriptCode } from '../services/r-script-runner';
 
 // Patterns that indicate potentially unsafe R code (write side-effects)
 const UNSAFE_PATTERNS = /write|sink|file\.create|saveRDS|save\(|system\(/i;
 
-export class RExecTool implements ITool {
+export class RExecTool implements AgentTool {
     readonly name = 'r_exec';
 
     readonly schema: ToolSchema = {

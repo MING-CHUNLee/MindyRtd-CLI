@@ -15,3 +15,20 @@ export interface LLMRequestPayload {
     /** Override default model for this request */
     model?: string;
 }
+
+export interface LLMResponse {
+    /** LLM's response content */
+    content: string;
+    /** Token usage information */
+    usage?: {
+        promptTokens: number;
+        completionTokens: number;
+        totalTokens: number;
+    };
+    /** Model used for response */
+    model: string;
+    /** Provider used */
+    provider: string;
+    /** Response time in ms */
+    responseTimeMs?: number;
+}

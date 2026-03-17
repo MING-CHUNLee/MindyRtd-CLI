@@ -1,5 +1,5 @@
 /**
- * Domain Repository Interface: ISessionRepository
+ * Domain Repository Interface: SessionStore
  *
  * Defines the contract for session persistence.
  * Infrastructure layer provides the concrete implementation.
@@ -15,7 +15,7 @@ export interface SessionSummary {
     turnCount: number;
 }
 
-export interface ISessionRepository {
+export interface SessionStore {
     save(session: ConversationSession): Promise<void>;
     load(sessionId: string): Promise<ConversationSession | null>;
     /** Load the most recently saved session */

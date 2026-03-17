@@ -6,10 +6,10 @@
  */
 
 import path from 'path';
-import { ITool, ToolInput, ToolResult, ToolSchema } from '../../domain/interfaces/i-tool';
+import { AgentTool, ToolInput, ToolResult, ToolSchema } from '../../domain/interfaces/agent-tool';
 import { scanDirectory } from '../services/file-scanner';
 
-export class FileScanTool implements ITool {
+export class FileScanTool implements AgentTool {
     readonly name = 'file_scan';
 
     readonly schema: ToolSchema = {
