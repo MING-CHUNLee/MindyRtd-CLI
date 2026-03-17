@@ -1,45 +1,36 @@
 /**
- * Service: AgentService
+ * Service: AgentService  (facade)
  *
- * Headless, event-driven agent execution extracted from agent.ts.
- * No console.log, no readline, no ora — all I/O via callbacks.
+ * Thin coordinator that manages session lifecycle, routes instructions to the
+ * appropriate Use Case, and persists turns.  All I/O is event-driven — no
+ * console.log, no readline, no ora.
  *
- * The TUI (or any other UI) subscribes to events and provides
- * an approval callback for the human-in-the-loop safety gate.
+ * The TUI (or any other UI) subscribes to events and provides an approval
+ * callback for the human-in-the-loop safety gate.
  *
  * Dependencies (LLMController, SessionRepository, DiffEngine) are injected
  * via AgentServiceDeps for testability. If not provided, defaults are created.
  */
 
-import fs from 'fs';
 import path from 'path';
 
 import { LLMController } from '../../infrastructure/api/llm-controller';
-import { LLMRequestPayload } from '../../shared/types/llm-types';
-import { estimateTokens } from '../prompts';
 import { DiffEngine } from './diff-engine';
 import { SessionRepository } from '../../infrastructure/persistence/session-repository';
 import { ConversationSession } from '../../domain/entities/conversation-session';
 import { TurnUsage } from '../../domain/entities/conversation-turn';
 
 import { ToolRegistry } from './tool-registry';
-import { Orchestrator, OrchestratorResult, Artifact as OrchestratorArtifact } from './orchestrator';
 import { FileScanTool } from '../tools/file-scan-tool';
 import { FileReadTool } from '../tools/file-read-tool';
 import { RExecTool } from '../tools/r-exec-tool';
-import { Evaluator } from './evaluator';
 import { HistorySummarizer } from './history-summarizer';
 import { Artifact } from '../../domain/entities/artifact';
 import { PluginLoader } from '../../infrastructure/plugins/plugin-loader';
-import { KnowledgeBase } from './knowledge-base';
-import { KnowledgeRepository } from '../../infrastructure/persistence/knowledge-repository';
 import { SessionMessage } from '../../shared/types/messages';
 
-/**
- * Maximum tokens to allow in the system prompt + history + user message.
- * Keep well below the API limit (e.g. 8 000) so there is room for the response.
- */
-const MAX_CONTEXT_TOKENS = 6_000;
+import { ExecuteAskUseCase } from '../use-cases/execute-ask-use-case';
+import { ExecuteInstructionUseCase, OrchestratorArtifact } from '../use-cases/execute-instruction-use-case';
 
 // ── Event Types ──────────────────────────────────────────────────────────────
 
@@ -98,6 +89,9 @@ export class AgentService {
     private readonly onApproval: ApprovalCallback;
     private readonly directory: string;
 
+    private readonly askUseCase: ExecuteAskUseCase;
+    private readonly instructionUseCase: ExecuteInstructionUseCase;
+
     /** Throws if initialize() has not been called yet. */
     private get session(): ConversationSession {
         if (!this._session) throw new Error('AgentService not initialized — call initialize() first');
@@ -122,6 +116,26 @@ export class AgentService {
         this.registry.register(new FileScanTool());
         this.registry.register(new FileReadTool());
         this.registry.register(new RExecTool());
+
+        // Cast to the wider string type expected by use cases (safe: use cases only
+        // call emit with valid AgentEventType literals at runtime).
+        const emit = this.emit.bind(this) as (type: string, data: Record<string, unknown>) => void;
+
+        this.askUseCase = new ExecuteAskUseCase({
+            llm: this.llm,
+            registry: this.registry,
+            directory: this.directory,
+            emit,
+        });
+
+        this.instructionUseCase = new ExecuteInstructionUseCase({
+            llm: this.llm,
+            registry: this.registry,
+            diffEngine: this.diffEngine,
+            directory: this.directory,
+            onApproval: this.onApproval,
+            emit,
+        });
     }
 
     /** Initialize: load/create session, load plugins */
@@ -143,7 +157,6 @@ export class AgentService {
             model: this.session.model,
         });
 
-        // Load plugins
         const pluginLoader = new PluginLoader();
         try {
             const pluginMetas = await pluginLoader.loadAll(this.registry);
@@ -169,31 +182,45 @@ export class AgentService {
         const intent = await this.classifyIntent(instruction, history);
 
         if (intent === 'ask') {
-            await this.executeAskMode(instruction, history);
+            try {
+                const result = await this.askUseCase.execute(instruction, history);
+                this.session.addTurn(instruction, result.content, result.usage);
+                await this.repo.save(this.session);
+                this.emitTurnSaved(result.usage);
+            } catch {
+                // Error already emitted by the use case
+            }
             return;
         }
 
-        let orchResult: OrchestratorResult;
-        let baseRequest: LLMRequestPayload;
+        let result;
         try {
-            ({ orchResult, baseRequest } = await this.runOrchestration(instruction, history));
+            result = await this.instructionUseCase.execute(instruction, history);
         } catch {
-            return; // Error already emitted by runOrchestration
+            return; // Error already emitted by the use case
         }
 
-        const { validatedEdits, textArtifacts } = await this.validateArtifacts(orchResult, baseRequest);
+        if (result.analysisSummary !== undefined) {
+            // Orchestration produced no edit artifacts — save as analysis turn
+            const domainArtifacts = result.textArtifacts.map(
+                (a: OrchestratorArtifact) => Artifact.create('analysis', a.content),
+            );
+            this.session.addTurn(instruction, result.analysisSummary, result.usage, domainArtifacts);
+        } else {
+            const assistantSummary = result.appliedFiles.length > 0
+                ? `Applied changes to: ${result.appliedFiles.join(', ')}.`
+                : 'No changes were applied.';
 
-        if (validatedEdits.length === 0) {
-            const assistantSummary = textArtifacts.map(artifact => artifact.content).join('\n') || 'No changes generated.';
-            const domainArtifacts = textArtifacts.map(artifact => Artifact.create('analysis', artifact.content));
-            this.session.addTurn(instruction, assistantSummary, orchResult.usage, domainArtifacts);
-            await this.repo.save(this.session);
-            this.emitTurnSaved(orchResult.usage);
-            return;
+            const domainArtifacts: Artifact[] = [
+                ...result.appliedFiles.map(filePath =>
+                    Artifact.create('edit', result.validatedEdits.find(e => e.path === filePath)?.content ?? '', filePath)),
+                ...result.textArtifacts.map((a: OrchestratorArtifact) => Artifact.create('analysis', a.content)),
+            ];
+            this.session.addTurn(instruction, assistantSummary, result.usage, domainArtifacts);
         }
 
-        const appliedFiles = await this.applyEditsWithApproval(validatedEdits);
-        await this.persistTurn(instruction, orchResult, appliedFiles, textArtifacts, validatedEdits);
+        await this.repo.save(this.session);
+        this.emitTurnSaved(result.usage);
     }
 
     /** Handle slash commands */
@@ -231,7 +258,7 @@ export class AgentService {
         }
     }
 
-    // ── Phase helpers: executeInstruction ────────────────────────────────────
+    // ── Private utilities ─────────────────────────────────────────────────────
 
     private async prepareHistory(): Promise<SessionMessage[]> {
         const summarizer = new HistorySummarizer();
@@ -263,347 +290,6 @@ export class AgentService {
         this.emit('phase_end', { phase: 'intent', success: true });
         return intent;
     }
-
-    private async runOrchestration(
-        instruction: string,
-        history: SessionMessage[],
-    ): Promise<{ orchResult: OrchestratorResult; baseRequest: LLMRequestPayload }> {
-        this.emit('phase_start', { phase: 'orchestrator', description: 'Running agent (ReAct loop)' });
-
-        const kbRepo = new KnowledgeRepository();
-        const kb = new KnowledgeBase();
-        kb.load(kbRepo.load());
-        const knowledgeEntries = kb.retrieve(instruction, 3, this.directory);
-
-        const orchestrator = new Orchestrator(this.llm, this.registry);
-
-        const toolSchemas = this.registry.getSchemas();
-        const toolsText = toolSchemas.map(schema => {
-            const params = Object.entries(schema.parameters)
-                .map(([k, v]) => `    - ${k} (${v.type}${v.required ? ', required' : ''}): ${v.description}`)
-                .join('\n');
-            return `- ${schema.name}: ${schema.description}\n  Parameters:\n${params}` +
-                (schema.example ? `\n  Example: ${schema.example}` : '');
-        }).join('\n\n');
-
-        let systemPrompt =
-            'You are an expert coding agent that can edit files and analyze R code. ' +
-            'You have access to tools to explore the workspace before making edits.\n\n' +
-            `Working directory: ${this.directory}\n\n` +
-            `Available tools:\n${toolsText}`;
-
-        if (knowledgeEntries.length > 0) {
-            const kbText = knowledgeEntries.map(entry => `### ${entry.title}\n${entry.content}`).join('\n\n');
-            systemPrompt += `\n\n## Relevant Knowledge\n\n${kbText}`;
-            this.emit('status_update', { knowledge: knowledgeEntries.map(entry => entry.title) });
-        }
-
-        const baseRequest: LLMRequestPayload = {
-            systemPrompt,
-            userMessage: instruction,
-            history,
-            model: undefined,
-        };
-
-        try {
-            const orchResult = await orchestrator.run(baseRequest, instruction);
-            this.emit('phase_end', {
-                phase: 'orchestrator',
-                success: true,
-                summary: `${orchResult.subTasksRun} sub-task(s), ${orchResult.steps.length} step(s)`,
-            });
-
-            for (const step of orchResult.steps) {
-                this.emit('react_step', {
-                    stepNumber: step.stepNumber,
-                    thought: step.thought,
-                    action: step.action,
-                    observation: step.observation,
-                });
-            }
-
-            return { orchResult, baseRequest };
-        } catch (error) {
-            this.emit('phase_end', { phase: 'orchestrator', success: false });
-            this.emit('error', {
-                message: error instanceof Error ? error.message : String(error),
-                phase: 'orchestrator',
-            });
-            throw error;
-        }
-    }
-
-    private async validateArtifacts(
-        orchResult: OrchestratorResult,
-        baseRequest: LLMRequestPayload,
-    ): Promise<{
-        validatedEdits: Array<{ path: string; content: string }>;
-        textArtifacts: OrchestratorArtifact[];
-    }> {
-        const evaluator = new Evaluator();
-        const editArtifacts = orchResult.artifacts.filter(artifact => artifact.kind === 'edit');
-        const textArtifacts = orchResult.artifacts.filter(artifact => artifact.kind === 'text');
-
-        for (const artifact of textArtifacts) {
-            this.emit('text_output', { content: artifact.content });
-        }
-
-        const validatedEdits: Array<{ path: string; content: string }> = [];
-        for (const artifact of editArtifacts) {
-            const validation = evaluator.validateEditOutput(artifact.content);
-            if (validation.valid && validation.artifacts) {
-                validatedEdits.push(...validation.artifacts);
-            } else {
-                const corrected = await evaluator.retryWithCorrection(this.llm, baseRequest, artifact.content);
-                const retryValidation = evaluator.validateEditOutput(corrected);
-                if (retryValidation.valid && retryValidation.artifacts) {
-                    validatedEdits.push(...retryValidation.artifacts);
-                } else if (artifact.path) {
-                    validatedEdits.push({ path: artifact.path, content: artifact.content });
-                }
-            }
-        }
-
-        return { validatedEdits, textArtifacts };
-    }
-
-    private async applyEditsWithApproval(
-        validatedEdits: Array<{ path: string; content: string }>,
-    ): Promise<string[]> {
-        this.emit('phase_start', { phase: 'review', description: 'Review proposed changes' });
-        const appliedFiles: string[] = [];
-
-        for (const edit of validatedEdits) {
-            const absPath = path.resolve(this.directory, edit.path);
-            let original = '';
-            try {
-                original = fs.readFileSync(absPath, 'utf8');
-            } catch (error) {
-                if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-                    // Unexpected error (permission denied, encoding issue, etc.)
-                    this.emit('error', {
-                        message: `Cannot read ${absPath}: ${(error as Error).message}`,
-                        phase: 'review',
-                    });
-                }
-                // ENOENT = new file being created — proceed with empty original
-            }
-
-            if (original === edit.content) continue;
-
-            const coloredDiff = this.diffEngine.generateColoredDiff(original, edit.content);
-            this.emit('diff_proposed', { path: edit.path, diff: coloredDiff, original, proposed: edit.content });
-
-            const approved = await this.onApproval({
-                path: edit.path,
-                diff: coloredDiff,
-                original,
-                proposed: edit.content,
-            });
-            if (approved) {
-                fs.mkdirSync(path.dirname(absPath), { recursive: true });
-                fs.writeFileSync(absPath, edit.content, 'utf8');
-                this.emit('edit_applied', { path: edit.path });
-                appliedFiles.push(edit.path);
-            } else {
-                this.emit('edit_rejected', { path: edit.path });
-            }
-        }
-
-        this.emit('phase_end', { phase: 'review', success: true });
-        return appliedFiles;
-    }
-
-    private async persistTurn(
-        instruction: string,
-        orchResult: OrchestratorResult,
-        appliedFiles: string[],
-        textArtifacts: OrchestratorArtifact[],
-        validatedEdits: Array<{ path: string; content: string }>,
-    ): Promise<void> {
-        const assistantSummary = appliedFiles.length > 0
-            ? `Applied changes to: ${appliedFiles.join(', ')}.`
-            : 'No changes were applied.';
-
-        const domainArtifacts: Artifact[] = [
-            ...appliedFiles.map(filePath =>
-                Artifact.create('edit', validatedEdits.find(edit => edit.path === filePath)?.content ?? '', filePath)),
-            ...textArtifacts.map(artifact => Artifact.create('analysis', artifact.content)),
-        ];
-
-        this.session.addTurn(instruction, assistantSummary, orchResult.usage, domainArtifacts);
-        await this.repo.save(this.session);
-        this.emitTurnSaved(orchResult.usage);
-    }
-
-    // ── Phase helpers: executeAskMode ─────────────────────────────────────────
-
-    private isCasualMessage(msg: string): boolean {
-        const trimmed = msg.trim();
-        return (
-            trimmed.length < 30 &&
-            !/\b(file|code|bug|error|function|class|import|module|project|refactor|test)\b/i.test(trimmed)
-        );
-    }
-
-    private async buildProjectContext(): Promise<{
-        projectContext: string;
-        scannedFiles: Array<{ name: string; path: string }>;
-    }> {
-        let projectContext = '';
-        const scannedFiles: Array<{ name: string; path: string }> = [];
-
-        try {
-            const scanTool = this.registry.get('file_scan');
-            if (scanTool) {
-                const scanResult = await scanTool.execute({ directory: this.directory });
-                projectContext = scanResult.content;
-                if (scanResult.data) {
-                    const data = scanResult.data as { files?: Record<string, Array<{ name: string; path: string }>> };
-                    if (data.files) {
-                        for (const group of Object.values(data.files)) {
-                            if (Array.isArray(group)) {
-                                scannedFiles.push(...group.map(file => ({ name: file.name, path: file.path })));
-                            }
-                        }
-                    }
-                }
-            }
-        } catch (error) {
-            this.emit('status_update', {
-                warning: `Workspace scan failed, continuing without context: ${error instanceof Error ? error.message : String(error)}`,
-            });
-        }
-
-        return { projectContext, scannedFiles };
-    }
-
-    private async readRelevantFiles(
-        instruction: string,
-        scannedFiles: Array<{ name: string; path: string }>,
-    ): Promise<string> {
-        const instructionLower = instruction.toLowerCase();
-        const readTargets = scannedFiles.filter(file => instructionLower.includes(file.name.toLowerCase()));
-
-        let fileContents = '';
-        for (const file of readTargets) {
-            try {
-                const readTool = this.registry.get('file_read');
-                if (readTool) {
-                    const result = await readTool.execute({ path: file.path });
-                    if (!result.isError) {
-                        fileContents += result.content + '\n\n';
-                    }
-                }
-            } catch (error) {
-                this.emit('status_update', {
-                    warning: `Could not read file ${file.name}: ${error instanceof Error ? error.message : String(error)}`,
-                });
-            }
-        }
-
-        return fileContents;
-    }
-
-    private assembleAskPrompt(
-        history: SessionMessage[],
-        instruction: string,
-        projectContext: string,
-        fileContents: string,
-    ): string {
-        const basePrompt =
-            'You are an expert developer assistant. Answer the user\'s question clearly and concisely.\n\n' +
-            `Working directory: ${this.directory}\n\n`;
-
-        const historyTokens = estimateTokens(history.map(m => m.content).join('\n'));
-        const userTokens = estimateTokens(instruction);
-        const baseTokens = estimateTokens(basePrompt);
-        let budget = MAX_CONTEXT_TOKENS - historyTokens - userTokens - baseTokens;
-
-        let contextSection = '';
-        if (projectContext && budget > 200) {
-            const ctxTokens = estimateTokens(projectContext);
-            if (ctxTokens <= budget) {
-                contextSection = `## Project Context\n${projectContext}\n\n`;
-                budget -= ctxTokens;
-            } else {
-                const maxChars = budget * 4; // rough: 1 token ≈ 4 chars
-                contextSection = `## Project Context\n${projectContext.slice(0, maxChars)}\n[…truncated]\n\n`;
-                budget = 0;
-            }
-        }
-
-        let filesSection = '';
-        if (fileContents && budget > 200) {
-            const fileTokens = estimateTokens(fileContents);
-            if (fileTokens <= budget) {
-                filesSection = `## File Contents\n${fileContents}`;
-            } else {
-                const maxChars = budget * 4;
-                filesSection = `## File Contents\n${fileContents.slice(0, maxChars)}\n[…truncated]`;
-            }
-        }
-
-        return basePrompt + contextSection + filesSection;
-    }
-
-    private async streamResponse(
-        systemPrompt: string,
-        instruction: string,
-        history: SessionMessage[],
-    ): Promise<void> {
-        const turnUsage: TurnUsage = {
-            inputTokens: 0, outputTokens: 0,
-            cacheCreationTokens: 0, cacheReadTokens: 0,
-        };
-
-        try {
-            const response = await this.llm.streamPrompt(
-                { systemPrompt, userMessage: instruction, history },
-                (token) => this.emit('stream_token', { token }),
-            );
-
-            if (response.usage) {
-                turnUsage.inputTokens += response.usage.promptTokens ?? 0;
-                turnUsage.outputTokens += response.usage.completionTokens ?? 0;
-            }
-            if (response.responseTimeMs) {
-                turnUsage.responseTimeMs = response.responseTimeMs;
-            }
-
-            this.emit('text_output', { content: response.content });
-            this.emit('phase_end', { phase: 'ask', success: true });
-
-            this.session.addTurn(instruction, response.content, turnUsage);
-            await this.repo.save(this.session);
-            this.emitTurnSaved(turnUsage);
-        } catch (error) {
-            this.emit('phase_end', { phase: 'ask', success: false });
-            this.emit('error', {
-                message: error instanceof Error ? error.message : String(error),
-                phase: 'ask',
-            });
-        }
-    }
-
-    /** Ask mode: stream a response without tool usage */
-    private async executeAskMode(instruction: string, history: SessionMessage[]): Promise<void> {
-        const casual = this.isCasualMessage(instruction);
-
-        this.emit('phase_start', { phase: 'scan', description: 'Scanning workspace for context' });
-        const { projectContext, scannedFiles } = casual
-            ? { projectContext: '', scannedFiles: [] }
-            : await this.buildProjectContext();
-        this.emit('phase_end', { phase: 'scan', success: true });
-
-        const fileContents = casual ? '' : await this.readRelevantFiles(instruction, scannedFiles);
-
-        this.emit('phase_start', { phase: 'ask', description: 'Generating answer' });
-        const systemPrompt = this.assembleAskPrompt(history, instruction, projectContext, fileContents);
-        await this.streamResponse(systemPrompt, instruction, history);
-    }
-
-    // ── Private utilities ─────────────────────────────────────────────────────
 
     private emit(type: AgentEventType, data: Record<string, unknown>): void {
         this.onEvent({ type, data });
