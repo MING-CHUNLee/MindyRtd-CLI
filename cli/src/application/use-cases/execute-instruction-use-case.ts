@@ -33,6 +33,12 @@ export interface ExecuteInstructionDeps {
     /** Human-in-the-loop callback: returns true to apply the edit, false to skip. */
     onApproval: (edit: { path: string; diff: string; original: string; proposed: string }) => Promise<boolean>;
     emit: EmitFn;
+    /** Optional — defaults to a KnowledgeBase loaded from KnowledgeRepository. */
+    knowledgeBase?: KnowledgeBase;
+    /** Optional — defaults to new Evaluator(). */
+    evaluator?: Evaluator;
+    /** Optional — defaults to new Orchestrator(llm, registry). */
+    orchestrator?: Orchestrator;
 }
 
 export interface InstructionResult {
@@ -47,7 +53,21 @@ export interface InstructionResult {
 // ── ExecuteInstructionUseCase ─────────────────────────────────────────────────
 
 export class ExecuteInstructionUseCase {
-    constructor(private readonly deps: ExecuteInstructionDeps) {}
+    private readonly knowledgeBase: KnowledgeBase;
+    private readonly evaluator: Evaluator;
+    private readonly orchestrator: Orchestrator;
+
+    constructor(private readonly deps: ExecuteInstructionDeps) {
+        if (deps.knowledgeBase) {
+            this.knowledgeBase = deps.knowledgeBase;
+        } else {
+            const kbRepo = new KnowledgeRepository();
+            this.knowledgeBase = new KnowledgeBase();
+            this.knowledgeBase.load(kbRepo.load());
+        }
+        this.evaluator = deps.evaluator ?? new Evaluator();
+        this.orchestrator = deps.orchestrator ?? new Orchestrator(deps.llm, deps.registry);
+    }
 
     async execute(instruction: string, history: SessionMessage[]): Promise<InstructionResult> {
         let orchResult: OrchestratorResult;
@@ -83,12 +103,9 @@ export class ExecuteInstructionUseCase {
     ): Promise<{ orchResult: OrchestratorResult; baseRequest: LLMRequestPayload }> {
         this.deps.emit('phase_start', { phase: 'orchestrator', description: 'Running agent (ReAct loop)' });
 
-        const kbRepo = new KnowledgeRepository();
-        const kb = new KnowledgeBase();
-        kb.load(kbRepo.load());
-        const knowledgeEntries = kb.retrieve(instruction, 3, this.deps.directory);
+        const knowledgeEntries = this.knowledgeBase.retrieve(instruction, 3, this.deps.directory);
 
-        const orchestrator = new Orchestrator(this.deps.llm, this.deps.registry);
+        const orchestrator = this.orchestrator;
 
         const toolSchemas = this.deps.registry.getSchemas();
         const toolsText = toolSchemas.map(schema => {
@@ -153,7 +170,7 @@ export class ExecuteInstructionUseCase {
         validatedEdits: Array<{ path: string; content: string }>;
         textArtifacts: Artifact[];
     }> {
-        const evaluator = new Evaluator();
+        const evaluator = this.evaluator;
         const editArtifacts = orchResult.artifacts.filter(a => a.type === 'edit');
         const textArtifacts = orchResult.artifacts.filter(a => a.type !== 'edit');
 

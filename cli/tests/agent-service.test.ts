@@ -56,9 +56,9 @@ vi.mock('../src/application/tools/r-exec-tool', () => ({
 }));
 
 vi.mock('../src/infrastructure/persistence/knowledge-repository', () => ({
-    KnowledgeRepository: vi.fn().mockImplementation(() => ({
-        load: vi.fn().mockReturnValue([]),
-    })),
+    KnowledgeRepository: vi.fn(function() {
+        return { load: vi.fn().mockReturnValue([]) };
+    }),
 }));
 
 // ── Factories ─────────────────────────────────────────────────────────────────

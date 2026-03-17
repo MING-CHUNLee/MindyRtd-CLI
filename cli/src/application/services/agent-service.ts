@@ -25,6 +25,7 @@ import { FileScanTool } from '../tools/file-scan-tool';
 import { FileReadTool } from '../tools/file-read-tool';
 import { RExecTool } from '../tools/r-exec-tool';
 import { HistorySummarizer } from './history-summarizer';
+
 import { Artifact } from '../../domain/entities/artifact';
 import { PluginLoader } from '../../infrastructure/plugins/plugin-loader';
 import { SessionMessage } from '../../shared/types/messages';
@@ -75,6 +76,8 @@ export interface AgentServiceDeps {
     llm: LLMController;
     repo: SessionRepository;
     diffEngine: DiffEngine;
+    /** Optional — defaults to new HistorySummarizer(). */
+    summarizer?: HistorySummarizer;
 }
 
 // ── AgentService ─────────────────────────────────────────────────────────────
@@ -89,6 +92,7 @@ export class AgentService {
     private readonly onApproval: ApprovalCallback;
     private readonly directory: string;
 
+    private readonly summarizer: HistorySummarizer;
     private readonly askUseCase: ExecuteAskUseCase;
     private readonly instructionUseCase: ExecuteInstructionUseCase;
 
@@ -110,6 +114,7 @@ export class AgentService {
         this.llm = deps?.llm ?? LLMController.fromEnv();
         this.repo = deps?.repo ?? new SessionRepository();
         this.diffEngine = deps?.diffEngine ?? new DiffEngine();
+        this.summarizer = deps?.summarizer ?? new HistorySummarizer();
         this.registry = new ToolRegistry();
 
         // Register built-in tools
@@ -256,9 +261,8 @@ export class AgentService {
     // ── Private utilities ─────────────────────────────────────────────────────
 
     private async prepareHistory(): Promise<SessionMessage[]> {
-        const summarizer = new HistorySummarizer();
-        return summarizer.shouldSummarize(this.session)
-            ? await summarizer.summarize(this.session, this.llm)
+        return this.summarizer.shouldSummarize(this.session)
+            ? await this.summarizer.summarize(this.session, this.llm)
             : this.session.getHistory().map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }));
     }
 
