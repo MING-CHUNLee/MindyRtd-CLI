@@ -30,7 +30,7 @@ import { PluginLoader } from '../../infrastructure/plugins/plugin-loader';
 import { SessionMessage } from '../../shared/types/messages';
 
 import { ExecuteAskUseCase } from '../use-cases/execute-ask-use-case';
-import { ExecuteInstructionUseCase, OrchestratorArtifact } from '../use-cases/execute-instruction-use-case';
+import { ExecuteInstructionUseCase } from '../use-cases/execute-instruction-use-case';
 
 // ── Event Types ──────────────────────────────────────────────────────────────
 
@@ -202,21 +202,16 @@ export class AgentService {
 
         if (result.analysisSummary !== undefined) {
             // Orchestration produced no edit artifacts — save as analysis turn
-            const domainArtifacts = result.textArtifacts.map(
-                (a: OrchestratorArtifact) => Artifact.create('analysis', a.content),
-            );
-            this.session.addTurn(instruction, result.analysisSummary, result.usage, domainArtifacts);
+            this.session.addTurn(instruction, result.analysisSummary, result.usage, result.textArtifacts);
         } else {
             const assistantSummary = result.appliedFiles.length > 0
                 ? `Applied changes to: ${result.appliedFiles.join(', ')}.`
                 : 'No changes were applied.';
 
-            const domainArtifacts: Artifact[] = [
-                ...result.appliedFiles.map(filePath =>
-                    Artifact.create('edit', result.validatedEdits.find(e => e.path === filePath)?.content ?? '', filePath)),
-                ...result.textArtifacts.map((a: OrchestratorArtifact) => Artifact.create('analysis', a.content)),
-            ];
-            this.session.addTurn(instruction, assistantSummary, result.usage, domainArtifacts);
+            const editArtifacts = result.appliedFiles.map(filePath =>
+                Artifact.create('edit', result.validatedEdits.find(e => e.path === filePath)?.content ?? '', filePath));
+
+            this.session.addTurn(instruction, assistantSummary, result.usage, [...editArtifacts, ...result.textArtifacts]);
         }
 
         await this.repo.save(this.session);

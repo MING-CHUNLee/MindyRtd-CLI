@@ -17,14 +17,11 @@ import { TurnUsage } from '../../domain/entities/conversation-turn';
 import { ToolRegistry } from '../services/tool-registry';
 import { DiffEngine } from '../services/diff-engine';
 import { SessionMessage } from '../../shared/types/messages';
-import { Orchestrator, OrchestratorResult, Artifact as OrchestratorArtifact } from '../services/orchestrator';
+import { Orchestrator, OrchestratorResult } from '../services/orchestrator';
+import { Artifact } from '../../domain/entities/artifact';
 import { Evaluator } from '../services/evaluator';
 import { KnowledgeBase } from '../services/knowledge-base';
 import { KnowledgeRepository } from '../../infrastructure/persistence/knowledge-repository';
-
-// Re-export so the facade can reference OrchestratorArtifact without importing
-// directly from the orchestrator module.
-export type { OrchestratorArtifact };
 
 type EmitFn = (type: string, data: Record<string, unknown>) => void;
 
@@ -40,7 +37,7 @@ export interface ExecuteInstructionDeps {
 
 export interface InstructionResult {
     appliedFiles: string[];
-    textArtifacts: OrchestratorArtifact[];
+    textArtifacts: Artifact[];
     validatedEdits: Array<{ path: string; content: string }>;
     usage: TurnUsage;
     /** Set when orchestration produced no edit artifacts (analysis-only response). */
@@ -154,11 +151,11 @@ export class ExecuteInstructionUseCase {
         baseRequest: LLMRequestPayload,
     ): Promise<{
         validatedEdits: Array<{ path: string; content: string }>;
-        textArtifacts: OrchestratorArtifact[];
+        textArtifacts: Artifact[];
     }> {
         const evaluator = new Evaluator();
-        const editArtifacts = orchResult.artifacts.filter(a => a.kind === 'edit');
-        const textArtifacts = orchResult.artifacts.filter(a => a.kind === 'text');
+        const editArtifacts = orchResult.artifacts.filter(a => a.type === 'edit');
+        const textArtifacts = orchResult.artifacts.filter(a => a.type !== 'edit');
 
         for (const artifact of textArtifacts) {
             this.deps.emit('text_output', { content: artifact.content });

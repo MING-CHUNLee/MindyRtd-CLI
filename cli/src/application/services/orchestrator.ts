@@ -22,21 +22,12 @@
 import { LLMController } from '../../infrastructure/api/llm-controller';
 import { LLMRequestPayload } from '../../shared/types/llm-types';
 import { TurnUsage } from '../../domain/entities/conversation-turn';
+import { Artifact } from '../../domain/entities/artifact';
 import { ToolRegistry } from './tool-registry';
 import { ReActLoop, ReActResult, ReActStep } from './react-loop';
 import { extractJsonArray } from '../../shared/utils/json-extractor';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-
-export type ArtifactKind = 'edit' | 'text';
-
-export interface Artifact {
-    kind: ArtifactKind;
-    /** For 'text': the answer string. For 'edit': the file content. */
-    content: string;
-    /** Only present for 'edit' artifacts */
-    path?: string;
-}
 
 export interface OrchestratorResult {
     artifacts: Artifact[];
@@ -159,7 +150,7 @@ export class Orchestrator {
 
 /**
  * Attempt to parse the result as a JSON edit array: [{"path":"...","content":"..."}].
- * If that fails, wrap it as a single text artifact.
+ * If that fails, wrap it as a single 'analysis' artifact.
  */
 function extractArtifacts(result: string): Artifact[] {
     const jsonStr = extractJsonArray(result);
@@ -171,15 +162,11 @@ function extractArtifacts(result: string): Artifact[] {
                 parsed.length > 0 &&
                 parsed.every(item => typeof item.path === 'string' && typeof item.content === 'string')
             ) {
-                return parsed.map(item => ({
-                    kind: 'edit' as ArtifactKind,
-                    path: item.path!,
-                    content: item.content!,
-                }));
+                return parsed.map(item => Artifact.create('edit', item.content!, item.path!));
             }
         } catch {
             // Not valid edit JSON — fall through
         }
     }
-    return [{ kind: 'text', content: result }];
+    return [Artifact.create('analysis', result)];
 }
