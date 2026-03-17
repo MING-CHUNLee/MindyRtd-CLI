@@ -3,10 +3,12 @@
  *
  * Immutable snapshot of one user-instruction → agent-response exchange.
  * Stored append-only inside ConversationSession.
- * Optionally carries structured Artifacts produced during this turn.
+ * Carries FileChange[] (pending file mutations) and LLMOutput[] (text outputs).
  */
 
-import { Artifact, ArtifactJSON } from './artifact';
+import { FileChange, FileChangeJSON } from './file-change';
+import { LLMOutput, LLMOutputJSON } from './llm-output';
+import { ArtifactJSON } from './artifact';
 
 export interface TurnUsage {
     inputTokens: number;
@@ -22,7 +24,10 @@ export interface TurnJSON {
     assistantMessage: string;
     usage: TurnUsage;
     timestamp: string;
-    artifacts: ArtifactJSON[];
+    fileChanges: FileChangeJSON[];
+    outputs: LLMOutputJSON[];
+    /** @deprecated Present only in sessions written before the FileChange/LLMOutput split. */
+    artifacts?: ArtifactJSON[];
 }
 
 export class ConversationTurn {
@@ -34,7 +39,8 @@ export class ConversationTurn {
         readonly assistantMessage: string,
         readonly usage: TurnUsage,
         timestamp?: Date,
-        readonly artifacts: Artifact[] = [],
+        readonly fileChanges: FileChange[] = [],
+        readonly outputs: LLMOutput[] = [],
     ) {
         this.timestamp = timestamp ?? new Date();
     }
@@ -54,19 +60,50 @@ export class ConversationTurn {
             assistantMessage: this.assistantMessage,
             usage: { ...this.usage },
             timestamp: this.timestamp.toISOString(),
-            artifacts: this.artifacts.map(a => a.toJSON()),
+            fileChanges: this.fileChanges.map(fc => fc.toJSON()),
+            outputs: this.outputs.map(o => o.toJSON()),
         };
     }
 
     static fromJSON(data: TurnJSON): ConversationTurn {
-        const artifacts = (data.artifacts ?? []).map(a => Artifact.fromJSON(a));
+        let fileChanges: FileChange[];
+        let outputs: LLMOutput[];
+
+        const hasLegacy = data.artifacts && data.artifacts.length > 0;
+        const hasNew = (data.fileChanges?.length ?? 0) > 0 || (data.outputs?.length ?? 0) > 0;
+
+        if (hasLegacy && !hasNew) {
+            // Migration path: old session — split legacy artifacts by type
+            fileChanges = data.artifacts!
+                .filter(a => a.type === 'edit' || a.type === 'diff')
+                .map(a => FileChange.fromJSON({
+                    id: a.id,
+                    type: a.type as 'edit' | 'diff',
+                    path: a.path!,
+                    content: a.content,
+                    createdAt: a.createdAt,
+                }));
+            outputs = data.artifacts!
+                .filter(a => a.type === 'code' || a.type === 'analysis' || a.type === 'report')
+                .map(a => LLMOutput.fromJSON({
+                    id: a.id,
+                    type: a.type as 'code' | 'analysis' | 'report',
+                    content: a.content,
+                    createdAt: a.createdAt,
+                }));
+        } else {
+            fileChanges = (data.fileChanges ?? []).map(fc => FileChange.fromJSON(fc));
+            outputs = (data.outputs ?? []).map(o => LLMOutput.fromJSON(o));
+        }
+
         return new ConversationTurn(
             data.turnNumber,
             data.userMessage,
             data.assistantMessage,
             data.usage,
             new Date(data.timestamp),
-            artifacts,
+            fileChanges,
+            outputs,
         );
     }
 }

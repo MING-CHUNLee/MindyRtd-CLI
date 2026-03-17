@@ -26,7 +26,7 @@ import { FileReadTool } from '../tools/file-read-tool';
 import { RExecTool } from '../tools/r-exec-tool';
 import { HistorySummarizer } from './history-summarizer';
 
-import { Artifact } from '../../domain/entities/artifact';
+import { FileChange } from '../../domain/entities/file-change';
 import { PluginLoader } from '../../infrastructure/plugins/plugin-loader';
 import { SessionMessage } from '../../shared/types/messages';
 
@@ -207,16 +207,16 @@ export class AgentService {
 
         if (result.analysisSummary !== undefined) {
             // Orchestration produced no edit artifacts — save as analysis turn
-            this.session.addTurn(instruction, result.analysisSummary, result.usage, result.textArtifacts);
+            this.session.addTurn(instruction, result.analysisSummary, result.usage, [], result.outputs);
         } else {
             const assistantSummary = result.appliedFiles.length > 0
                 ? `Applied changes to: ${result.appliedFiles.join(', ')}.`
                 : 'No changes were applied.';
 
-            const editArtifacts = result.appliedFiles.map(filePath =>
-                Artifact.create('edit', result.validatedEdits.find(e => e.path === filePath)?.content ?? '', filePath));
+            const fileChanges = result.appliedFiles.map(filePath =>
+                FileChange.create('edit', filePath, result.validatedEdits.find(e => e.path === filePath)?.content ?? ''));
 
-            this.session.addTurn(instruction, assistantSummary, result.usage, [...editArtifacts, ...result.textArtifacts]);
+            this.session.addTurn(instruction, assistantSummary, result.usage, fileChanges, result.outputs);
         }
 
         await this.repo.save(this.session);

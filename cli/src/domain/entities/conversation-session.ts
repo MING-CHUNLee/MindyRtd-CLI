@@ -10,7 +10,8 @@
  */
 
 import { ConversationTurn, TurnUsage, TurnJSON } from './conversation-turn';
-import { Artifact } from './artifact';
+import { FileChange, FileChangeType } from './file-change';
+import { LLMOutput, LLMOutputType } from './llm-output';
 import { TokenBudget, TokenUsageSnapshot } from '../values/token-budget';
 import { CacheStatus } from '../values/cache-status';
 
@@ -122,7 +123,8 @@ export class ConversationSession {
         userMessage: string,
         assistantMessage: string,
         usage: TurnUsage,
-        artifacts?: Artifact[],
+        fileChanges?: FileChange[],
+        outputs?: LLMOutput[],
     ): ConversationTurn {
         const turn = new ConversationTurn(
             this._turns.length + 1,
@@ -130,19 +132,24 @@ export class ConversationSession {
             assistantMessage,
             usage,
             undefined,
-            artifacts ?? [],
+            fileChanges ?? [],
+            outputs ?? [],
         );
         this._turns.push(turn);
         this.accumulate(usage);
         return turn;
     }
 
-    /**
-     * Return all artifacts across all turns, optionally filtered by type.
-     */
-    getArtifacts(type?: Artifact['type']): Artifact[] {
-        const all = this._turns.flatMap(t => t.artifacts);
-        return type ? all.filter(a => a.type === type) : all;
+    /** Return all FileChanges across all turns, optionally filtered by type. */
+    getFileChanges(type?: FileChangeType): FileChange[] {
+        const all = this._turns.flatMap(t => t.fileChanges);
+        return type ? all.filter(fc => fc.type === type) : all;
+    }
+
+    /** Return all LLMOutputs across all turns, optionally filtered by type. */
+    getOutputs(type?: LLMOutputType): LLMOutput[] {
+        const all = this._turns.flatMap(t => t.outputs);
+        return type ? all.filter(o => o.type === type) : all;
     }
 
     // ── Checkpoint / Rollback ────────────────────────────────────────────

@@ -18,7 +18,7 @@ import { ToolRegistry } from '../services/tool-registry';
 import { DiffEngine } from '../services/diff-engine';
 import { SessionMessage } from '../../shared/types/messages';
 import { Orchestrator, OrchestratorResult } from '../services/orchestrator';
-import { Artifact } from '../../domain/entities/artifact';
+import { LLMOutput } from '../../domain/entities/llm-output';
 import { Evaluator } from '../services/evaluator';
 import { KnowledgeBase } from '../services/knowledge-base';
 import { KnowledgeRepository } from '../../infrastructure/persistence/knowledge-repository';
@@ -43,7 +43,7 @@ export interface ExecuteInstructionDeps {
 
 export interface InstructionResult {
     appliedFiles: string[];
-    textArtifacts: Artifact[];
+    outputs: LLMOutput[];
     validatedEdits: Array<{ path: string; content: string }>;
     usage: TurnUsage;
     /** Set when orchestration produced no edit artifacts (analysis-only response). */
@@ -78,13 +78,13 @@ export class ExecuteInstructionUseCase {
             throw new Error('Orchestration failed'); // error already emitted by runOrchestration
         }
 
-        const { validatedEdits, textArtifacts } = await this.validateArtifacts(orchResult, baseRequest);
+        const { validatedEdits, outputs } = await this.validateArtifacts(orchResult, baseRequest);
 
         if (validatedEdits.length === 0) {
-            const analysisSummary = textArtifacts.map(a => a.content).join('\n') || 'No changes generated.';
+            const analysisSummary = outputs.map(o => o.content).join('\n') || 'No changes generated.';
             return {
                 appliedFiles: [],
-                textArtifacts,
+                outputs,
                 validatedEdits: [],
                 usage: orchResult.usage,
                 analysisSummary,
@@ -92,7 +92,7 @@ export class ExecuteInstructionUseCase {
         }
 
         const appliedFiles = await this.applyEditsWithApproval(validatedEdits);
-        return { appliedFiles, textArtifacts, validatedEdits, usage: orchResult.usage };
+        return { appliedFiles, outputs, validatedEdits, usage: orchResult.usage };
     }
 
     // ── Private helpers ───────────────────────────────────────────────────────
@@ -168,33 +168,31 @@ export class ExecuteInstructionUseCase {
         baseRequest: LLMRequestPayload,
     ): Promise<{
         validatedEdits: Array<{ path: string; content: string }>;
-        textArtifacts: Artifact[];
+        outputs: LLMOutput[];
     }> {
         const evaluator = this.evaluator;
-        const editArtifacts = orchResult.artifacts.filter(a => a.type === 'edit');
-        const textArtifacts = orchResult.artifacts.filter(a => a.type !== 'edit');
 
-        for (const artifact of textArtifacts) {
-            this.deps.emit('text_output', { content: artifact.content });
+        for (const output of orchResult.outputs) {
+            this.deps.emit('text_output', { content: output.content });
         }
 
         const validatedEdits: Array<{ path: string; content: string }> = [];
-        for (const artifact of editArtifacts) {
-            const validation = evaluator.validateEditOutput(artifact.content);
+        for (const fc of orchResult.fileChanges) {
+            const validation = evaluator.validateEditOutput(fc.content);
             if (validation.valid && validation.artifacts) {
                 validatedEdits.push(...validation.artifacts);
             } else {
-                const corrected = await evaluator.retryWithCorrection(this.deps.llm, baseRequest, artifact.content);
+                const corrected = await evaluator.retryWithCorrection(this.deps.llm, baseRequest, fc.content);
                 const retryValidation = evaluator.validateEditOutput(corrected);
                 if (retryValidation.valid && retryValidation.artifacts) {
                     validatedEdits.push(...retryValidation.artifacts);
-                } else if (artifact.path) {
-                    validatedEdits.push({ path: artifact.path, content: artifact.content });
+                } else {
+                    validatedEdits.push({ path: fc.path, content: fc.content });
                 }
             }
         }
 
-        return { validatedEdits, textArtifacts };
+        return { validatedEdits, outputs: orchResult.outputs };
     }
 
     private async applyEditsWithApproval(

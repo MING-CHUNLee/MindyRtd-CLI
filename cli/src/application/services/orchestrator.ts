@@ -22,7 +22,8 @@
 import { LLMController } from '../../infrastructure/api/llm-controller';
 import { LLMRequestPayload } from '../../shared/types/llm-types';
 import { TurnUsage } from '../../domain/entities/conversation-turn';
-import { Artifact } from '../../domain/entities/artifact';
+import { FileChange } from '../../domain/entities/file-change';
+import { LLMOutput } from '../../domain/entities/llm-output';
 import { ToolRegistry } from './tool-registry';
 import { ReActLoop, ReActResult, ReActStep } from './react-loop';
 import { extractJsonArray } from '../../shared/utils/json-extractor';
@@ -30,7 +31,8 @@ import { extractJsonArray } from '../../shared/utils/json-extractor';
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export interface OrchestratorResult {
-    artifacts: Artifact[];
+    fileChanges: FileChange[];
+    outputs: LLMOutput[];
     steps: ReActStep[];
     usage: TurnUsage;
     /** Number of sub-tasks run (1 for simple mode) */
@@ -72,8 +74,10 @@ export class Orchestrator {
 
     private async runSimple(baseRequest: LLMRequestPayload): Promise<OrchestratorResult> {
         const loopResult = await this.reactLoop.run(baseRequest);
+        const { fileChanges, outputs } = extractResults(loopResult.result);
         return {
-            artifacts: extractArtifacts(loopResult.result),
+            fileChanges,
+            outputs,
             steps: loopResult.steps,
             usage: loopResult.usage,
             subTasksRun: 1,
@@ -88,7 +92,8 @@ export class Orchestrator {
     ): Promise<OrchestratorResult> {
         const subTasks = await this.decompose(baseRequest, instruction);
 
-        const allArtifacts: Artifact[] = [];
+        const allFileChanges: FileChange[] = [];
+        const allOutputs: LLMOutput[] = [];
         const allSteps: ReActStep[] = [];
         const cumUsage: TurnUsage = { inputTokens: 0, outputTokens: 0, cacheCreationTokens: 0, cacheReadTokens: 0 };
         let subTasksRun = 0;
@@ -104,7 +109,9 @@ export class Orchestrator {
             const loopResult = await this.reactLoop.run(subRequest);
             subTasksRun++;
 
-            allArtifacts.push(...extractArtifacts(loopResult.result));
+            const { fileChanges, outputs } = extractResults(loopResult.result);
+            allFileChanges.push(...fileChanges);
+            allOutputs.push(...outputs);
             allSteps.push(...loopResult.steps);
             cumUsage.inputTokens += loopResult.usage.inputTokens;
             cumUsage.outputTokens += loopResult.usage.outputTokens;
@@ -113,7 +120,8 @@ export class Orchestrator {
         }
 
         return {
-            artifacts: allArtifacts,
+            fileChanges: allFileChanges,
+            outputs: allOutputs,
             steps: allSteps,
             usage: cumUsage,
             subTasksRun,
@@ -146,13 +154,13 @@ export class Orchestrator {
     }
 }
 
-// ── Artifact extraction ───────────────────────────────────────────────────────
+// ── Result extraction ─────────────────────────────────────────────────────────
 
 /**
  * Attempt to parse the result as a JSON edit array: [{"path":"...","content":"..."}].
- * If that fails, wrap it as a single 'analysis' artifact.
+ * If that succeeds, return FileChange[]. Otherwise wrap it as a single LLMOutput.
  */
-function extractArtifacts(result: string): Artifact[] {
+function extractResults(result: string): { fileChanges: FileChange[]; outputs: LLMOutput[] } {
     const jsonStr = extractJsonArray(result);
     if (jsonStr) {
         try {
@@ -162,11 +170,14 @@ function extractArtifacts(result: string): Artifact[] {
                 parsed.length > 0 &&
                 parsed.every(item => typeof item.path === 'string' && typeof item.content === 'string')
             ) {
-                return parsed.map(item => Artifact.create('edit', item.content!, item.path!));
+                return {
+                    fileChanges: parsed.map(item => FileChange.create('edit', item.path!, item.content!)),
+                    outputs: [],
+                };
             }
         } catch {
             // Not valid edit JSON — fall through
         }
     }
-    return [Artifact.create('analysis', result)];
+    return { fileChanges: [], outputs: [LLMOutput.create('analysis', result)] };
 }
