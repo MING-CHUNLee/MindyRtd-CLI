@@ -28,9 +28,9 @@ import { execRscriptCode } from './r-script-runner';
 const GET_PACKAGES_SCRIPT = `
 pkgs <- installed.packages()
 for (i in 1:nrow(pkgs)) {
-    cat(sprintf("%s|%s|%s|%s\\n", 
-        pkgs[i, "Package"], 
-        pkgs[i, "Version"], 
+    cat(sprintf("%s|%s|%s|%s\\n",
+        pkgs[i, "Package"],
+        pkgs[i, "Version"],
         ifelse(is.na(pkgs[i, "Priority"]), "", pkgs[i, "Priority"]),
         pkgs[i, "LibPath"]))
 }

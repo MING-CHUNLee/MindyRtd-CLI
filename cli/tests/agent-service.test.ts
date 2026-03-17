@@ -15,15 +15,11 @@ import {
 import { LLMController } from '../src/infrastructure/api/llm-controller';
 import { SessionRepository } from '../src/infrastructure/persistence/session-repository';
 import { DiffEngine } from '../src/application/services/diff-engine';
+import { PluginLoader } from '../src/infrastructure/plugins/plugin-loader';
 import { ConversationSession } from '../src/domain/entities/conversation-session';
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
-vi.mock('../src/infrastructure/plugins/plugin-loader', () => ({
-    PluginLoader: vi.fn(function() {
-        return { loadAll: vi.fn().mockResolvedValue([]) };
-    }),
-}));
 
 vi.mock('../src/application/tools/file-scan-tool', () => ({
     FileScanTool: vi.fn(function() {
@@ -111,7 +107,8 @@ function makeService(
     const repo = makeMockRepo();
     const diffEngine = makeMockDiffEngine();
 
-    const deps: AgentServiceDeps = { llm, repo, diffEngine };
+    const pluginLoader = { loadAll: vi.fn().mockResolvedValue([]) } as unknown as PluginLoader;
+    const deps: AgentServiceDeps = { llm, repo, diffEngine, pluginLoader };
 
     const service = new AgentService(
         { directory: '/fake/project' },

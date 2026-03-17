@@ -18,7 +18,7 @@ vi.mock('fs/promises', () => ({
 
 import { glob } from 'glob';
 import { readFile } from 'fs/promises';
-import { FileFinder } from '../src/application/services/file-finder';
+import { FileFinder } from '../src/infrastructure/filesystem/file-finder';
 
 const mockGlob = glob as unknown as ReturnType<typeof vi.fn>;
 const mockReadFile = readFile as unknown as ReturnType<typeof vi.fn>;

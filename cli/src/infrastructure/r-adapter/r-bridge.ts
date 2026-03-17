@@ -8,8 +8,8 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { ExecutionResponse } from '../../shared/types/execution';
-import { getCommandsDir } from '../../infrastructure/config/paths';
-import { EXECUTION } from '../../infrastructure/config/constants';
+import { getCommandsDir } from '../config/paths';
+import { EXECUTION } from '../config/constants';
 import {
     PlumberConnectionError,
     PlumberTimeoutError,

@@ -10,8 +10,8 @@
  * - This service focuses purely on business logic (Clean Architecture)
  */
 
-import { scanLibraries, isPackageInstalled, getPackageInfo } from './library-scanner';
-import { scanDirectory } from './file-scanner';
+import { scanLibraries, isPackageInstalled, getPackageInfo } from '../../infrastructure/r-adapter/library-scanner';
+import { scanDirectory } from '../../infrastructure/filesystem/file-scanner';
 import { ContextBuilder } from './context-builder';
 import { LibraryScanResult, createLibraryScanResult } from '../../shared/types/library-info';
 import { ScanResult } from '../../shared/types';

@@ -79,6 +79,8 @@ export interface AgentServiceDeps {
     diffEngine: DiffEngine;
     /** Optional — defaults to new HistorySummarizer(). */
     summarizer?: HistorySummarizer;
+    /** Optional — defaults to new PluginLoader(). */
+    pluginLoader?: PluginLoader;
 }
 
 // ── AgentService ─────────────────────────────────────────────────────────────
@@ -94,6 +96,7 @@ export class AgentService {
     private readonly directory: string;
 
     private readonly summarizer: HistorySummarizer;
+    private readonly pluginLoader: PluginLoader;
     private readonly askUseCase: ExecuteAskUseCase;
     private readonly instructionUseCase: ExecuteInstructionUseCase;
 
@@ -116,6 +119,7 @@ export class AgentService {
         this.repo = deps?.repo ?? new SessionRepository();
         this.diffEngine = deps?.diffEngine ?? new DiffEngine();
         this.summarizer = deps?.summarizer ?? new HistorySummarizer();
+        this.pluginLoader = deps?.pluginLoader ?? new PluginLoader();
         this.registry = new ToolRegistry();
 
         // Register built-in tools
@@ -163,9 +167,8 @@ export class AgentService {
             model: this.session.model,
         });
 
-        const pluginLoader = new PluginLoader();
         try {
-            const pluginMetas = await pluginLoader.loadAll(this.registry);
+            const pluginMetas = await this.pluginLoader.loadAll(this.registry);
             const loadedPlugins = pluginMetas.filter(meta => meta.loaded).map(meta => meta.name);
             if (loadedPlugins.length > 0) {
                 this.emit('status_update', { plugins: loadedPlugins });

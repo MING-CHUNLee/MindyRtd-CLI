@@ -14,7 +14,7 @@
  */
 
 import { resolve } from 'path';
-import { RubyApiClient } from '../../infrastructure/api/ruby-api-client';
+import { RubyApiClient } from '../api/ruby-api-client';
 import { FileFinder } from './file-finder';
 
 // ============================================

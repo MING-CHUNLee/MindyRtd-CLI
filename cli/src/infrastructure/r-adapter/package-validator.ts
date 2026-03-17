@@ -12,7 +12,7 @@ import {
     SafetyLevel,
 } from '../../shared/types/package-safety';
 import { PackageSafetyChecker } from './package-safety-checker';
-import { SAFETY } from '../../infrastructure/config/constants';
+import { SAFETY } from '../config/constants';
 
 /**
  * HTTP client interface for dependency injection.

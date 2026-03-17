@@ -17,7 +17,7 @@ import chalk from 'chalk';
 import ora from 'ora';
 import * as fs from 'fs';
 import * as path from 'path';
-import { RBridge } from '../../application/services/r-bridge';
+import { RBridge } from '../../infrastructure/r-adapter/r-bridge';
 import { confirmCode } from '../../application/services/code-confirmer';
 import { RunCommandOptions, ExecutionResponse } from '../../shared/types/execution';
 import { EXECUTION } from '../../infrastructure/config/constants';

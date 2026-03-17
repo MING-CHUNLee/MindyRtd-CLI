@@ -7,7 +7,7 @@
 
 import path from 'path';
 import { AgentTool, ToolInput, ToolResult, ToolSchema } from '../../domain/interfaces/agent-tool';
-import { scanDirectory } from '../services/file-scanner';
+import { scanDirectory } from '../../infrastructure/filesystem/file-scanner';
 
 export class FileScanTool implements AgentTool {
     readonly name = 'file_scan';

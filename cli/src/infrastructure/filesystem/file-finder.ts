@@ -11,7 +11,7 @@
 import { readFile } from 'fs/promises';
 import { relative } from 'path';
 import { glob } from 'glob';
-import { FilePreview } from '../../infrastructure/api/ruby-api-client';
+import { FilePreview } from '../api/ruby-api-client';
 
 // ============================================
 // Constants

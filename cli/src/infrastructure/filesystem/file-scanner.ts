@@ -10,7 +10,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { FileInfo, ProjectInfo, ScanResult, ScanOptions } from '../../shared/types';
 import { DirectoryNotFoundError, InvalidDirectoryError } from '../../shared/utils/errors';
-import { FILE_SCAN } from '../../infrastructure/config/constants';
+import { FILE_SCAN } from '../config/constants';
 
 // ============================================
 // Types

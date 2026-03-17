@@ -12,7 +12,7 @@ import {
     BlacklistEntry,
     TrustedMaintainer,
 } from '../../shared/types/package-safety';
-import { SAFETY } from '../../infrastructure/config/constants';
+import { SAFETY } from '../config/constants';
 
 export class PackageSafetyChecker {
     private blacklist: BlacklistEntry[];

@@ -7,7 +7,7 @@
  */
 
 import { AgentTool, ToolInput, ToolResult, ToolSchema } from '../../domain/interfaces/agent-tool';
-import { execRscriptCode } from '../services/r-script-runner';
+import { execRscriptCode } from '../../infrastructure/r-adapter/r-script-runner';
 
 // Patterns that indicate potentially unsafe R code (write side-effects)
 const UNSAFE_PATTERNS = /write|sink|file\.create|saveRDS|save\(|system\(/i;
