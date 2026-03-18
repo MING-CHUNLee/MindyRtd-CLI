@@ -1,0 +1,400 @@
+<mxfile host="app.diagrams.net" version="21.0.0">
+  <diagram id="agent_svc" name="AgentService Organization">
+    <mxGraphModel dx="1422" dy="762" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- ══ Title ══ -->
+        <mxCell id="ttl"
+          value="AgentService — Tool &amp; Service Organization  (ask vs edit subcommands)"
+          style="text;html=1;fontSize=15;fontStyle=1;align=center;"
+          vertex="1" parent="1">
+          <mxGeometry x="40" y="14" width="1250" height="26" as="geometry" />
+        </mxCell>
+
+        <!-- ══ agent.ts — Adapter Controller ══ -->
+        <mxCell id="entry"
+          value="&lt;b&gt;agent.ts&lt;/b&gt;  ·  Adapter Controller (Commander.js)&lt;br&gt;onEvent → chalk/console output  |  onApproval → readline prompt  |  --directory  --resume  --session  --new"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#555;fontColor=#333;fontSize=11;arcSize=5;"
+          vertex="1" parent="1">
+          <mxGeometry x="165" y="52" width="1000" height="54" as="geometry" />
+        </mxCell>
+
+        <!-- ══ AgentService Facade ══ -->
+        <mxCell id="svc"
+          value="&lt;b&gt;AgentService&lt;/b&gt;  ·  Application Facade  (DI: llm, repo, diffEngine, summarizer, pluginLoader)"
+          style="swimlane;startSize=28;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;fontStyle=1;html=1;"
+          vertex="1" parent="1">
+          <mxGeometry x="165" y="124" width="1000" height="108" as="geometry" />
+        </mxCell>
+
+        <mxCell id="sv1"
+          value="&lt;b&gt;initialize()&lt;/b&gt;&lt;br&gt;load/create session&lt;br&gt;PluginLoader.loadAll()&lt;br&gt;register tools in ToolRegistry"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;"
+          vertex="1" parent="svc">
+          <mxGeometry x="12" y="34" width="175" height="64" as="geometry" />
+        </mxCell>
+
+        <mxCell id="sv2"
+          value="&lt;b&gt;prepareHistory()&lt;/b&gt;&lt;br&gt;HistorySummarizer&lt;br&gt;health ≥ 75% → compress&lt;br&gt;old turns via LLM"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;"
+          vertex="1" parent="svc">
+          <mxGeometry x="202" y="34" width="175" height="64" as="geometry" />
+        </mxCell>
+
+        <mxCell id="sv3"
+          value="&lt;b&gt;classifyIntent()&lt;/b&gt;&lt;br&gt;LLM call → 'ask' | 'edit'&lt;br&gt;ask: review / explain / analyze&lt;br&gt;edit: fix / modify / write / refactor"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;"
+          vertex="1" parent="svc">
+          <mxGeometry x="392" y="34" width="200" height="64" as="geometry" />
+        </mxCell>
+
+        <mxCell id="sv4"
+          value="&lt;b&gt;emit(event, data)&lt;/b&gt;&lt;br&gt;session_loaded / phase_start&lt;br&gt;phase_end / react_step&lt;br&gt;text_output / error"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;"
+          vertex="1" parent="svc">
+          <mxGeometry x="607" y="34" width="175" height="64" as="geometry" />
+        </mxCell>
+
+        <mxCell id="sv5"
+          value="&lt;b&gt;emitTurnSaved()&lt;/b&gt;&lt;br&gt;SessionRepository.save()&lt;br&gt;emit turn_saved + usage&lt;br&gt;(runs after use case returns)"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;"
+          vertex="1" parent="svc">
+          <mxGeometry x="797" y="34" width="190" height="64" as="geometry" />
+        </mxCell>
+
+        <!-- ══ classifyIntent diamond ══ -->
+        <mxCell id="dmd"
+          value="&lt;b&gt;intent?&lt;/b&gt;"
+          style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;fontStyle=1;"
+          vertex="1" parent="1">
+          <mxGeometry x="570" y="256" width="190" height="70" as="geometry" />
+        </mxCell>
+
+
+        <!-- ══════════════════════════════════════
+             ASK PATH  (ExecuteAskUseCase)
+        ══════════════════════════════════════ -->
+        <mxCell id="ask_c"
+          value="&lt;b&gt;ExecuteAskUseCase&lt;/b&gt;  ·  mindy ask / casual question"
+          style="swimlane;startSize=28;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;html=1;"
+          vertex="1" parent="1">
+          <mxGeometry x="30" y="354" width="490" height="510" as="geometry" />
+        </mxCell>
+
+        <mxCell id="a1"
+          value="① isCasualMessage()&lt;br&gt;&lt;small&gt;length &lt; 30 &amp;&amp; no code keywords&lt;br&gt;→ skip file scan  (fast path)&lt;/small&gt;"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;"
+          vertex="1" parent="ask_c">
+          <mxGeometry x="40" y="40" width="410" height="52" as="geometry" />
+        </mxCell>
+
+        <mxCell id="a2"
+          value="② buildProjectContext()&lt;br&gt;&lt;small&gt;ToolRegistry.execute('file_scan')&lt;br&gt;→ RFileCollection { rScripts, rMarkdown, rData, rProject, docs }&lt;br&gt;inject  ## Working Directory  +  ## Project Files&lt;/small&gt;"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;"
+          vertex="1" parent="ask_c">
+          <mxGeometry x="40" y="106" width="410" height="72" as="geometry" />
+        </mxCell>
+
+        <mxCell id="a3"
+          value="③ readRelevantFiles()&lt;br&gt;&lt;small&gt;match filenames mentioned in instruction&lt;br&gt;ToolRegistry.execute('file_read', { path })&lt;br&gt;fallback: auto-read up to 5 files  ·  inject  ## File Contents&lt;/small&gt;"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;"
+          vertex="1" parent="ask_c">
+          <mxGeometry x="40" y="192" width="410" height="72" as="geometry" />
+        </mxCell>
+
+        <mxCell id="a4"
+          value="④ assembleAskPrompt()&lt;br&gt;&lt;small&gt;sections: ## Working Directory | ## Project Files&lt;br&gt;## File Contents | ## Relevant Knowledge (KnowledgeBase)&lt;br&gt;token budget: max 6,000 tokens&lt;/small&gt;"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;"
+          vertex="1" parent="ask_c">
+          <mxGeometry x="40" y="278" width="410" height="68" as="geometry" />
+        </mxCell>
+
+        <mxCell id="a5"
+          value="⑤ streamPrompt()&lt;br&gt;&lt;small&gt;LLMController.streamPrompt(request, onToken)&lt;br&gt;SSE: emit stream_token per chunk to TUI&lt;br&gt;accumulate usage { inputTokens, outputTokens }&lt;/small&gt;"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;"
+          vertex="1" parent="ask_c">
+          <mxGeometry x="40" y="360" width="410" height="68" as="geometry" />
+        </mxCell>
+
+        <mxCell id="a_res"
+          value="✓  AskResult  { content: string,  usage: TokenUsage }"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0055cc;fontColor=#ffffff;strokeColor=#003999;fontSize=11;fontStyle=1;"
+          vertex="1" parent="ask_c">
+          <mxGeometry x="40" y="450" width="410" height="44" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ea12" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;endFill=1;" edge="1" source="a1" target="a2" parent="ask_c">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ea23" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;endFill=1;" edge="1" source="a2" target="a3" parent="ask_c">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ea34" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;endFill=1;" edge="1" source="a3" target="a4" parent="ask_c">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ea45" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;endFill=1;" edge="1" source="a4" target="a5" parent="ask_c">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ea5r" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;endFill=1;" edge="1" source="a5" target="a_res" parent="ask_c">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+
+        <!-- ══════════════════════════════════════
+             EDIT PATH  (ExecuteInstructionUseCase)
+        ══════════════════════════════════════ -->
+        <mxCell id="edit_c"
+          value="&lt;b&gt;ExecuteInstructionUseCase&lt;/b&gt;  ·  mindy edit / agent instruction"
+          style="swimlane;startSize=28;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=12;fontStyle=1;html=1;"
+          vertex="1" parent="1">
+          <mxGeometry x="600" y="354" width="730" height="510" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e1"
+          value="① Orchestrator.run()&lt;br&gt;&lt;small&gt;detect multi-step pattern: /\bthen\b|\balso\b|\bfirst\b|\beach\b/i&lt;br&gt;&lt;b&gt;simple mode&lt;/b&gt;: run ReActLoop once&lt;br&gt;&lt;b&gt;multi-step mode&lt;/b&gt;: LLM decompose() → JSON sub-task array → ReActLoop × N&lt;br&gt;global token budget: 100,000 tokens&lt;/small&gt;"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;"
+          vertex="1" parent="edit_c">
+          <mxGeometry x="20" y="40" width="690" height="84" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e2"
+          value="② ReActLoop  (max 10 steps · abort after 3 consecutive tool errors)&lt;br&gt;&lt;small&gt;&lt;b&gt;[THOUGHT]&lt;/b&gt; reasoning...&lt;br&gt;&lt;b&gt;[ACTION {&quot;tool&quot;: &quot;file_scan&quot; | &quot;file_read&quot; | &quot;r_exec&quot;,  &quot;input&quot;: { ... }}]&lt;/b&gt;&lt;br&gt;→ ToolRegistry.execute()  →  append  &lt;b&gt;[OBSERVATION]&lt;/b&gt;  to messages  →  next step&lt;br&gt;&lt;b&gt;[ANSWER]&lt;/b&gt; final response: JSON [{path, content}, ...]  or  plain text&lt;/small&gt;"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;"
+          vertex="1" parent="edit_c">
+          <mxGeometry x="20" y="138" width="690" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e3"
+          value="③ validateArtifacts()  ·  Evaluator.validateEditOutput()&lt;br&gt;&lt;small&gt;parse JSON array · verify each item has { path: string, content: string }&lt;/small&gt;"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;"
+          vertex="1" parent="edit_c">
+          <mxGeometry x="20" y="252" width="690" height="52" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e4"
+          value="④ retryWithCorrection()  —  only if JSON is invalid  (max 2 retries)&lt;br&gt;&lt;small&gt;Evaluator re-prompts LLM with JSON_FORMATTER_SYSTEM_PROMPT to repair output&lt;/small&gt;"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;"
+          vertex="1" parent="edit_c">
+          <mxGeometry x="20" y="318" width="690" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e5"
+          value="⑤ applyEditsWithApproval()  ·  Phase-3 Safety Gate&lt;br&gt;&lt;small&gt;DiffEngine.generate() → emit diff_proposed → &lt;b&gt;onApproval callback&lt;/b&gt; (readline) → user confirm/reject&lt;br&gt;ENOENT → new file (allowed)  |  other fs error → emit warning, skip file&lt;/small&gt;"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;"
+          vertex="1" parent="edit_c">
+          <mxGeometry x="20" y="382" width="690" height="66" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e6"
+          value="⑥ fs.writeFileSync()  —  write approved file changes to disk  |  emit edit_applied per file"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;"
+          vertex="1" parent="edit_c">
+          <mxGeometry x="20" y="462" width="690" height="36" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e_res"
+          value="✓  InstructionResult  { appliedFiles[],  outputs[],  validatedEdits[],  usage: TokenUsage }"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d79b00;fontColor=#ffffff;strokeColor=#b46504;fontSize=11;fontStyle=1;"
+          vertex="1" parent="edit_c">
+          <mxGeometry x="20" y="508" width="690" height="38" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ee12" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;endFill=1;" edge="1" source="e1" target="e2" parent="edit_c">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ee23" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;endFill=1;" edge="1" source="e2" target="e3" parent="edit_c">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ee34" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;endFill=1;" edge="1" source="e3" target="e4" parent="edit_c">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ee45" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;endFill=1;" edge="1" source="e4" target="e5" parent="edit_c">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ee56" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;endFill=1;" edge="1" source="e5" target="e6" parent="edit_c">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ee6r" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;endFill=1;" edge="1" source="e6" target="e_res" parent="edit_c">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+
+        <!-- ══════════════════════════════════════
+             SHARED SERVICES ROW
+        ══════════════════════════════════════ -->
+
+        <!-- ToolRegistry -->
+        <mxCell id="treg"
+          value="&lt;b&gt;ToolRegistry&lt;/b&gt;  ·  execute() always returns ToolResult — never throws  (errors become { isError: true })"
+          style="swimlane;startSize=26;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;fontStyle=1;html=1;"
+          vertex="1" parent="1">
+          <mxGeometry x="30" y="896" width="650" height="92" as="geometry" />
+        </mxCell>
+
+        <mxCell id="tr1"
+          value="&lt;b&gt;file_scan&lt;/b&gt;&lt;br&gt;scan workspace&lt;br&gt;→ RFileCollection"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;"
+          vertex="1" parent="treg">
+          <mxGeometry x="12" y="30" width="130" height="52" as="geometry" />
+        </mxCell>
+
+        <mxCell id="tr2"
+          value="&lt;b&gt;file_read&lt;/b&gt;&lt;br&gt;read by { path }&lt;br&gt;→ content string"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;"
+          vertex="1" parent="treg">
+          <mxGeometry x="156" y="30" width="130" height="52" as="geometry" />
+        </mxCell>
+
+        <mxCell id="tr3"
+          value="&lt;b&gt;r_exec&lt;/b&gt;&lt;br&gt;run R command&lt;br&gt;read-only guard"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;"
+          vertex="1" parent="treg">
+          <mxGeometry x="300" y="30" width="130" height="52" as="geometry" />
+        </mxCell>
+
+        <mxCell id="tr4"
+          value="&lt;b&gt;plugins (dynamic)&lt;/b&gt;&lt;br&gt;~/.mindy/plugins/&lt;br&gt;ITool contract"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;"
+          vertex="1" parent="treg">
+          <mxGeometry x="444" y="30" width="192" height="52" as="geometry" />
+        </mxCell>
+
+        <!-- LLMController -->
+        <mxCell id="llmc"
+          value="&lt;b&gt;LLMController&lt;/b&gt;  ·  Claude + OpenAI adapters"
+          style="swimlane;startSize=26;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;fontStyle=1;html=1;"
+          vertex="1" parent="1">
+          <mxGeometry x="700" y="896" width="630" height="92" as="geometry" />
+        </mxCell>
+
+        <mxCell id="lc1"
+          value="&lt;b&gt;sendPrompt()&lt;/b&gt;&lt;br&gt;batch call&lt;br&gt;→ LLMResponse"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;"
+          vertex="1" parent="llmc">
+          <mxGeometry x="12" y="30" width="140" height="52" as="geometry" />
+        </mxCell>
+
+        <mxCell id="lc2"
+          value="&lt;b&gt;streamPrompt()&lt;/b&gt;&lt;br&gt;SSE → onToken cb&lt;br&gt;→ LLMResponse"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;"
+          vertex="1" parent="llmc">
+          <mxGeometry x="164" y="30" width="140" height="52" as="geometry" />
+        </mxCell>
+
+        <mxCell id="lc3"
+          value="&lt;b&gt;Claude adapter&lt;/b&gt;&lt;br&gt;Anthropic API&lt;br&gt;claude-sonnet-4-6"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;"
+          vertex="1" parent="llmc">
+          <mxGeometry x="316" y="30" width="145" height="52" as="geometry" />
+        </mxCell>
+
+        <mxCell id="lc4"
+          value="&lt;b&gt;OpenAI adapter&lt;/b&gt;&lt;br&gt;OpenAI API&lt;br&gt;GPT models"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;"
+          vertex="1" parent="llmc">
+          <mxGeometry x="472" y="30" width="145" height="52" as="geometry" />
+        </mxCell>
+
+        <!-- Shared Persistence -->
+        <mxCell id="pers"
+          value="&lt;b&gt;Shared Persistence &amp; Support&lt;/b&gt;"
+          style="swimlane;startSize=26;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;fontStyle=1;html=1;"
+          vertex="1" parent="1">
+          <mxGeometry x="30" y="1008" width="1300" height="78" as="geometry" />
+        </mxCell>
+
+        <mxCell id="p1"
+          value="&lt;b&gt;SessionRepository&lt;/b&gt;&lt;br&gt;save/load · &lt;cwd&gt;/.mindy/sessions/"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;"
+          vertex="1" parent="pers">
+          <mxGeometry x="12" y="28" width="248" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="p2"
+          value="&lt;b&gt;KnowledgeBase&lt;/b&gt;&lt;br&gt;retrieve() TF-IDF · &lt;cwd&gt;/.mindy/knowledge.json"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;"
+          vertex="1" parent="pers">
+          <mxGeometry x="274" y="28" width="295" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="p3"
+          value="&lt;b&gt;HistorySummarizer&lt;/b&gt;&lt;br&gt;shouldSummarize (≥75%) · compress old turns via LLM · keepRecentTurns=3"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;"
+          vertex="1" parent="pers">
+          <mxGeometry x="582" y="28" width="360" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="p4"
+          value="&lt;b&gt;PluginLoader&lt;/b&gt;&lt;br&gt;discover() / loadAll() · ~/.mindy/plugins/ (global)"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;"
+          vertex="1" parent="pers">
+          <mxGeometry x="956" y="28" width="330" height="40" as="geometry" />
+        </mxCell>
+
+
+        <!-- ══════════════════════════════════════
+             MAIN FLOW ARROWS
+        ══════════════════════════════════════ -->
+
+        <!-- entry → svc -->
+        <mxCell id="f1" value="executeInstruction(instruction)"
+          style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;endFill=1;fontSize=9;"
+          edge="1" source="entry" target="svc" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- svc → diamond -->
+        <mxCell id="f2" value=""
+          style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;endFill=1;"
+          edge="1" source="svc" target="dmd" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- diamond → ask_c -->
+        <mxCell id="f3" value="'ask'"
+          style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;endFill=1;exitX=0;exitY=0.5;exitPerimeter=0;entryX=0.5;entryY=0;entryPerimeter=0;fontSize=11;fontStyle=1;fontColor=#0055cc;"
+          edge="1" source="dmd" target="ask_c" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- diamond → edit_c -->
+        <mxCell id="f4" value="'edit'"
+          style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;endFill=1;exitX=1;exitY=0.5;exitPerimeter=0;entryX=0.5;entryY=0;entryPerimeter=0;fontSize=11;fontStyle=1;fontColor=#d79b00;"
+          edge="1" source="dmd" target="edit_c" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ask_c → treg -->
+        <mxCell id="f5" value="file_scan, file_read"
+          style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=open;endFill=0;dashed=1;fontSize=9;entryX=0.25;entryY=0;entryPerimeter=0;"
+          edge="1" source="ask_c" target="treg" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- edit_c → treg -->
+        <mxCell id="f6" value="file_scan, file_read, r_exec"
+          style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=open;endFill=0;dashed=1;fontSize=9;entryX=0.75;entryY=0;entryPerimeter=0;"
+          edge="1" source="edit_c" target="treg" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ask_c → llmc -->
+        <mxCell id="f7" value="streamPrompt()"
+          style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=open;endFill=0;dashed=1;fontSize=9;entryX=0.15;entryY=0;entryPerimeter=0;"
+          edge="1" source="ask_c" target="llmc" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- edit_c → llmc -->
+        <mxCell id="f8" value="sendPrompt()"
+          style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=open;endFill=0;dashed=1;fontSize=9;entryX=0.75;entryY=0;entryPerimeter=0;"
+          edge="1" source="edit_c" target="llmc" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

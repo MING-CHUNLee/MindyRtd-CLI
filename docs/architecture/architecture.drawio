@@ -1,0 +1,151 @@
+<mxfile host="65bd71144e">
+    <diagram id="arch" name="MindyCLI Architecture">
+        <mxGraphModel dx="564" dy="718" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="sA_title" value="MindyCLI — Flow: User ↔ CLI Agent ↔ Context / Conversation ↔ LLM" style="text;html=1;fontSize=15;fontStyle=1;align=center;" parent="1" vertex="1">
+                    <mxGeometry x="40" y="16" width="1000" height="26" as="geometry"/>
+                </mxCell>
+                <mxCell id="user" value="&lt;b&gt;👤 User&lt;/b&gt;&lt;br&gt;Terminal I/O&lt;br&gt;&lt;font&gt;&lt;i&gt;View  (MVC)&lt;/i&gt;&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;arcSize=12;fontColor=#000066;" parent="1" vertex="1">
+                    <mxGeometry x="50" y="58" width="145" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="cli_agent" value="&lt;b&gt;🤖 CLI Agent&lt;/b&gt;&lt;br&gt;Controllers + Services&lt;br&gt;Orchestrator / ReActLoop&lt;br&gt;&lt;font&gt;&lt;i&gt;Controller  (MVC)&lt;/i&gt;&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;arcSize=12;fontColor=#003300;" parent="1" vertex="1">
+                    <mxGeometry x="265" y="48" width="185" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="ctx" value="&lt;b&gt;📋 Context / Conversation&lt;/b&gt;&lt;br&gt;ConversationSession&lt;br&gt;Turns + Artifacts + KB&lt;br&gt;&lt;font&gt;&lt;i&gt;Model  (MVC) / Domain  (DDD)&lt;/i&gt;&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;arcSize=12;fontColor=#994C00;" parent="1" vertex="1">
+                    <mxGeometry x="530" y="48" width="210" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="llm_box" value="&lt;b&gt;🧠 LLM&lt;/b&gt;&lt;br&gt;Claude / OpenAI&lt;br&gt;streamPrompt()&lt;br&gt;&lt;font&gt;&lt;i&gt;Infrastructure  (DDD)&lt;/i&gt;&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;arcSize=12;fontColor=#660066;" parent="1" vertex="1">
+                    <mxGeometry x="815" y="48" width="175" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="e1f" value="cmd / instruction" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0.35;exitPerimeter=0;entryX=0;entryY=0.35;entryPerimeter=0;endArrow=block;endFill=1;fontSize=9;" parent="1" source="user" target="cli_agent" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e2f" value="read / update session" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0.35;exitPerimeter=0;entryX=0;entryY=0.35;entryPerimeter=0;endArrow=block;endFill=1;fontSize=9;" parent="1" source="cli_agent" target="ctx" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e3f" value="prompt + history" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0.35;exitPerimeter=0;entryX=0;entryY=0.35;entryPerimeter=0;endArrow=block;endFill=1;fontSize=9;" parent="1" source="ctx" target="llm_box" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e1b" value="output / diff / stream" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0;exitY=0.65;exitPerimeter=0;entryX=1;entryY=0.65;entryPerimeter=0;endArrow=block;endFill=1;dashed=1;fontSize=9;" parent="1" source="cli_agent" target="user" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e2b" value="history / artifacts" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0;exitY=0.65;exitPerimeter=0;entryX=1;entryY=0.65;entryPerimeter=0;endArrow=block;endFill=1;dashed=1;fontSize=9;" parent="1" source="ctx" target="cli_agent" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e3b" value="response / tokens" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0;exitY=0.65;exitPerimeter=0;entryX=1;entryY=0.65;entryPerimeter=0;endArrow=block;endFill=1;dashed=1;fontSize=9;" parent="1" source="llm_box" target="ctx" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="sB_title" value="DDD Architecture — MVC Mapping" style="text;html=1;fontSize=14;fontStyle=1;align=left;" parent="1" vertex="1">
+                    <mxGeometry x="40" y="185" width="500" height="22" as="geometry"/>
+                </mxCell>
+                <mxCell id="sB_legend" value="🔵 Presentation = View  |  🟢 Application = Controller  |  🟡 Domain = Model  |  🔴 Infrastructure = External Adapters  |  ── request   ╌╌ response" style="text;html=1;fontSize=10;align=left;" parent="1" vertex="1">
+                    <mxGeometry x="40" y="204" width="950" height="18" as="geometry"/>
+                </mxCell>
+                <mxCell id="L1" value="&lt;b&gt;PRESENTATION LAYER&lt;/b&gt;  ·  View (MVC)" style="swimlane;startSize=28;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;html=1;fontColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="40" y="228" width="1000" height="88" as="geometry"/>
+                </mxCell>
+                <mxCell id="L1a" value="&lt;b&gt;User Terminal&lt;/b&gt;&lt;br&gt;chalk / inquirer&lt;br&gt;stdin / stdout" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;fontColor=#000000;" parent="L1" vertex="1">
+                    <mxGeometry x="14" y="34" width="145" height="44" as="geometry"/>
+                </mxCell>
+                <mxCell id="L1b" value="&lt;b&gt;CLI Entry  (index.ts)&lt;/b&gt;&lt;br&gt;Commander.js — command router" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;fontColor=#000000;" parent="L1" vertex="1">
+                    <mxGeometry x="174" y="34" width="210" height="44" as="geometry"/>
+                </mxCell>
+                <mxCell id="L2" value="&lt;b&gt;APPLICATION LAYER&lt;/b&gt;  ·  Controller (MVC)" style="swimlane;startSize=28;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;fontStyle=1;html=1;fontColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="40" y="328" width="1000" height="124" as="geometry"/>
+                </mxCell>
+                <mxCell id="L2a" value="&lt;b&gt;Adapter Controllers&lt;/b&gt;&lt;br&gt;agent.ts / ask.ts&lt;br&gt;rollback.ts / plugins.ts&lt;br&gt;knowledge.ts" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;fontColor=#000000;" parent="L2" vertex="1">
+                    <mxGeometry x="14" y="34" width="155" height="78" as="geometry"/>
+                </mxCell>
+                <mxCell id="L2b" value="&lt;b&gt;AgentService  (Facade)&lt;/b&gt;&lt;br&gt;initialize() / getSession()&lt;br&gt;classifyIntent()&lt;br&gt;handleSlashCommand()" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;fontColor=#000000;" parent="L2" vertex="1">
+                    <mxGeometry x="184" y="34" width="165" height="78" as="geometry"/>
+                </mxCell>
+                <mxCell id="L2c" value="&lt;b&gt;ExecuteAskUseCase&lt;/b&gt;&lt;br&gt;→ AskResult { content, usage }&lt;br&gt;stream support&lt;br&gt;HistorySummarizer" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;fontColor=#000000;" parent="L2" vertex="1">
+                    <mxGeometry x="364" y="34" width="170" height="78" as="geometry"/>
+                </mxCell>
+                <mxCell id="L2d" value="&lt;b&gt;ExecuteInstructionUseCase&lt;/b&gt;&lt;br&gt;→ InstructionResult&lt;br&gt;Evaluator (JSON repair)&lt;br&gt;Phase-3 diff review" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;fontColor=#000000;" parent="L2" vertex="1">
+                    <mxGeometry x="548" y="34" width="175" height="78" as="geometry"/>
+                </mxCell>
+                <mxCell id="L2e" value="&lt;b&gt;Orchestrator / ReActLoop&lt;/b&gt;&lt;br&gt;[THOUGHT] / [ACTION] / [ANSWER]&lt;br&gt;simple + multi-step modes&lt;br&gt;3-fail abort guard" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;fontColor=#000000;" parent="L2" vertex="1">
+                    <mxGeometry x="736" y="34" width="188" height="78" as="geometry"/>
+                </mxCell>
+                <mxCell id="L3" value="&lt;b&gt;DOMAIN LAYER&lt;/b&gt;&amp;nbsp; ·  Core Business Logic (DDD)" style="swimlane;startSize=28;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;fontStyle=1;html=1;fontColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="40" y="464" width="1000" height="124" as="geometry"/>
+                </mxCell>
+                <mxCell id="L3a" value="&lt;b&gt;ConversationSession&lt;/b&gt;&lt;br&gt;addTurn(Artifact[])&lt;br&gt;getArtifacts(type?)&lt;br&gt;checkpoint() / rollbackTo(n)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;fontColor=#000000;" parent="L3" vertex="1">
+                    <mxGeometry x="14" y="34" width="180" height="78" as="geometry"/>
+                </mxCell>
+                <mxCell id="L3b" value="&lt;b&gt;ConversationTurn&lt;/b&gt;&lt;br&gt;role / content / usage&lt;br&gt;artifacts: Artifact[]&lt;br&gt;fromJSON() compat" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;fontColor=#000000;" parent="L3" vertex="1">
+                    <mxGeometry x="208" y="34" width="170" height="78" as="geometry"/>
+                </mxCell>
+                <mxCell id="L3c" value="&lt;b&gt;Artifact&lt;/b&gt;&lt;br&gt;type: edit | diff | code&lt;br&gt;     | analysis | report&lt;br&gt;path / content" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;fontColor=#000000;" parent="L3" vertex="1">
+                    <mxGeometry x="392" y="34" width="160" height="78" as="geometry"/>
+                </mxCell>
+                <mxCell id="L3d" value="&lt;b&gt;KnowledgeEntry&lt;/b&gt;&lt;br&gt;tags / title / content&lt;br&gt;TF-IDF scoring&lt;br&gt;(tags×3 title×2 content×1)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;fontColor=#000000;" parent="L3" vertex="1">
+                    <mxGeometry x="566" y="34" width="175" height="78" as="geometry"/>
+                </mxCell>
+                <mxCell id="L3e" value="&lt;b&gt;ToolRegistry + ITool&lt;/b&gt;&lt;br&gt;file_scan / file_read&lt;br&gt;r_exec (read-only guard)&lt;br&gt;plugin dynamic load" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;fontColor=#000000;" parent="L3" vertex="1">
+                    <mxGeometry x="754" y="34" width="180" height="78" as="geometry"/>
+                </mxCell>
+                <mxCell id="L4" value="&lt;b&gt;INFRASTRUCTURE LAYER&lt;/b&gt;  ·  External Adapters (DDD)" style="swimlane;startSize=28;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;fontStyle=1;html=1;fontColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="40" y="600" width="1000" height="112" as="geometry"/>
+                </mxCell>
+                <mxCell id="L4a" value="&lt;b&gt;LLMController&lt;/b&gt;&lt;br&gt;sendPrompt() / streamPrompt()&lt;br&gt;Claude + OpenAI adapters&lt;br&gt;SSE streaming" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;fontColor=#000000;" parent="L4" vertex="1">
+                    <mxGeometry x="14" y="34" width="195" height="68" as="geometry"/>
+                </mxCell>
+                <mxCell id="L4b" value="&lt;b&gt;Paths Config  (paths.ts)&lt;/b&gt;&lt;br&gt;getProjectBase()&lt;br&gt;getSessionsDir()&lt;br&gt;&lt;cwd&gt;/.mindy/&lt;/cwd&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;fontColor=#000000;" parent="L4" vertex="1">
+                    <mxGeometry x="224" y="34" width="165" height="68" as="geometry"/>
+                </mxCell>
+                <mxCell id="L4c" value="&lt;b&gt;SessionRepository&lt;/b&gt;&lt;br&gt;save() / load()&lt;br&gt;.mindy/sessions/&lt;br&gt;project-scoped" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;fontColor=#000000;" parent="L4" vertex="1">
+                    <mxGeometry x="404" y="34" width="165" height="68" as="geometry"/>
+                </mxCell>
+                <mxCell id="L4d" value="&lt;b&gt;KnowledgeRepository&lt;/b&gt;&lt;br&gt;.mindy/knowledge.json&lt;br&gt;project-scoped" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;fontColor=#000000;" parent="L4" vertex="1">
+                    <mxGeometry x="584" y="34" width="165" height="68" as="geometry"/>
+                </mxCell>
+                <mxCell id="L4e" value="&lt;b&gt;PluginLoader&lt;/b&gt;&lt;br&gt;discover() / loadAll()&lt;br&gt;~/.mindy/plugins/&lt;br&gt;global plugins" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;fontColor=#000000;" parent="L4" vertex="1">
+                    <mxGeometry x="764" y="34" width="185" height="68" as="geometry"/>
+                </mxCell>
+                <mxCell id="L5" value="&lt;b&gt;EXTERNAL SERVICES&lt;/b&gt;" style="swimlane;startSize=28;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;fontStyle=1;html=1;fontColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="40" y="724" width="1000" height="96" as="geometry"/>
+                </mxCell>
+                <mxCell id="L5a" value="&lt;b&gt;Claude API&lt;/b&gt;&lt;br&gt;Anthropic&lt;br&gt;claude-sonnet-4-6" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;fontColor=#000000;" parent="L5" vertex="1">
+                    <mxGeometry x="14" y="34" width="155" height="52" as="geometry"/>
+                </mxCell>
+                <mxCell id="L5b" value="&lt;b&gt;OpenAI API&lt;/b&gt;&lt;br&gt;GPT models / SSE" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;fontColor=#000000;" parent="L5" vertex="1">
+                    <mxGeometry x="184" y="34" width="155" height="52" as="geometry"/>
+                </mxCell>
+                <mxCell id="L5c" value="&lt;b&gt;File System&lt;/b&gt;&lt;br&gt;.R / .Rmd / .RData / .Rproj&lt;br&gt;.mindy/ persistence" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;fontColor=#000000;" parent="L5" vertex="1">
+                    <mxGeometry x="354" y="34" width="180" height="52" as="geometry"/>
+                </mxCell>
+                <mxCell id="L5d" value="&lt;b&gt;R Runtime&lt;/b&gt;&lt;br&gt;RStudio Terminal&lt;br&gt;r_exec tool" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;fontColor=#000000;" parent="L5" vertex="1">
+                    <mxGeometry x="548" y="34" width="155" height="52" as="geometry"/>
+                </mxCell>
+                <mxCell id="f12" value="command dispatch" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.12;exitY=1;exitPerimeter=0;entryX=0.12;entryY=0;entryPerimeter=0;endArrow=block;endFill=1;fontSize=9;" parent="1" source="L1" target="L2" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="f23" value="read / write entities" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.12;exitY=1;exitPerimeter=0;entryX=0.12;entryY=0;entryPerimeter=0;endArrow=block;endFill=1;fontSize=9;" parent="1" source="L2" target="L3" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="f34" value="persist / retrieve" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.12;exitY=1;exitPerimeter=0;entryX=0.12;entryY=0;entryPerimeter=0;endArrow=block;endFill=1;fontSize=9;" parent="1" source="L3" target="L4" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="f45" value="API calls / disk I/O" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.12;exitY=1;exitPerimeter=0;entryX=0.12;entryY=0;entryPerimeter=0;endArrow=block;endFill=1;fontSize=9;" parent="1" source="L4" target="L5" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="r21" value="response / output" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.88;exitY=0;exitPerimeter=0;entryX=0.88;entryY=1;entryPerimeter=0;endArrow=block;endFill=1;dashed=1;fontSize=9;" parent="1" source="L2" target="L1" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="r32" value="domain data" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.88;exitY=0;exitPerimeter=0;entryX=0.88;entryY=1;entryPerimeter=0;endArrow=block;endFill=1;dashed=1;fontSize=9;" parent="1" source="L3" target="L2" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="r43" value="persisted data" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.88;exitY=0;exitPerimeter=0;entryX=0.88;entryY=1;entryPerimeter=0;endArrow=block;endFill=1;dashed=1;fontSize=9;" parent="1" source="L4" target="L3" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="r54" value="LLM response / files" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.88;exitY=0;exitPerimeter=0;entryX=0.88;entryY=1;entryPerimeter=0;endArrow=block;endFill=1;dashed=1;fontSize=9;" parent="1" source="L5" target="L4" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>
