@@ -7,19 +7,21 @@
  * in RStudio projects, powered by LLM-based workflows.
  *
  * Entry point:
- *   mindy-cli              → Agent mode (default, interactive)
+ *   mindy-cli              → Interactive TUI REPL (default)
  *   mindy-cli agent "..."  → Agent mode (one-shot instruction)
+ *   mindy-cli ask "..."    → Ask mode (conversational Q&A)
  *   mindy-cli <command>    → Direct utility commands (scan, run, install, …)
  *
  * Clean Architecture (dependency flows inward):
  *
- * - domain/          : Core entities, value objects, interfaces (zero deps)
+ * - domain/          : Core entities, value objects, interfaces, repositories (zero deps)
  * - application/
  *     - controllers/ : CLI command handlers (Commander-based)
+ *     - use-cases/   : Orchestrated workflows (ask, instruction pipelines)
  *     - services/    : Business logic (Orchestrator, DiffEngine, RBridge, …)
  *     - tools/       : Agent tool implementations (FileScan, FileRead, RExec)
  *     - prompts/     : Prompt templates & section builders
- * - infrastructure/  : External I/O — API clients, persistence, plugins, config
+ * - infrastructure/  : External I/O — API clients, persistence, filesystem, plugins, config, r-adapter
  * - presentation/    : Views, status bar, Ink-based TUI, i18n
  * - shared/          : Cross-cutting types, utils, static data
  */

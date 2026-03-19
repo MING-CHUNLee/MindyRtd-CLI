@@ -14,6 +14,9 @@
 # Except docs in root docs/
 !docs/**/*.md
 
+# Except README.md in root docs/
+!README.md
+
 # Node.js
 node_modules/
 npm-debug.log*
