@@ -118,8 +118,9 @@ export function requireEnv(key: string): string {
     const value = process.env[key];
     if (!value) {
         throw new Error(
-            `Missing required environment variable: ${key}\n` +
-            `Please set it in your .env file or environment.`
+            `No API key found for "${key}".\n` +
+            `Please add it to the .env file in your project root directory and restart mindy-cli.\n` +
+            `Example: echo '${key}=your-api-key-here' >> .env`
         );
     }
     return value;

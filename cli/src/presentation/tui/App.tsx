@@ -175,8 +175,7 @@ const App: React.FC<AppProps> = ({ config }) => {
     useEffect(() => {
         const initAgent = async () => {
             const mod = await import('../../application/services/agent-service.js');
-            // CJS default export wraps all named exports
-            const AgentServiceClass = mod.AgentService ?? mod.default?.AgentService;
+            const AgentServiceClass = mod.AgentService;
             const service = new AgentServiceClass(
                 { directory: config?.directory ?? process.cwd() },
                 handleAgentEvent,
@@ -189,7 +188,12 @@ const App: React.FC<AppProps> = ({ config }) => {
             agentServiceRef.current = service;
         };
         initAgent().catch(err => {
-            addMessage('error', `Failed to initialize agent: ${err.message ?? err}`);
+            const isApiKeyError = err.message?.includes('No API key found') || err.message?.includes('API key');
+            if (isApiKeyError) {
+                addMessage('error', err.message);
+            } else {
+                addMessage('error', `Failed to initialize agent: ${err.message ?? err}`);
+            }
         });
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -206,7 +210,7 @@ const App: React.FC<AppProps> = ({ config }) => {
 
         const service = agentServiceRef.current;
         if (!service) {
-            addMessage('error', 'Agent not initialized yet. Please wait...');
+            addMessage('error', 'Agent is not ready. Please check your .env file has a valid API key and restart mindy-cli.');
             return;
         }
 
@@ -269,12 +273,12 @@ const App: React.FC<AppProps> = ({ config }) => {
 
             {statusData && (
                 <StatusBar
-                    sessionId={statusData.sessionId}
-                    turnCount={statusData.turnCount}
                     model={statusData.model}
                     usagePercent={statusData.usagePercent}
                     health={statusData.health}
                     totalCostUSD={statusData.totalCostUSD}
+                    turnCount={statusData.turnCount}
+                    items={['model', 'context', 'turn', 'cost']}
                 />
             )}
 

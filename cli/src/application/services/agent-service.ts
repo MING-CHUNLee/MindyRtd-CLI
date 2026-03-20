@@ -23,6 +23,7 @@ import { TurnUsage } from '../../domain/entities/conversation-turn';
 import { ToolRegistry } from './tool-registry';
 import { FileScanTool } from '../tools/file-scan-tool';
 import { FileReadTool } from '../tools/file-read-tool';
+import { PdfReadTool } from '../tools/pdf-read-tool';
 import { RExecTool } from '../tools/r-exec-tool';
 import { HistorySummarizer } from './history-summarizer';
 import { INTENT_CLASSIFIER_SYSTEM_PROMPT } from '../prompts/intent-classifier';
@@ -125,6 +126,7 @@ export class AgentService {
         // Register built-in tools
         this.registry.register(new FileScanTool());
         this.registry.register(new FileReadTool());
+        this.registry.register(new PdfReadTool());
         this.registry.register(new RExecTool());
 
         // Cast to the wider string type expected by use cases (safe: use cases only
