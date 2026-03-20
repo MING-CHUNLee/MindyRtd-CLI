@@ -8,6 +8,7 @@
  * persisting the session turn.
  */
 
+import path from 'path';
 import { LLMController } from '../../infrastructure/api/llm-controller';
 import { TurnUsage } from '../../domain/entities/conversation-turn';
 import { ToolRegistry } from '../services/tool-registry';
@@ -98,12 +99,20 @@ export class ExecuteAskUseCase {
         scannedFiles: Array<{ name: string; path: string }>,
     ): Promise<string> {
         const instructionLower = instruction.toLowerCase();
-        const readTargets = scannedFiles.filter(file => instructionLower.includes(file.name.toLowerCase()));
+        const readTargets = scannedFiles.filter(file => {
+            const nameLower = file.name.toLowerCase();
+            if (instructionLower.includes(nameLower)) return true;
+            // Also match by extension keyword: "pdf" in instruction matches all .pdf files
+            const ext = path.extname(nameLower).slice(1); // e.g. "pdf", "r", "rmd"
+            return ext.length > 0 && instructionLower.includes(ext);
+        });
 
         let fileContents = '';
         for (const file of readTargets) {
             try {
-                const readTool = this.deps.registry.get('file_read');
+                const isPdf = file.name.toLowerCase().endsWith('.pdf');
+                const toolName = isPdf ? 'pdf_read' : 'file_read';
+                const readTool = this.deps.registry.get(toolName);
                 if (readTool) {
                     const result = await readTool.execute({ path: file.path });
                     if (!result.isError) {
