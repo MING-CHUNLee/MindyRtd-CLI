@@ -22,6 +22,7 @@ import { LLMOutput } from '../../domain/entities/llm-output';
 import { Evaluator } from '../services/evaluator';
 import { KnowledgeBase } from '../services/knowledge-base';
 import { KnowledgeRepository } from '../../infrastructure/persistence/knowledge-repository';
+import { FileEditTool, StagedEdit } from '../tools/file-edit-tool';
 
 type EmitFn = (type: string, data: Record<string, unknown>) => void;
 
@@ -39,6 +40,8 @@ export interface ExecuteInstructionDeps {
     evaluator?: Evaluator;
     /** Optional — defaults to new Orchestrator(llm, registry). */
     orchestrator?: Orchestrator;
+    /** Optional — defaults to a new FileEditTool(diffEngine). */
+    fileEditTool?: FileEditTool;
 }
 
 export interface InstructionResult {
@@ -56,6 +59,7 @@ export class ExecuteInstructionUseCase {
     private readonly knowledgeBase: KnowledgeBase;
     private readonly evaluator: Evaluator;
     private readonly orchestrator: Orchestrator;
+    private readonly fileEditTool: FileEditTool;
 
     constructor(private readonly deps: ExecuteInstructionDeps) {
         if (deps.knowledgeBase) {
@@ -67,6 +71,7 @@ export class ExecuteInstructionUseCase {
         }
         this.evaluator = deps.evaluator ?? new Evaluator();
         this.orchestrator = deps.orchestrator ?? new Orchestrator(deps.llm, deps.registry);
+        this.fileEditTool = deps.fileEditTool ?? new FileEditTool(deps.diffEngine);
     }
 
     async execute(instruction: string, history: SessionMessage[]): Promise<InstructionResult> {
@@ -80,18 +85,25 @@ export class ExecuteInstructionUseCase {
 
         const { validatedEdits, outputs } = await this.validateArtifacts(orchResult, baseRequest);
 
-        if (validatedEdits.length === 0) {
+        // Collect edits from two sources:
+        //   1. ReAct tool calls  → already staged inside FileEditTool with original + diff pre-computed
+        //   2. LLM artifact JSON → converted to StagedEdit here (read original, compute diff)
+        const toolStagedEdits = this.fileEditTool.drainStagedEdits();
+        const artifactEdits = this.buildStagedEditsFromArtifacts(validatedEdits);
+        const allEdits = [...toolStagedEdits, ...artifactEdits];
+
+        if (allEdits.length === 0) {
             const analysisSummary = outputs.map(o => o.content).join('\n') || 'No changes generated.';
             return {
                 appliedFiles: [],
                 outputs,
-                validatedEdits: [],
+                validatedEdits,
                 usage: orchResult.usage,
                 analysisSummary,
             };
         }
 
-        const appliedFiles = await this.applyEditsWithApproval(validatedEdits);
+        const appliedFiles = await this.applyEditsWithApproval(allEdits);
         return { appliedFiles, outputs, validatedEdits, usage: orchResult.usage };
     }
 
@@ -195,14 +207,17 @@ export class ExecuteInstructionUseCase {
         return { validatedEdits, outputs: orchResult.outputs };
     }
 
-    private async applyEditsWithApproval(
-        validatedEdits: Array<{ path: string; content: string }>,
-    ): Promise<string[]> {
-        this.deps.emit('phase_start', { phase: 'review', description: 'Review proposed changes' });
-        const appliedFiles: string[] = [];
-
-        for (const edit of validatedEdits) {
-            const absPath = path.resolve(this.deps.directory, edit.path);
+    /**
+     * Convert artifact-extracted edits (from LLM JSON blob) into StagedEdit objects
+     * by reading the original file from disk and computing the diff.
+     * Skips edits where the proposed content is identical to the current file.
+     */
+    private buildStagedEditsFromArtifacts(
+        artifacts: Array<{ path: string; content: string }>,
+    ): StagedEdit[] {
+        const staged: StagedEdit[] = [];
+        for (const artifact of artifacts) {
+            const absPath = path.resolve(this.deps.directory, artifact.path);
             let original = '';
             try {
                 original = fs.readFileSync(absPath, 'utf8');
@@ -212,24 +227,48 @@ export class ExecuteInstructionUseCase {
                         message: `Cannot read ${absPath}: ${(error as Error).message}`,
                         phase: 'review',
                     });
+                    continue;
                 }
-                // ENOENT = new file being created — proceed with empty original
+                // ENOENT = new file being created — original stays ''
             }
 
-            if (original === edit.content) continue;
+            if (original === artifact.content) continue;
 
-            const coloredDiff = this.deps.diffEngine.generateColoredDiff(original, edit.content);
-            this.deps.emit('diff_proposed', { path: edit.path, diff: coloredDiff, original, proposed: edit.content });
+            staged.push({
+                path: artifact.path,
+                content: artifact.content,
+                original,
+                diff: this.deps.diffEngine.generateColoredDiff(original, artifact.content),
+            });
+        }
+        return staged;
+    }
+
+    /**
+     * Present each staged edit to the user for approval and apply approved ones via FileEditTool.
+     * No direct fs calls here — all I/O is delegated to fileEditTool.applyEdit().
+     */
+    private async applyEditsWithApproval(edits: StagedEdit[]): Promise<string[]> {
+        this.deps.emit('phase_start', { phase: 'review', description: 'Review proposed changes' });
+        const appliedFiles: string[] = [];
+
+        for (const edit of edits) {
+            this.deps.emit('diff_proposed', {
+                path: edit.path,
+                diff: edit.diff,
+                original: edit.original,
+                proposed: edit.content,
+            });
 
             const approved = await this.deps.onApproval({
                 path: edit.path,
-                diff: coloredDiff,
-                original,
+                diff: edit.diff,
+                original: edit.original,
                 proposed: edit.content,
             });
+
             if (approved) {
-                fs.mkdirSync(path.dirname(absPath), { recursive: true });
-                fs.writeFileSync(absPath, edit.content, 'utf8');
+                this.fileEditTool.applyEdit(edit);
                 this.deps.emit('edit_applied', { path: edit.path });
                 appliedFiles.push(edit.path);
             } else {

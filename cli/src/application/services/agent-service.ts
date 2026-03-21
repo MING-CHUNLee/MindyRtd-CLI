@@ -23,6 +23,7 @@ import { TurnUsage } from '../../domain/entities/conversation-turn';
 import { ToolRegistry } from './tool-registry';
 import { FileScanTool } from '../tools/file-scan-tool';
 import { FileReadTool } from '../tools/file-read-tool';
+import { FileEditTool } from '../tools/file-edit-tool';
 import { PdfReadTool } from '../tools/pdf-read-tool';
 import { RExecTool } from '../tools/r-exec-tool';
 import { HistorySummarizer } from './history-summarizer';
@@ -124,8 +125,10 @@ export class AgentService {
         this.registry = new ToolRegistry();
 
         // Register built-in tools
+        const fileEditTool = new FileEditTool(this.diffEngine);
         this.registry.register(new FileScanTool());
         this.registry.register(new FileReadTool());
+        this.registry.register(fileEditTool);
         this.registry.register(new PdfReadTool());
         this.registry.register(new RExecTool());
 
@@ -146,6 +149,7 @@ export class AgentService {
             diffEngine: this.diffEngine,
             directory: this.directory,
             onApproval: this.onApproval,
+            fileEditTool,
             emit,
         });
     }
