@@ -35,6 +35,7 @@ import { SessionMessage } from '../../shared/types/messages';
 
 import { ExecuteAskUseCase } from '../use-cases/execute-ask-use-case';
 import { ExecuteInstructionUseCase } from '../use-cases/execute-instruction-use-case';
+import { ExecuteRunUseCase } from '../use-cases/execute-run-use-case';
 
 // ── Event Types ──────────────────────────────────────────────────────────────
 
@@ -101,6 +102,7 @@ export class AgentService {
     private readonly pluginLoader: PluginLoader;
     private readonly askUseCase: ExecuteAskUseCase;
     private readonly instructionUseCase: ExecuteInstructionUseCase;
+    private readonly runUseCase: ExecuteRunUseCase;
 
     /** Throws if initialize() has not been called yet. */
     private get session(): ConversationSession {
@@ -152,6 +154,13 @@ export class AgentService {
             fileEditTool,
             emit,
         });
+
+        this.runUseCase = new ExecuteRunUseCase({
+            llm: this.llm,
+            registry: this.registry,
+            directory: this.directory,
+            emit,
+        });
     }
 
     /** Initialize: load/create session, load plugins */
@@ -200,6 +209,18 @@ export class AgentService {
             try {
                 const result = await this.askUseCase.execute(instruction, history);
                 this.session.addTurn(instruction, result.content, result.usage);
+                await this.repo.save(this.session);
+                this.emitTurnSaved(result.usage);
+            } catch {
+                // Error already emitted by the use case
+            }
+            return;
+        }
+
+        if (intent === 'run') {
+            try {
+                const result = await this.runUseCase.execute(instruction, history);
+                this.session.addTurn(instruction, result.analysis, result.usage);
                 await this.repo.save(this.session);
                 this.emitTurnSaved(result.usage);
             } catch {
@@ -276,16 +297,18 @@ export class AgentService {
             : this.session.getHistory().map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }));
     }
 
-    private async classifyIntent(instruction: string, history: SessionMessage[]): Promise<'ask' | 'edit'> {
+    private async classifyIntent(instruction: string, history: SessionMessage[]): Promise<'ask' | 'edit' | 'run'> {
         this.emit('phase_start', { phase: 'intent', description: 'Classifying intent' });
-        let intent: 'ask' | 'edit' = 'edit';
+        let intent: 'ask' | 'edit' | 'run' = 'edit';
         try {
             const intentResponse = await this.llm.sendPrompt({
                 systemPrompt: INTENT_CLASSIFIER_SYSTEM_PROMPT,
                 userMessage: instruction,
                 history,
             });
-            if (intentResponse.content.trim().toLowerCase().includes('ask')) intent = 'ask';
+            const response = intentResponse.content.trim().toLowerCase();
+            if (response.includes('run')) intent = 'run';
+            else if (response.includes('ask')) intent = 'ask';
         } catch (error) {
             this.emit('status_update', {
                 warning: `Intent classification failed: ${error instanceof Error ? error.message : String(error)}, defaulting to edit`,
