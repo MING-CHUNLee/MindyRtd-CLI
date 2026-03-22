@@ -345,7 +345,7 @@ export class AgentService {
         }
 
         // ── LLM classification for ambiguous cases ────────────────────────────
-        let intent: 'ask' | 'edit' | 'run' | 'install' = 'edit';
+        let intent: 'ask' | 'edit' | 'run' | 'install' = 'ask';
         try {
             const intentResponse = await this.llm.sendPrompt({
                 systemPrompt: INTENT_CLASSIFIER_SYSTEM_PROMPT,
@@ -355,10 +355,11 @@ export class AgentService {
             const response = intentResponse.content.trim().toLowerCase();
             if (response.includes('install')) intent = 'install';
             else if (response.includes('run')) intent = 'run';
-            else if (response.includes('ask')) intent = 'ask';
+            else if (response.includes('edit')) intent = 'edit';
+            // else: 'ask' (default — also covers LLM returning "ask" or anything unexpected)
         } catch (error) {
             this.emit('status_update', {
-                warning: `Intent classification failed: ${error instanceof Error ? error.message : String(error)}, defaulting to edit`,
+                warning: `Intent classification failed: ${error instanceof Error ? error.message : String(error)}, defaulting to ask`,
             });
         }
         this.emit('intent_classified', { intent });
@@ -370,8 +371,12 @@ export class AgentService {
      * Deterministic intent detection for unambiguous instructions.
      * Returns null if the instruction is ambiguous and needs LLM classification.
      */
-    private static detectObviousIntent(instruction: string): 'run' | 'install' | null {
+    private static detectObviousIntent(instruction: string): 'ask' | 'run' | 'install' | null {
         const lower = instruction.toLowerCase();
+
+        // ask: ends with "?" or starts with a question word / conversational phrase
+        if (instruction.trim().endsWith('?')) return 'ask';
+        if (/^(?:what|how|why|when|where|who|can|could|is|are|does|did|have|has|tell me|explain|show me|describe|what'?s|幫我解釋|解釋|說明|告訴我|上次|我們上次)\b/i.test(lower)) return 'ask';
 
         // install: "install X" / "安裝 X" where X looks like a package name
         if (/(?:install|安裝)\s+[A-Za-z0-9._]/.test(instruction)) return 'install';
