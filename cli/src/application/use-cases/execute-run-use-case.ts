@@ -211,10 +211,12 @@ export class ExecuteRunUseCase {
         history: SessionMessage[],
         usage: TurnUsage,
     ): Promise<string> {
-        // Token budget: ~6000 chars per section (~1500 tokens each), total ~18000 chars ≈ 4500 tokens
-        const SCRIPT_MAX  = 6_000;
-        const PREVIEW_MAX = 2_000; // shared across all data previews
-        const OUTPUT_MAX  = 8_000; // highest priority — errors are here
+        // Token budget for gpt-4o 8k limit:
+        //   system boilerplate ~400 tokens, user message ~200, response headroom ~1500
+        //   remaining ~5900 tokens ≈ 23600 chars — split conservatively
+        const SCRIPT_MAX  = 3_000;  // ~750 tokens
+        const PREVIEW_MAX = 1_000;  // ~250 tokens
+        const OUTPUT_MAX  = 4_000;  // ~1000 tokens — highest priority (errors live here)
 
         const scriptName = scriptPath ? path.basename(scriptPath) : 'the R script';
 
@@ -258,7 +260,7 @@ export class ExecuteRunUseCase {
 
         try {
             const response = await this.deps.llm.streamPrompt(
-                { systemPrompt, userMessage: instruction, history },
+                { systemPrompt, userMessage: instruction, history: [] },
                 (token) => this.deps.emit('stream_token', { token }),
             );
 
