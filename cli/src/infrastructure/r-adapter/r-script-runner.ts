@@ -12,6 +12,7 @@ import { findRscriptPath, execAsync } from './r-path-finder';
 
 const TEMP_SCRIPT_PREFIX = 'mindy_r_script_';
 const TEMP_SCRIPT_EXTENSION = '.R';
+const EXEC_TIMEOUT_MS = 60_000; // 60 seconds
 
 /**
  * Execute R code by writing to a temp file and running with Rscript.
@@ -36,7 +37,21 @@ export async function execRscriptCode(rCode: string): Promise<{ stdout: string; 
             ? `Rscript "${tempFile}"`
             : `"${rscriptPath}" "${tempFile}"`;
 
-        return await execAsync(command);
+        try {
+            return await execAsync(command, { timeout: EXEC_TIMEOUT_MS });
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            const isTimeout = msg.includes('timed out') || (err as { killed?: boolean }).killed;
+            if (isTimeout) {
+                return {
+                    stdout: '',
+                    stderr: `R script execution timed out after ${EXEC_TIMEOUT_MS / 1000}s. The script may require interactive input or is taking too long.`,
+                };
+            }
+            // Non-timeout errors: return stderr so the LLM can analyze it
+            const stderr = (err as { stderr?: string }).stderr ?? msg;
+            return { stdout: '', stderr };
+        }
     } finally {
         // Clean up temp file
         try {

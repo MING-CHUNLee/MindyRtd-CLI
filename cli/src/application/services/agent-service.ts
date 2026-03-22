@@ -26,6 +26,8 @@ import { FileReadTool } from '../tools/file-read-tool';
 import { FileEditTool } from '../tools/file-edit-tool';
 import { PdfReadTool } from '../tools/pdf-read-tool';
 import { RExecTool } from '../tools/r-exec-tool';
+import { RInstallTool } from '../tools/r-install-tool';
+import { RRenderTool } from '../tools/r-render-tool';
 import { HistorySummarizer } from './history-summarizer';
 import { INTENT_CLASSIFIER_SYSTEM_PROMPT } from '../prompts/intent-classifier';
 
@@ -133,6 +135,8 @@ export class AgentService {
         this.registry.register(fileEditTool);
         this.registry.register(new PdfReadTool());
         this.registry.register(new RExecTool());
+        this.registry.register(new RInstallTool());
+        this.registry.register(new RRenderTool());
 
         // Cast to the wider string type expected by use cases (safe: use cases only
         // call emit with valid AgentEventType literals at runtime).
@@ -229,6 +233,11 @@ export class AgentService {
             return;
         }
 
+        if (intent === 'install') {
+            await this.executeInstall(instruction);
+            return;
+        }
+
         let result;
         try {
             result = await this.instructionUseCase.execute(instruction, history);
@@ -252,6 +261,33 @@ export class AgentService {
 
         await this.repo.save(this.session);
         this.emitTurnSaved(result.usage);
+    }
+
+    /**
+     * Install intent: extract package names from the instruction, call r_install,
+     * emit the output, and persist the turn.
+     */
+    private async executeInstall(instruction: string): Promise<void> {
+        this.emit('phase_start', { phase: 'install', description: 'Installing R packages' });
+
+        const tool = this.registry.get('r_install');
+        if (!tool) {
+            this.emit('error', { message: 'r_install tool not available' });
+            return;
+        }
+
+        // Extract package names: look for word after "install"/"安裝", or fall back to full instruction
+        const match = instruction.match(/(?:install|安裝)\s+([\w.,\s]+)/i);
+        const packages = match ? match[1].replace(/\s+/g, ',') : instruction;
+
+        const result = await tool.execute({ packages });
+        this.emit('phase_end', { phase: 'install', success: !result.isError });
+        this.emit('text_output', { content: result.content });
+
+        const usage: TurnUsage = { inputTokens: 0, outputTokens: 0, cacheCreationTokens: 0, cacheReadTokens: 0 };
+        this.session.addTurn(instruction, result.content, usage);
+        await this.repo.save(this.session);
+        this.emitTurnSaved(usage);
     }
 
     /** Handle slash commands */
@@ -297,9 +333,19 @@ export class AgentService {
             : this.session.getHistory().map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }));
     }
 
-    private async classifyIntent(instruction: string, history: SessionMessage[]): Promise<'ask' | 'edit' | 'run'> {
+    private async classifyIntent(instruction: string, history: SessionMessage[]): Promise<'ask' | 'edit' | 'run' | 'install'> {
         this.emit('phase_start', { phase: 'intent', description: 'Classifying intent' });
-        let intent: 'ask' | 'edit' | 'run' = 'edit';
+
+        // ── Regex pre-check (deterministic, no LLM call needed) ──────────────
+        const definiteIntent = AgentService.detectObviousIntent(instruction);
+        if (definiteIntent) {
+            this.emit('intent_classified', { intent: definiteIntent });
+            this.emit('phase_end', { phase: 'intent', success: true });
+            return definiteIntent;
+        }
+
+        // ── LLM classification for ambiguous cases ────────────────────────────
+        let intent: 'ask' | 'edit' | 'run' | 'install' = 'edit';
         try {
             const intentResponse = await this.llm.sendPrompt({
                 systemPrompt: INTENT_CLASSIFIER_SYSTEM_PROMPT,
@@ -307,7 +353,8 @@ export class AgentService {
                 history,
             });
             const response = intentResponse.content.trim().toLowerCase();
-            if (response.includes('run')) intent = 'run';
+            if (response.includes('install')) intent = 'install';
+            else if (response.includes('run')) intent = 'run';
             else if (response.includes('ask')) intent = 'ask';
         } catch (error) {
             this.emit('status_update', {
@@ -317,6 +364,28 @@ export class AgentService {
         this.emit('intent_classified', { intent });
         this.emit('phase_end', { phase: 'intent', success: true });
         return intent;
+    }
+
+    /**
+     * Deterministic intent detection for unambiguous instructions.
+     * Returns null if the instruction is ambiguous and needs LLM classification.
+     */
+    private static detectObviousIntent(instruction: string): 'run' | 'install' | null {
+        const lower = instruction.toLowerCase();
+
+        // install: "install X" / "安裝 X" where X looks like a package name
+        if (/(?:install|安裝)\s+[A-Za-z0-9._]/.test(instruction)) return 'install';
+
+        // run: explicit execute/run/render keyword + R/Rmd file reference or path
+        const hasRunKeyword = /\b(?:execute|run|render|執行|跑|knit)\b/i.test(lower);
+        const hasRFile = /\.(?:r|rmd)\b/i.test(instruction);
+        if (hasRunKeyword && hasRFile) return 'run';
+
+        // run: bare path to an R/Rmd file (e.g. "C:/foo/bar.Rmd")
+        if (/[A-Za-z]:[\\/][^\s]+\.(?:Rmd|rmd|R)\b/.test(instruction)) return 'run';
+        if (/\/[^\s]+\.(?:Rmd|rmd|R)\b/.test(instruction)) return 'run';
+
+        return null;
     }
 
     private emit(type: AgentEventType, data: Record<string, unknown>): void {

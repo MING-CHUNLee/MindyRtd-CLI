@@ -4,9 +4,10 @@
  * Handles the run pipeline: find the target R script, execute it via r_exec,
  * then stream an LLM analysis of the output.
  *
- * Pipeline: scan → find script → r_exec(source) → stream analysis
+ * Pipeline: scan → find script → read script + data files → r_exec(source) → stream analysis
  */
 
+import fs from 'fs';
 import path from 'path';
 import { LLMController } from '../../infrastructure/api/llm-controller';
 import { TurnUsage } from '../../domain/entities/conversation-turn';
@@ -29,6 +30,8 @@ export interface RunResult {
     usage: TurnUsage;
 }
 
+interface DataPreview { ref: string; type: 'csv' | 'excel' | 'unknown'; preview: string }
+
 // ── ExecuteRunUseCase ─────────────────────────────────────────────────────────
 
 export class ExecuteRunUseCase {
@@ -42,19 +45,32 @@ export class ExecuteRunUseCase {
         const scriptPath = await this.findScript(instruction);
         this.deps.emit('phase_end', { phase: 'scan', success: true });
 
-        // 2. Execute (or skip execution if no script found)
-        let execOutput = '';
-        if (scriptPath) {
-            this.deps.emit('phase_start', { phase: 'run', description: `Executing ${path.basename(scriptPath)}` });
-            execOutput = await this.runScript(scriptPath);
-            this.deps.emit('phase_end', { phase: 'run', success: true });
-        } else {
-            this.deps.emit('status_update', { warning: 'No matching R script found — will analyze without executing' });
+        // 2. If no script found, report immediately — do NOT call the LLM
+        if (!scriptPath) {
+            const msg = `No matching R or Rmd file found.\n` +
+                `Searched in: ${this.deps.directory}\n\n` +
+                `If your file is outside this directory, provide the full path in your instruction, e.g.:\n` +
+                `  execute C:/Users/Mindy/Desktop/CSDS/Hw5/Hw5.Rmd`;
+            this.deps.emit('text_output', { content: msg });
+            return { scriptPath: null, execOutput: '', analysis: msg, usage };
         }
 
-        // 3. Stream LLM analysis
+        // 3. Read script source and any referenced data files
+        const scriptContent = this.readScriptContent(scriptPath);
+        const dataPreviews = scriptContent
+            ? this.readDataPreviews(path.dirname(scriptPath), this.extractDataFileRefs(scriptContent))
+            : [];
+
+        // 4. Execute
+        this.deps.emit('phase_start', { phase: 'run', description: `Executing ${path.basename(scriptPath)}` });
+        const execOutput = await this.runScript(scriptPath);
+        this.deps.emit('phase_end', { phase: 'run', success: true });
+
+        // 5. Stream LLM analysis with full context
         this.deps.emit('phase_start', { phase: 'analyze', description: 'Analyzing output' });
-        const analysis = await this.streamAnalysis(instruction, scriptPath, execOutput, history, usage);
+        const analysis = await this.streamAnalysis(
+            instruction, scriptPath, scriptContent, dataPreviews, execOutput, history, usage,
+        );
         this.deps.emit('phase_end', { phase: 'analyze', success: true });
 
         return { scriptPath, execOutput, analysis, usage };
@@ -62,8 +78,18 @@ export class ExecuteRunUseCase {
 
     // ── Private helpers ───────────────────────────────────────────────────────
 
-    /** Scan workspace and return the absolute path of the best-matching .R file. */
+    /** Scan workspace and return the absolute path of the best-matching .R/.Rmd file. */
     private async findScript(instruction: string): Promise<string | null> {
+        // 1. Try extracting an absolute path directly from the instruction
+        // NOTE: Rmd/rmd must come before R in the alternation to avoid .R matching first
+        const absMatch = instruction.match(/[A-Za-z]:[\\/][^\s"']+\.(?:Rmd|rmd|R)\b/i)
+            ?? instruction.match(/\/[^\s"']+\.(?:Rmd|rmd|R)\b/i);
+        if (absMatch) {
+            const candidate = absMatch[0].replace(/\\/g, '/');
+            if (fs.existsSync(candidate)) return candidate;
+        }
+
+        // 2. Fall back to scanning the working directory
         const scanTool = this.deps.registry.get('file_scan');
         if (!scanTool) return null;
 
@@ -97,43 +123,137 @@ export class ExecuteRunUseCase {
     }
 
     /**
-     * Execute the script by calling r_exec with source("path", chdir=TRUE).
-     * Using source() means we skip the content-based safety check that would
-     * block legitimate write operations in user scripts.
+     * Execute the script.
+     * - .R files: source("path", chdir=TRUE)
+     * - .Rmd files: rmarkdown::render("path") via r_render tool (bypasses safety guard)
      */
     private async runScript(scriptPath: string): Promise<string> {
+        const ext = path.extname(scriptPath).toLowerCase();
+
+        if (ext === '.rmd') {
+            const rRender = this.deps.registry.get('r_render');
+            if (!rRender) return '(r_render tool not available)';
+            const result = await rRender.execute({ path: scriptPath });
+            return result.content;
+        }
+
         const rExec = this.deps.registry.get('r_exec');
         if (!rExec) return '(r_exec tool not available)';
-
         const forwardSlashPath = scriptPath.replace(/\\/g, '/');
-        const code = `source("${forwardSlashPath}", chdir=TRUE)`;
-
-        const result = await rExec.execute({ code });
+        const result = await rExec.execute({ code: `source("${forwardSlashPath}", chdir=TRUE)` });
         return result.content;
+    }
+
+    /** Read R/Rmd script source. Returns null on error. */
+    private readScriptContent(scriptPath: string): string | null {
+        try {
+            return fs.readFileSync(scriptPath, 'utf-8');
+        } catch {
+            return null;
+        }
+    }
+
+    /** Extract data file paths referenced in the script (CSV, Excel, TSV, TXT). */
+    private extractDataFileRefs(scriptContent: string): string[] {
+        // Match quoted strings inside common R data-reading functions
+        const pattern = /(?:read\.csv|read\.table|read_csv|fread|read_excel|readxl::read_excel|read\.delim|read_tsv|read\.xlsx)\s*\(\s*["']([^"']+)["']/gi;
+        const refs: string[] = [];
+        let match: RegExpExecArray | null;
+        while ((match = pattern.exec(scriptContent)) !== null) {
+            refs.push(match[1]);
+        }
+        return [...new Set(refs)];
+    }
+
+    /** Read a short preview of each referenced data file. */
+    private readDataPreviews(scriptDir: string, refs: string[]): DataPreview[] {
+        return refs.map((ref): DataPreview => {
+            const absPath = path.isAbsolute(ref) ? ref : path.join(scriptDir, ref);
+            const ext = path.extname(ref).toLowerCase();
+
+            if (ext === '.xlsx' || ext === '.xls') {
+                const exists = fs.existsSync(absPath);
+                return {
+                    ref,
+                    type: 'excel',
+                    preview: exists
+                        ? `(Excel file found at ${absPath} — contents not shown; will be read by script)`
+                        : `(Excel file NOT found at ${absPath})`,
+                };
+            }
+
+            // For text-based files (CSV, TSV, TXT) read up to 10 lines
+            try {
+                const raw = fs.readFileSync(absPath, 'utf-8');
+                const lines = raw.split('\n').slice(0, 10).join('\n');
+                return { ref, type: 'csv', preview: lines };
+            } catch {
+                return { ref, type: 'unknown', preview: `(File not found at ${absPath})` };
+            }
+        });
+    }
+
+    /**
+     * Truncate a string to maxChars, appending a note if truncated.
+     * Priority: execution output > script source > data previews.
+     */
+    private static truncate(text: string, maxChars: number): string {
+        if (text.length <= maxChars) return text;
+        return text.slice(0, maxChars) + `\n... (truncated — ${text.length - maxChars} chars omitted)`;
     }
 
     private async streamAnalysis(
         instruction: string,
         scriptPath: string | null,
+        scriptContent: string | null,
+        dataPreviews: DataPreview[],
         execOutput: string,
         history: SessionMessage[],
         usage: TurnUsage,
     ): Promise<string> {
+        // Token budget: ~6000 chars per section (~1500 tokens each), total ~18000 chars ≈ 4500 tokens
+        const SCRIPT_MAX  = 6_000;
+        const PREVIEW_MAX = 2_000; // shared across all data previews
+        const OUTPUT_MAX  = 8_000; // highest priority — errors are here
+
         const scriptName = scriptPath ? path.basename(scriptPath) : 'the R script';
 
         let systemPrompt =
-            'You are an expert R programming assistant. ' +
-            'Analyze the execution output of an R script and explain what happened clearly.\n\n' +
+            'You are an R execution analyzer. ' +
+            'The system has already executed the R script using local tools — you do NOT need to tell the user how to run it manually. ' +
+            'Your job is to analyze the provided script source, data files, and execution output, then answer the user\'s question.\n\n' +
             `Working directory: ${this.deps.directory}\n\n`;
 
+        if (scriptContent) {
+            const src = ExecuteRunUseCase.truncate(scriptContent, SCRIPT_MAX);
+            systemPrompt += `## Script Source: ${scriptName}\n\`\`\`r\n${src}\n\`\`\`\n\n`;
+        }
+
+        if (dataPreviews.length > 0) {
+            systemPrompt += '## Referenced Data Files\n';
+            let previewBudget = PREVIEW_MAX;
+            for (const dp of dataPreviews) {
+                if (previewBudget <= 0) break;
+                const preview = ExecuteRunUseCase.truncate(dp.preview, previewBudget);
+                previewBudget -= preview.length;
+                systemPrompt += `### ${dp.ref}\n\`\`\`\n${preview}\n\`\`\`\n\n`;
+            }
+        }
+
         if (execOutput) {
+            const out = ExecuteRunUseCase.truncate(execOutput, OUTPUT_MAX);
             systemPrompt +=
-                `## Execution Output of ${scriptName}\n\`\`\`\n${execOutput}\n\`\`\`\n\n` +
+                `## Execution Output\n\`\`\`\n${out}\n\`\`\`\n\n` +
                 'Explain the output, highlight any errors or warnings, and summarize what the script did.';
+        } else if (scriptPath) {
+            systemPrompt +=
+                `## Execution Output\n(no output was captured — the script may have run silently or failed before producing output)\n\n` +
+                'Analyze the script source above and explain what it does or why it may have produced no output.';
         } else {
             systemPrompt +=
-                `No execution output was captured for ${scriptName}. ` +
-                'Answer the user\'s question as best you can based on the available context.';
+                'No script was found matching the instruction. ' +
+                'Inform the user that no matching .R or .Rmd file was found in the working directory, ' +
+                'and ask them to verify the filename or path.';
         }
 
         try {
