@@ -86,11 +86,11 @@ const DEFAULTS = {
     maxTokens: 4096,
     logLevel: 'info' as const,
     models: {
-        openai: 'gpt-4',
-        anthropic: 'claude-3-opus-20240229',
-        azure: 'gpt-4',
-        ollama: 'llama2',
-        google: 'gemini-2.5-flash',
+        openai: 'gpt-4o',
+        anthropic: 'claude-3-5-sonnet-20241022',
+        azure: 'gpt-4o',
+        ollama: 'llama3.2',
+        google: 'gemini-2.0-flash',
     },
     endpoints: {
         openai: 'https://api.openai.com/v1/chat/completions',
