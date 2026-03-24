@@ -92,6 +92,7 @@ export interface AgentServiceDeps {
 
 export class AgentService {
     private _session?: ConversationSession;
+    private previousSessionSummary = '';
     private readonly llm: LLMController;
     private readonly repo: SessionRepository;
     private readonly registry: ToolRegistry;
@@ -177,6 +178,9 @@ export class AgentService {
             const last = await this.repo.loadLast();
             this._session = last ?? ConversationSession.create(model);
         } else {
+            // forceNew: load the last session's summary for cross-session context
+            const prev = await this.repo.loadLast();
+            if (prev) this.previousSessionSummary = AgentService.formatSessionSummary(prev);
             this._session = ConversationSession.create(model);
         }
 
@@ -211,7 +215,7 @@ export class AgentService {
 
         if (intent === 'ask') {
             try {
-                const result = await this.askUseCase.execute(instruction, history);
+                const result = await this.askUseCase.execute(instruction, history, this.previousSessionSummary);
                 this.session.addTurn(instruction, result.content, result.usage);
                 await this.repo.save(this.session);
                 this.emitTurnSaved(result.usage);
@@ -297,6 +301,7 @@ export class AgentService {
             case 'status':
                 return this.getStatusText();
             case 'new': {
+                this.previousSessionSummary = AgentService.formatSessionSummary(this.session);
                 const model = this.llm.getProviderInfo().model;
                 this._session = ConversationSession.create(model);
                 return `New session created: ${this.session.id.slice(-6)}`;
@@ -391,6 +396,19 @@ export class AgentService {
         if (/\/[^\s]+\.(?:Rmd|rmd|R)\b/.test(instruction)) return 'run';
 
         return null;
+    }
+
+    /** Build a compact summary of the last few turns for cross-session context. */
+    private static formatSessionSummary(session: ConversationSession): string {
+        const history = session.getHistory();
+        if (history.length === 0) return '';
+        const lastN = history.slice(-6); // at most 3 user+assistant pairs
+        const lines = lastN.map(m => {
+            const role = m.role === 'user' ? 'User' : 'Assistant';
+            const snippet = m.content.length > 300 ? m.content.slice(0, 300) + '…' : m.content;
+            return `${role}: ${snippet}`;
+        });
+        return `[Previous session — last ${Math.floor(lastN.length / 2)} turn(s)]\n${lines.join('\n')}`;
     }
 
     private emit(type: AgentEventType, data: Record<string, unknown>): void {

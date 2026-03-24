@@ -16,6 +16,7 @@ import { SessionMessage } from '../../shared/types/messages';
 import { estimateTokens } from '../prompts';
 
 const MAX_CONTEXT_TOKENS = 6_000;
+const MAX_TOTAL_TOKENS = 7_500; // hard ceiling: system + history + user must stay below this
 
 type EmitFn = (type: string, data: Record<string, unknown>) => void;
 
@@ -36,7 +37,7 @@ export interface AskResult {
 export class ExecuteAskUseCase {
     constructor(private readonly deps: ExecuteAskDeps) {}
 
-    async execute(instruction: string, history: SessionMessage[]): Promise<AskResult> {
+    async execute(instruction: string, history: SessionMessage[], previousSessionSummary = ''): Promise<AskResult> {
         const casual = this.isCasualMessage(instruction);
 
         this.deps.emit('phase_start', { phase: 'scan', description: 'Scanning workspace for context' });
@@ -48,7 +49,7 @@ export class ExecuteAskUseCase {
         const fileContents = casual ? '' : await this.readRelevantFiles(instruction, scannedFiles);
 
         this.deps.emit('phase_start', { phase: 'ask', description: 'Generating answer' });
-        const systemPrompt = this.assembleAskPrompt(history, instruction, projectContext, fileContents);
+        const systemPrompt = this.assembleAskPrompt(history, instruction, projectContext, fileContents, previousSessionSummary);
         return this.callLLMStream(systemPrompt, instruction, history);
     }
 
@@ -56,8 +57,10 @@ export class ExecuteAskUseCase {
 
     private isCasualMessage(msg: string): boolean {
         const trimmed = msg.trim();
+        // Questions about conversation history never need workspace scan
+        if (/\b(last time|previous(ly)?|before|remember|recall|上次|之前|記得|我們談|我們說)\b/i.test(trimmed)) return true;
         return (
-            trimmed.length < 30 &&
+            trimmed.length < 50 &&
             !/\b(file|code|bug|error|function|class|import|module|project|refactor|test)\b/i.test(trimmed)
         );
     }
@@ -134,6 +137,7 @@ export class ExecuteAskUseCase {
         instruction: string,
         projectContext: string,
         fileContents: string,
+        previousSessionSummary = '',
     ): string {
         const basePrompt =
             'You are an expert developer assistant. Answer the user\'s question clearly and concisely.\n\n' +
@@ -143,6 +147,16 @@ export class ExecuteAskUseCase {
         const userTokens = estimateTokens(instruction);
         const baseTokens = estimateTokens(basePrompt);
         let budget = MAX_CONTEXT_TOKENS - historyTokens - userTokens - baseTokens;
+
+        let prevSessionSection = '';
+        if (previousSessionSummary && budget > 200) {
+            const prevTokens = estimateTokens(previousSessionSummary);
+            const text = prevTokens <= budget
+                ? previousSessionSummary
+                : previousSessionSummary.slice(0, budget * 4) + '\n[…truncated]';
+            prevSessionSection = `## Previous Session\n${text}\n\n`;
+            budget -= Math.min(prevTokens, budget);
+        }
 
         let contextSection = '';
         if (projectContext && budget > 200) {
@@ -168,7 +182,20 @@ export class ExecuteAskUseCase {
             }
         }
 
-        return basePrompt + contextSection + filesSection;
+        return basePrompt + prevSessionSection + contextSection + filesSection;
+    }
+
+    /**
+     * Drop oldest history messages until system + history + user fits within MAX_TOTAL_TOKENS.
+     */
+    private compactHistory(history: SessionMessage[], systemPrompt: string, userMessage: string): SessionMessage[] {
+        const fixed = estimateTokens(systemPrompt) + estimateTokens(userMessage);
+        let remaining = [...history];
+        // Always keep at least the last 2 messages (most recent user+assistant pair)
+        while (remaining.length > 2 && fixed + estimateTokens(remaining.map(m => m.content).join('\n')) > MAX_TOTAL_TOKENS) {
+            remaining = remaining.slice(2); // drop oldest user+assistant pair
+        }
+        return remaining;
     }
 
     private async callLLMStream(
@@ -181,9 +208,14 @@ export class ExecuteAskUseCase {
             cacheCreationTokens: 0, cacheReadTokens: 0,
         };
 
+        const compactedHistory = this.compactHistory(history, systemPrompt, instruction);
+        if (compactedHistory.length < history.length) {
+            this.deps.emit('status_update', { warning: `History compacted: ${history.length} → ${compactedHistory.length} messages to fit token limit` });
+        }
+
         try {
             const response = await this.deps.llm.streamPrompt(
-                { systemPrompt, userMessage: instruction, history },
+                { systemPrompt, userMessage: instruction, history: compactedHistory },
                 (token) => this.deps.emit('stream_token', { token }),
             );
 
