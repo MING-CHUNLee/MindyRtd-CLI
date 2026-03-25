@@ -6,12 +6,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 All commands run from the `cli/` directory:
 
+> **This project uses [Bun](https://bun.sh/) instead of npm.** Use `bun` for all package management and script execution.
+
 ```bash
-npm run build        # Compile TypeScript → dist/
-npm run dev          # Run via tsx (no build needed)
-npm test             # Run all tests (Vitest)
-npm test -- path/to/test.test.ts   # Run a single test file
-npm run mindy -- agent "instruction"  # Run CLI in dev mode
+bun run build        # Compile TypeScript → dist/
+bun run dev          # Run via tsx (no build needed)
+bun test             # Run all tests (Vitest)
+bun test path/to/test.test.ts   # Run a single test file
+bun run mindy -- agent "instruction"  # Run CLI in dev mode
 ```
 
 To run the built CLI:

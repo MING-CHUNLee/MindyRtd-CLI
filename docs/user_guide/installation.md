@@ -5,7 +5,8 @@
 Before using Mindy CLI, ensure you have the following installed:
 
 - **RStudio IDE** (v2023.03+ recommended)
-- **Node.js** (v18.0.0+)
+- **Bun** (v1.0+) — used instead of npm for all package management. Install via: `curl -fsSL https://bun.sh/install | bash`
+- **Node.js** (v18.0.0+) — runtime for the built CLI
 - **R Package**: `mindy` (The bridge between CLI and RStudio)
 
 ## Step 1: Install the R Bridge Package
@@ -28,11 +29,11 @@ git clone https://github.com/MING-CHUNLee/MindyRtd-CLI.git
 cd MindyRtd-CLI/cli
 
 # 2. Install dependencies & build
-npm install
-npm run build
+bun install
+bun run build
 
 # 3. Link globally
-npm link
+bun link
 ```
 
 Now you can use the command `mindy-cli` or the alias `mrc` from anywhere.

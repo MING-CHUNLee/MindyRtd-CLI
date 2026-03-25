@@ -9,10 +9,10 @@
         },
         {
             "id": "project-structure",
-            "keyword": ["plan", "規劃", "架構", "目錄", "檔案位置"],
+            "keyword": ["plan", "規劃", "架構", "目錄", "檔案位置", "bun", "npm", "package manager", "install", "dependencies"],
             "title": "Project Structure Rules",
             "file": "project-structure.md",
-            "description": "關於專案目錄結構與特定檔案存放位置（如 Plan 應放入 plans 目錄）的使用者偏好與規則"
+            "description": "關於專案目錄結構與特定檔案存放位置（如 Plan 應放入 plans 目錄）的使用者偏好與規則；以及本專案使用 Bun 取代 npm 的規範"
         },
         {
             "id": "agentic-cli-architecture",

@@ -23,7 +23,8 @@ mindy-cli agent "Add error handling to the data loading pipeline"
 
 ## Requirements
 
-- Node.js >= 18
+- [Bun](https://bun.sh/) >= 1.0 (used instead of npm for all package management and script execution)
+- Node.js >= 18 (runtime for the built CLI)
 - R installed (for `run` and `install` commands)
 - An API key for at least one supported LLM provider
 
@@ -31,13 +32,15 @@ mindy-cli agent "Add error handling to the data loading pipeline"
 
 ## Installation
 
+> **This project uses [Bun](https://bun.sh/) instead of npm.** Install Bun first if you haven't: `curl -fsSL https://bun.sh/install | bash`
+
 ```bash
 cd cli
-npm install
-npm run build
+bun install
+bun run build
 
 # Link globally (optional)
-npm link
+bun link
 ```
 
 After linking, both `mindy-cli` and `mrc` are available as global commands.
@@ -256,17 +259,19 @@ cli/src/
 
 ## Development
 
+> **This project uses [Bun](https://bun.sh/) instead of npm.**
+
 ```bash
 cd cli
 
 # Run without building
-npm run dev -- agent "your instruction"
+bun run dev -- agent "your instruction"
 
 # Build
-npm run build
+bun run build
 
 # Run tests
-npm test
+bun test
 ```
 
 ---

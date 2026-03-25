@@ -1,5 +1,7 @@
 # Mindy CLI (Node.js Package)
 
+> **This project uses [Bun](https://bun.sh/) instead of npm.** Use `bun` for all package management and script execution.
+
 Please refer to the [Root Documentation](../README.md) for full details.
 
 - [Installation Guide](../docs/installation.md)
@@ -10,12 +12,12 @@ Please refer to the [Root Documentation](../README.md) for full details.
 
 ```bash
 cd cli
-npm install
-npm run dev
+bun install
+bun run dev
 ```
 
 ## Testing
 
 ```bash
-npm test
+bun test
 ```
