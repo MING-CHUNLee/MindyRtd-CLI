@@ -115,14 +115,15 @@ export class PackageValidator {
                 recommendations,
                 allowInstallation,
             };
-        } catch (error: any) {
+        } catch (error) {
             // If we can't validate, treat as risky
+            const message = error instanceof Error ? error.message : String(error);
             return {
                 packageName,
                 safetyLevel: 'risky',
                 checks,
                 warnings: ['Unable to perform complete safety check'],
-                errors: [`Validation error: ${error.message}`],
+                errors: [`Validation error: ${message}`],
                 recommendations: ['Proceed with caution'],
                 allowInstallation: false,
             };
@@ -182,8 +183,8 @@ export class PackageValidator {
                 downloads,
                 archived: data.archived || false,
             };
-        } catch (error: any) {
-            if (error.response?.status === 404) {
+        } catch (error) {
+            if ((error as { response?: { status?: number } }).response?.status === 404) {
                 throw new Error(`Package '${packageName}' not found on CRAN`);
             }
             throw error;
@@ -223,8 +224,8 @@ export class PackageValidator {
                 githubUrl: data.html_url,
                 archived: data.archived,
             };
-        } catch (error: any) {
-            if (error.response?.status === 404) {
+        } catch (error) {
+            if ((error as { response?: { status?: number } }).response?.status === 404) {
                 throw new Error(
                     `GitHub repository '${packageName}' not found`
                 );

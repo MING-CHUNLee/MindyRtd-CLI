@@ -260,8 +260,8 @@ export class PackageSafetyChecker {
                 const content = fs.readFileSync(filePath, 'utf-8');
                 return JSON.parse(content);
             }
-        } catch (error: any) {
-            console.warn('Failed to load blacklist:', error.message);
+        } catch (error) {
+            console.warn('Failed to load blacklist:', error instanceof Error ? error.message : String(error));
         }
         return [];
     }
@@ -276,8 +276,8 @@ export class PackageSafetyChecker {
                 const content = fs.readFileSync(filePath, 'utf-8');
                 return JSON.parse(content);
             }
-        } catch (error: any) {
-            console.warn('Failed to load trusted maintainers:', error.message);
+        } catch (error) {
+            console.warn('Failed to load trusted maintainers:', error instanceof Error ? error.message : String(error));
         }
         return [];
     }

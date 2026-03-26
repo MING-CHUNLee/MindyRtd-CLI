@@ -55,8 +55,9 @@ export class Orchestrator {
         private readonly llm: LLMController,
         private readonly registry: ToolRegistry,
         private readonly tokenBudget = DEFAULT_TOKEN_BUDGET,
+        reactLoop?: ReActLoop,
     ) {
-        this.reactLoop = new ReActLoop(llm, registry);
+        this.reactLoop = reactLoop ?? new ReActLoop(llm, registry);
     }
 
     async run(

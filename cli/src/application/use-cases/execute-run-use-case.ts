@@ -32,6 +32,16 @@ export interface RunResult {
 
 interface DataPreview { ref: string; type: 'csv' | 'excel' | 'unknown'; preview: string }
 
+interface RunAnalysisContext {
+    instruction: string;
+    scriptPath: string | null;
+    scriptContent: string | null;
+    dataPreviews: DataPreview[];
+    execOutput: string;
+    history: SessionMessage[];
+    usage: TurnUsage;
+}
+
 // ── ExecuteRunUseCase ─────────────────────────────────────────────────────────
 
 export class ExecuteRunUseCase {
@@ -68,9 +78,9 @@ export class ExecuteRunUseCase {
 
         // 5. Stream LLM analysis with full context
         this.deps.emit('phase_start', { phase: 'analyze', description: 'Analyzing output' });
-        const analysis = await this.streamAnalysis(
+        const analysis = await this.streamAnalysis({
             instruction, scriptPath, scriptContent, dataPreviews, execOutput, history, usage,
-        );
+        });
         this.deps.emit('phase_end', { phase: 'analyze', success: true });
 
         return { scriptPath, execOutput, analysis, usage };
@@ -202,15 +212,8 @@ export class ExecuteRunUseCase {
         return text.slice(0, maxChars) + `\n... (truncated — ${text.length - maxChars} chars omitted)`;
     }
 
-    private async streamAnalysis(
-        instruction: string,
-        scriptPath: string | null,
-        scriptContent: string | null,
-        dataPreviews: DataPreview[],
-        execOutput: string,
-        history: SessionMessage[],
-        usage: TurnUsage,
-    ): Promise<string> {
+    private async streamAnalysis(ctx: RunAnalysisContext): Promise<string> {
+        const { instruction, scriptPath, scriptContent, dataPreviews, execOutput, history, usage } = ctx;
         // Token budget for gpt-4o 8k limit:
         //   system boilerplate ~400 tokens, user message ~200, response headroom ~1500
         //   remaining ~5900 tokens ≈ 23600 chars — split conservatively

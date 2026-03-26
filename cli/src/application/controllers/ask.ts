@@ -35,6 +35,13 @@ export const askCommand = new Command('ask')
         await executeAskCommand(question, options);
     });
 
+/**
+ * Execute the `ask` sub-command: load/create session, run the Q&A pipeline,
+ * persist the turn, and render the context status bar.
+ *
+ * @param question - The natural-language question to answer
+ * @param options  - CLI options (directory, resume, session, new)
+ */
 export async function executeAskCommand(
     question: string,
     options: AskOptions,
@@ -71,7 +78,10 @@ export async function executeAskCommand(
     let spinner: Ora | null = null;
 
     const emit = (type: string, data: Record<string, unknown>): void => {
-        const event: AgentEvent = { type: type as AgentEvent['type'], data };
+        // Bridge the string-based EmitFn used by use-cases to the narrowed AgentEvent
+        // discriminated union accepted by handleEvent. The cast via unknown is safe
+        // because AgentService only ever emits valid AgentEventType literals at runtime.
+        const event = { type, data } as unknown as AgentEvent;
         handleEvent(event, spinner, s => { spinner = s; });
     };
 

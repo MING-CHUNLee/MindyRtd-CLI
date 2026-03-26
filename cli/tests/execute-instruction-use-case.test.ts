@@ -83,7 +83,6 @@ function makeMockStagingService(opts: {
 
 function makeMockOrchestrator(result: Partial<OrchestratorResult> = {}): Orchestrator {
     const defaults: OrchestratorResult = {
-        finalResponse: '',
         steps: [],
         fileChanges: [],
         outputs: [],

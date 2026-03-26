@@ -3,15 +3,15 @@ import chalk from 'chalk';
 
 export class DiffEngine {
     /**
-     * 比較兩個字串並返回帶有顏色的終端機輸出 (Patch 格式簡化版)
+     * Compare two strings and return a coloured terminal output (simplified patch format).
      */
     public generateColoredDiff(oldStr: string, newStr: string): string {
         const differences = diff.diffLines(oldStr, newStr);
         let output = '';
 
-        // 若完全相同
+        // Identical files — nothing to show
         if (differences.length === 1 && !differences[0].added && !differences[0].removed) {
-            return chalk.gray('檔案無任何變更。');
+            return chalk.gray('No changes detected.');
         }
 
         differences.forEach((part) => {
@@ -28,7 +28,7 @@ export class DiffEngine {
     }
 
     /**
-     * 為每一行加上前綴符號
+     * Prefix every line in text with the given prefix string.
      */
     private prefixLines(text: string, prefix: string): string {
         return text

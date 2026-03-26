@@ -4,9 +4,6 @@
  * Integrates environment information from library-scanner and file-scanner
  * to generate dynamic System Prompts for LLM interactions.
  *
- * This solves the professor's challenge: "help the LLM communicate with
- * the client side to figure out what is available and what can be done"
- *
  * Architecture Note:
  * - Types are defined in /types/prompt-context.ts
  * - Static data is in /data/package-capabilities.ts

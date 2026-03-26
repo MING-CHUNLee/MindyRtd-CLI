@@ -19,6 +19,7 @@ import { SessionMessage } from '../../shared/types/messages';
 import { Orchestrator, OrchestratorResult } from '../services/orchestrator';
 import { LLMOutput } from '../../domain/entities/llm-output';
 import { Evaluator } from '../services/evaluator';
+import { buildInstructionAgentPrompt } from '../prompts/instruction-agent';
 import { KnowledgeBase } from '../services/knowledge-base';
 import { KnowledgeRepository } from '../../infrastructure/persistence/knowledge-repository';
 import { EditStagingService, StagedEdit } from '../services/edit-staging-service';
@@ -121,26 +122,15 @@ export class ExecuteInstructionUseCase {
 
         const orchestrator = this.orchestrator;
 
-        const toolSchemas = this.deps.registry.getSchemas();
-        const toolsText = toolSchemas.map(schema => {
-            const params = Object.entries(schema.parameters)
-                .map(([k, v]) => `    - ${k} (${v.type}${v.required ? ', required' : ''}): ${v.description}`)
-                .join('\n');
-            return `- ${schema.name}: ${schema.description}\n  Parameters:\n${params}` +
-                (schema.example ? `\n  Example: ${schema.example}` : '');
-        }).join('\n\n');
+        const toolsText = this.buildToolsText();
 
-        let systemPrompt =
-            'You are an expert coding agent that can edit files and analyze R code. ' +
-            'You have access to tools to explore the workspace before making edits.\n\n' +
-            `Working directory: ${this.deps.directory}\n\n` +
-            `Available tools:\n${toolsText}`;
-
+        let knowledgeText: string | undefined;
         if (knowledgeEntries.length > 0) {
-            const kbText = knowledgeEntries.map(entry => `### ${entry.title}\n${entry.content}`).join('\n\n');
-            systemPrompt += `\n\n## Relevant Knowledge\n\n${kbText}`;
+            knowledgeText = knowledgeEntries.map(entry => `### ${entry.title}\n${entry.content}`).join('\n\n');
             this.deps.emit('status_update', { knowledge: knowledgeEntries.map(entry => entry.title) });
         }
+
+        const systemPrompt = buildInstructionAgentPrompt(this.deps.directory, toolsText, knowledgeText);
 
         const baseRequest: LLMRequestPayload = {
             systemPrompt,
@@ -243,5 +233,16 @@ export class ExecuteInstructionUseCase {
 
         this.deps.emit('phase_end', { phase: 'review', success: true });
         return appliedFiles;
+    }
+
+    /** Format all registered tool schemas into the plain-text list injected into the system prompt. */
+    private buildToolsText(): string {
+        return this.deps.registry.getSchemas().map(schema => {
+            const params = Object.entries(schema.parameters)
+                .map(([k, v]) => `    - ${k} (${v.type}${v.required ? ', required' : ''}): ${v.description}`)
+                .join('\n');
+            return `- ${schema.name}: ${schema.description}\n  Parameters:\n${params}` +
+                (schema.example ? `\n  Example: ${schema.example}` : '');
+        }).join('\n\n');
     }
 }

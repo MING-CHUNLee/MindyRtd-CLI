@@ -14,6 +14,11 @@ import path from 'path';
 import { IFileSystem } from '../../domain/interfaces/file-system';
 import { DiffEngine } from './diff-engine';
 
+/** Type guard: true when e is a Node.js system error with a `.code` property. */
+function isNodeError(e: unknown): e is NodeJS.ErrnoException {
+    return e instanceof Error && 'code' in e;
+}
+
 export interface StagedEdit {
     path: string;      // relative path as given by the LLM
     content: string;   // proposed new content
@@ -82,9 +87,9 @@ export class EditStagingService {
             try {
                 original = this.fileSystem.read(absPath);
             } catch (error) {
-                if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+                if (!isNodeError(error) || error.code !== 'ENOENT') {
                     emit('error', {
-                        message: `Cannot read ${absPath}: ${(error as Error).message}`,
+                        message: `Cannot read ${absPath}: ${error instanceof Error ? error.message : String(error)}`,
                         phase: 'review',
                     });
                     continue;

@@ -58,11 +58,12 @@ cat(jsonlite::toJSON(result, auto_unbox = TRUE))
 
                 // Strategy 3: Try parsing the whole output
                 return JSON.parse(response.output.trim());
-            } catch (error: any) {
+            } catch (error) {
                 // Provide detailed error for debugging
                 const preview = response.output.substring(0, 100);
+                const message = error instanceof Error ? error.message : String(error);
                 throw new Error(
-                    `Failed to parse package status. Output preview: "${preview}...". Error: ${error.message}`
+                    `Failed to parse package status. Output preview: "${preview}...". Error: ${message}`
                 );
             }
         }

@@ -51,13 +51,13 @@ export class TokenBudget {
     }
 
     private computeCost(): number {
-        const p = getPricing(this.model);
-        const M = 1_000_000;
+        const pricing = getPricing(this.model);
+        const TOKENS_PER_MILLION = 1_000_000;
         return (
-            (this.snapshot.inputTokens / M) * p.inputPerMillion +
-            (this.snapshot.outputTokens / M) * p.outputPerMillion +
-            ((this.snapshot.cacheCreationTokens) / M) * p.cacheCreationPerMillion +
-            ((this.snapshot.cacheReadTokens) / M) * p.cacheReadPerMillion
+            (this.snapshot.inputTokens / TOKENS_PER_MILLION) * pricing.inputPerMillion +
+            (this.snapshot.outputTokens / TOKENS_PER_MILLION) * pricing.outputPerMillion +
+            ((this.snapshot.cacheCreationTokens) / TOKENS_PER_MILLION) * pricing.cacheCreationPerMillion +
+            ((this.snapshot.cacheReadTokens) / TOKENS_PER_MILLION) * pricing.cacheReadPerMillion
         );
     }
 }

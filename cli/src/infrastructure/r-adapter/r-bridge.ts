@@ -251,7 +251,7 @@ export class RBridge {
     // Configuration
     // ============================================
 
-    setTimeout(timeoutMs: number): void {
+    setRequestTimeout(timeoutMs: number): void {
         this.timeout = Math.min(timeoutMs, EXECUTION.MAX_TIMEOUT_MS);
     }
 }

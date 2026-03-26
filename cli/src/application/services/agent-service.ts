@@ -33,7 +33,7 @@ import { RExecTool } from '../tools/r-exec-tool';
 import { RInstallTool } from '../tools/r-install-tool';
 import { RRenderTool } from '../tools/r-render-tool';
 import { HistorySummarizer } from './history-summarizer';
-import { INTENT_CLASSIFIER_SYSTEM_PROMPT } from '../prompts/intent-classifier';
+import { IntentRouter, Intent } from './intent-router';
 
 import { FileChange } from '../../domain/entities/file-change';
 import { PluginLoader } from '../../infrastructure/plugins/plugin-loader';
@@ -43,27 +43,26 @@ import { ExecuteAskUseCase } from '../use-cases/execute-ask-use-case';
 import { ExecuteInstructionUseCase } from '../use-cases/execute-instruction-use-case';
 import { ExecuteRunUseCase } from '../use-cases/execute-run-use-case';
 
-// ── Event Types ──────────────────────────────────────────────────────────────
+// ── Event Types (discriminated union) ────────────────────────────────────────
 
-export type AgentEventType =
-    | 'session_loaded'
-    | 'intent_classified'
-    | 'phase_start'
-    | 'phase_end'
-    | 'react_step'
-    | 'text_output'
-    | 'stream_token'
-    | 'diff_proposed'
-    | 'edit_applied'
-    | 'edit_rejected'
-    | 'turn_saved'
-    | 'error'
-    | 'status_update';
+/** Each variant carries exactly the data that event type needs. */
+export type AgentEvent =
+    | { type: 'session_loaded';    data: { sessionId: string; turnCount: number; model: string } }
+    | { type: 'intent_classified'; data: { intent: string } }
+    | { type: 'phase_start';       data: { phase: string; description: string } }
+    | { type: 'phase_end';         data: { phase: string; success: boolean; summary?: string } }
+    | { type: 'react_step';        data: { stepNumber: number; thought?: string; action?: { tool: string }; observation?: string } }
+    | { type: 'text_output';       data: { content: string } }
+    | { type: 'stream_token';      data: { token: string } }
+    | { type: 'diff_proposed';     data: { path: string; diff: string; original: string; proposed: string } }
+    | { type: 'edit_applied';      data: { path: string } }
+    | { type: 'edit_rejected';     data: { path: string } }
+    | { type: 'turn_saved';        data: { turnCount: number; usage: unknown; sessionId: string; model: string; usagePercent: number; health: string; totalCostUSD: number } }
+    | { type: 'error';             data: { message: string; phase?: string } }
+    | { type: 'status_update';     data: { plugins?: string[]; warning?: string; knowledge?: string[] } };
 
-export interface AgentEvent {
-    type: AgentEventType;
-    data: Record<string, unknown>;
-}
+/** Convenience alias for the union of all valid event type strings. */
+export type AgentEventType = AgentEvent['type'];
 
 export interface ProposedEdit {
     path: string;
@@ -107,6 +106,7 @@ export class AgentService {
 
     private readonly summarizer: HistorySummarizer;
     private readonly pluginLoader: PluginLoader;
+    private readonly intentRouter: IntentRouter;
     private readonly askUseCase: ExecuteAskUseCase;
     private readonly instructionUseCase: ExecuteInstructionUseCase;
     private readonly runUseCase: ExecuteRunUseCase;
@@ -133,6 +133,14 @@ export class AgentService {
         this.pluginLoader = deps?.pluginLoader ?? new PluginLoader();
         this.registry = new ToolRegistry();
 
+        // Sub-services (IntentRouter, use cases) use a broad (type: string, data: Record) emit
+        // signature. Create a real bridge function rather than a cast so events are correctly
+        // forwarded as AgentEvent objects to onEvent.
+        const emit = (type: string, data: Record<string, unknown>): void => {
+            this.onEvent({ type, data } as AgentEvent);
+        };
+        this.intentRouter = new IntentRouter(this.llm, emit);
+
         // Register built-in tools
         const fs = new LocalFileSystem();
         const stagingService = new EditStagingService(fs, this.diffEngine);
@@ -148,8 +156,6 @@ export class AgentService {
 
         // Cast to the wider string type expected by use cases (safe: use cases only
         // call emit with valid AgentEventType literals at runtime).
-        const emit = this.emit.bind(this) as (type: string, data: Record<string, unknown>) => void;
-
         this.askUseCase = new ExecuteAskUseCase({
             llm: this.llm,
             registry: this.registry,
@@ -191,22 +197,22 @@ export class AgentService {
             this._session = ConversationSession.create(model);
         }
 
-        this.emit('session_loaded', {
+        this.emit({ type: 'session_loaded', data: {
             sessionId: this.session.id,
             turnCount: this.session.turnCount,
             model: this.session.model,
-        });
+        } });
 
         try {
             const pluginMetas = await this.pluginLoader.loadAll(this.registry);
             const loadedPlugins = pluginMetas.filter(meta => meta.loaded).map(meta => meta.name);
             if (loadedPlugins.length > 0) {
-                this.emit('status_update', { plugins: loadedPlugins });
+                this.emit({ type: 'status_update', data: { plugins: loadedPlugins } });
             }
         } catch (error) {
-            this.emit('status_update', {
+            this.emit({ type: 'status_update', data: {
                 warning: `Plugin loading failed: ${error instanceof Error ? error.message : String(error)}`,
-            });
+            } });
         }
     }
 
@@ -279,11 +285,11 @@ export class AgentService {
      * emit the output, and persist the turn.
      */
     private async executeInstall(instruction: string): Promise<void> {
-        this.emit('phase_start', { phase: 'install', description: 'Installing R packages' });
+        this.emit({ type: 'phase_start', data: { phase: 'install', description: 'Installing R packages' } });
 
         const tool = this.registry.get('r_install');
         if (!tool) {
-            this.emit('error', { message: 'r_install tool not available' });
+            this.emit({ type: 'error', data: { message: 'r_install tool not available' } });
             return;
         }
 
@@ -292,8 +298,8 @@ export class AgentService {
         const packages = match ? match[1].replace(/\s+/g, ',') : instruction;
 
         const result = await tool.execute({ packages });
-        this.emit('phase_end', { phase: 'install', success: !result.isError });
-        this.emit('text_output', { content: result.content });
+        this.emit({ type: 'phase_end', data: { phase: 'install', success: !result.isError } });
+        this.emit({ type: 'text_output', data: { content: result.content } });
 
         const usage: TurnUsage = { inputTokens: 0, outputTokens: 0, cacheCreationTokens: 0, cacheReadTokens: 0 };
         this.session.addTurn(instruction, result.content, usage);
@@ -342,67 +348,11 @@ export class AgentService {
     private async prepareHistory(): Promise<SessionMessage[]> {
         return this.summarizer.shouldSummarize(this.session)
             ? await this.summarizer.summarize(this.session, this.llm)
-            : this.session.getHistory().map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }));
+            : this.session.getHistory().map(msg => ({ role: msg.role as 'user' | 'assistant', content: msg.content }));
     }
 
-    private async classifyIntent(instruction: string, history: SessionMessage[]): Promise<'ask' | 'edit' | 'run' | 'install'> {
-        this.emit('phase_start', { phase: 'intent', description: 'Classifying intent' });
-
-        // ── Regex pre-check (deterministic, no LLM call needed) ──────────────
-        const definiteIntent = AgentService.detectObviousIntent(instruction);
-        if (definiteIntent) {
-            this.emit('intent_classified', { intent: definiteIntent });
-            this.emit('phase_end', { phase: 'intent', success: true });
-            return definiteIntent;
-        }
-
-        // ── LLM classification for ambiguous cases ────────────────────────────
-        let intent: 'ask' | 'edit' | 'run' | 'install' = 'ask';
-        try {
-            const intentResponse = await this.llm.sendPrompt({
-                systemPrompt: INTENT_CLASSIFIER_SYSTEM_PROMPT,
-                userMessage: instruction,
-                history,
-            });
-            const response = intentResponse.content.trim().toLowerCase();
-            if (response.includes('install')) intent = 'install';
-            else if (response.includes('run')) intent = 'run';
-            else if (response.includes('edit')) intent = 'edit';
-            // else: 'ask' (default — also covers LLM returning "ask" or anything unexpected)
-        } catch (error) {
-            this.emit('status_update', {
-                warning: `Intent classification failed: ${error instanceof Error ? error.message : String(error)}, defaulting to ask`,
-            });
-        }
-        this.emit('intent_classified', { intent });
-        this.emit('phase_end', { phase: 'intent', success: true });
-        return intent;
-    }
-
-    /**
-     * Deterministic intent detection for unambiguous instructions.
-     * Returns null if the instruction is ambiguous and needs LLM classification.
-     */
-    private static detectObviousIntent(instruction: string): 'ask' | 'run' | 'install' | null {
-        const lower = instruction.toLowerCase();
-
-        // ask: ends with "?" or starts with a question word / conversational phrase
-        if (instruction.trim().endsWith('?')) return 'ask';
-        if (/^(?:what|how|why|when|where|who|can|could|is|are|does|did|have|has|tell me|explain|show me|describe|what'?s|幫我解釋|解釋|說明|告訴我|上次|我們上次)\b/i.test(lower)) return 'ask';
-
-        // install: "install X" / "安裝 X" where X looks like a package name
-        if (/(?:install|安裝)\s+[A-Za-z0-9._]/.test(instruction)) return 'install';
-
-        // run: explicit execute/run/render keyword + R/Rmd file reference or path
-        const hasRunKeyword = /\b(?:execute|run|render|執行|跑|knit)\b/i.test(lower);
-        const hasRFile = /\.(?:r|rmd)\b/i.test(instruction);
-        if (hasRunKeyword && hasRFile) return 'run';
-
-        // run: bare path to an R/Rmd file (e.g. "C:/foo/bar.Rmd")
-        if (/[A-Za-z]:[\\/][^\s]+\.(?:Rmd|rmd|R)\b/.test(instruction)) return 'run';
-        if (/\/[^\s]+\.(?:Rmd|rmd|R)\b/.test(instruction)) return 'run';
-
-        return null;
+    private async classifyIntent(instruction: string, history: SessionMessage[]): Promise<Intent> {
+        return this.intentRouter.classify(instruction, history);
     }
 
     /** Build a compact summary of the last few turns for cross-session context. */
@@ -418,13 +368,13 @@ export class AgentService {
         return `[Previous session — last ${Math.floor(lastN.length / 2)} turn(s)]\n${lines.join('\n')}`;
     }
 
-    private emit(type: AgentEventType, data: Record<string, unknown>): void {
-        this.onEvent({ type, data });
+    private emit(event: AgentEvent): void {
+        this.onEvent(event);
     }
 
     private emitTurnSaved(usage: TurnUsage): void {
         const budget = this.session.tokenBudget;
-        this.emit('turn_saved', {
+        this.emit({ type: 'turn_saved', data: {
             turnCount: this.session.turnCount,
             usage,
             sessionId: this.session.id,
@@ -432,7 +382,7 @@ export class AgentService {
             usagePercent: budget.usagePercent,
             health: budget.health,
             totalCostUSD: this.session.totalCostUSD,
-        });
+        } });
     }
 
     private getStatusText(): string {
