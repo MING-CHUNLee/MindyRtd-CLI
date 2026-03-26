@@ -1,6 +1,12 @@
 {
   "skills": [
     {
+      "skill-id": "code-review",
+      "file": "skill-code-review.md",
+      "summary": "MindyCLI 全專案架構 Code Review：5步驟流程、Clean Architecture 合規、staged-edit pattern、test gap 識別、report 輸出格式",
+      "keywords": ["code-review", "architecture", "clean-architecture", "dependency-inversion", "staged-edit", "test-coverage", "MindyCLI"]
+    },
+    {
       "skill-id": "typescript-clean-code",
       "file": "skill-typescript-clean-code.md",
       "summary": "Clean Code Review 全流程：7大類別評估、分級問題、對比前次分數、產出 review report",

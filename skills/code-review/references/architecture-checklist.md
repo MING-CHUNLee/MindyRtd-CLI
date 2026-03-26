@@ -155,6 +155,114 @@ export const config = {
 };
 ```
 
+## MindyCLI Clean Architecture Layers
+
+MindyCLI uses Clean Architecture. Dependencies point inward: `infrastructure` → `application` → `domain`.
+
+### `infrastructure/filesystem/` — Low-level I/O Adapters
+
+Responsibility: **how** to operate the disk. Calls `fs`, `glob`, `path.resolve`, etc.
+Contains: `LocalFileSystem`, `DirectoryScanner`, `file-scanner.ts`
+
+- [ ] Only this layer calls Node.js `fs` directly
+- [ ] No business logic — pure technical detail (read bytes, list entries)
+- [ ] Implements domain interfaces (`IFileSystem`, `IDirectoryScanner`)
+
+**✅ Good:**
+```typescript
+// infrastructure/filesystem/directory-scanner.ts
+export class DirectoryScanner implements IDirectoryScanner {
+    scan(options: ScanOptions): Promise<ScanResult> {
+        return scanDirectory(options); // ✅ wraps fs, no logic
+    }
+}
+```
+
+**❌ Bad:**
+```typescript
+// application/tools/file-scan-tool.ts
+import { scanDirectory } from '../../infrastructure/filesystem/file-scanner'; // ❌ tool reaching into infra
+```
+
+---
+
+### `application/tools/` — LLM Action Wrappers
+
+Responsibility: bridge LLM `[ACTION]` markers to infrastructure. Add **business rules** (staging, read-only guards, size limits).
+Contains: `FileEditTool`, `FileReadTool`, `FileScanTool`, `RExecTool`, `PdfReadTool`
+
+- [ ] Constructor takes **domain interfaces or services**, never concrete infrastructure classes
+- [ ] `execute()` body is: **validate → delegate → return ToolResult** (≤10 lines)
+- [ ] No `fs.*` calls — delegate to injected service/interface
+- [ ] Business rules (staging, editable-extension check, size limit) enforced here, not in services
+
+**✅ Good:**
+```typescript
+// application/tools/file-read-tool.ts
+export class FileReadTool implements AgentTool {
+    constructor(private readonly fileReadService: FileReadService) {} // ✅ service injected
+
+    async execute(input: ToolInput): Promise<ToolResult> {
+        const filePath = input.path as string | undefined;
+        if (!filePath?.trim()) return { content: 'No file path provided.', isError: true }; // ✅ validate
+        const result = this.fileReadService.read(filePath); // ✅ delegate
+        if ('error' in result) return { content: result.error, isError: true };
+        return { content: `--- ${path.basename(result.absPath)} ---\n${result.content}`, isError: false }; // ✅ return
+    }
+}
+```
+
+**❌ Bad:**
+```typescript
+// application/tools/file-read-tool.ts
+async execute(input: ToolInput): Promise<ToolResult> {
+    const absPath = path.resolve(input.path as string);   // ❌ path.resolve in tool
+    if (!fs.existsSync(absPath)) return { content: 'Not found', isError: true }; // ❌ direct fs call
+    const content = fs.readFileSync(absPath, 'utf-8');    // ❌ direct fs call
+    return { content, isError: false };
+}
+```
+
+---
+
+### `application/services/` — Pure Orchestration
+
+Responsibility: **what** to do, not **how** to do I/O. Dispatch, parse, compute.
+Contains: `ToolRegistry`, `ReActLoop`, `DiffEngine`, `EditStagingService`, `FileReadService`, `HistorySummarizer`, `Evaluator`
+
+- [ ] Services depend only on domain interfaces — never on `LocalFileSystem`, `scanDirectory`, etc. directly
+- [ ] No `console.log` or `process.stdout` — emit events if output needed
+- [ ] Services are stateless or own their state explicitly (e.g. `EditStagingService._staged` queue)
+- [ ] I/O-doing services (`FileReadService`, `EditStagingService`) receive `IFileSystem` via constructor DI
+
+**Key distinction — `EditStagingService` shared instance pattern:**
+```
+FileEditTool ──stage()──▶ EditStagingService._staged[]
+                                    │
+ExecuteInstructionUseCase ──drain()─┘──apply()──▶ IFileSystem.write()
+```
+The staging service is constructed **once** in `AgentService` and injected into both the tool (writer) and the use case (reader). This is the correct pattern when two objects need to share mutable state.
+
+---
+
+### Dependency Inversion Rule for Tools
+
+> **A tool in `application/tools/` must never import from `infrastructure/`.**
+
+When a tool needs I/O:
+1. Define an interface in `domain/interfaces/` (e.g. `IDirectoryScanner`)
+2. Implement it in `infrastructure/` (e.g. `DirectoryScanner`)
+3. Or wrap it in an `application/services/` service (e.g. `FileReadService`) if business logic is needed
+4. Inject via constructor into the tool
+
+```
+domain/interfaces/IDirectoryScanner  ←  FileScanTool depends on this
+        ↑ implements
+infrastructure/filesystem/DirectoryScanner  ←  wired in AgentService / ask.ts
+```
+
+---
+
 ## Dependency Flow Check
 
 ### Allowed Dependencies
