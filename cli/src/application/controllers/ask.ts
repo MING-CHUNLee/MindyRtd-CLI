@@ -11,6 +11,7 @@ import { ToolRegistry } from '../../application/services/tool-registry';
 import { FileScanTool } from '../../application/tools/file-scan-tool';
 import { FileReadTool } from '../../application/tools/file-read-tool';
 import { PdfReadTool } from '../../application/tools/pdf-read-tool';
+import { LocalFileSystem } from '../../infrastructure/filesystem/local-file-system';
 import { ExecuteAskUseCase, AskResult } from '../../application/use-cases/execute-ask-use-case';
 import { AgentEvent } from '../services/agent-service';
 
@@ -62,7 +63,7 @@ export async function executeAskCommand(
     // ── Wire use case ─────────────────────────────────────────────────────────
     const registry = new ToolRegistry();
     registry.register(new FileScanTool());
-    registry.register(new FileReadTool());
+    registry.register(new FileReadTool(new LocalFileSystem()));
     registry.register(new PdfReadTool());
 
     let spinner: Ora | null = null;

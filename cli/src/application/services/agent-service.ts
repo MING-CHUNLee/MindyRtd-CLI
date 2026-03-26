@@ -24,6 +24,7 @@ import { ToolRegistry } from './tool-registry';
 import { FileScanTool } from '../tools/file-scan-tool';
 import { FileReadTool } from '../tools/file-read-tool';
 import { FileEditTool } from '../tools/file-edit-tool';
+import { LocalFileSystem } from '../../infrastructure/filesystem/local-file-system';
 import { PdfReadTool } from '../tools/pdf-read-tool';
 import { RExecTool } from '../tools/r-exec-tool';
 import { RInstallTool } from '../tools/r-install-tool';
@@ -130,9 +131,10 @@ export class AgentService {
         this.registry = new ToolRegistry();
 
         // Register built-in tools
-        const fileEditTool = new FileEditTool(this.diffEngine);
+        const fs = new LocalFileSystem();
+        const fileEditTool = new FileEditTool(this.diffEngine, fs);
         this.registry.register(new FileScanTool());
-        this.registry.register(new FileReadTool());
+        this.registry.register(new FileReadTool(fs));
         this.registry.register(fileEditTool);
         this.registry.register(new PdfReadTool());
         this.registry.register(new RExecTool());

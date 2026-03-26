@@ -8,10 +8,11 @@
  * session turn.
  */
 
-import fs from 'fs';
 import path from 'path';
 
 import { LLMController } from '../../infrastructure/api/llm-controller';
+import { IFileSystem } from '../../domain/interfaces/file-system';
+import { LocalFileSystem } from '../../infrastructure/filesystem/local-file-system';
 import { LLMRequestPayload } from '../../shared/types/llm-types';
 import { TurnUsage } from '../../domain/entities/conversation-turn';
 import { ToolRegistry } from '../services/tool-registry';
@@ -40,8 +41,10 @@ export interface ExecuteInstructionDeps {
     evaluator?: Evaluator;
     /** Optional — defaults to new Orchestrator(llm, registry). */
     orchestrator?: Orchestrator;
-    /** Optional — defaults to a new FileEditTool(diffEngine). */
+    /** Optional — defaults to a new FileEditTool(diffEngine, fileSystem). */
     fileEditTool?: FileEditTool;
+    /** Optional — defaults to LocalFileSystem. Must be provided explicitly in tests. */
+    fileSystem?: IFileSystem;
 }
 
 export interface InstructionResult {
@@ -60,6 +63,7 @@ export class ExecuteInstructionUseCase {
     private readonly evaluator: Evaluator;
     private readonly orchestrator: Orchestrator;
     private readonly fileEditTool: FileEditTool;
+    private readonly fileSystem: IFileSystem;
 
     constructor(private readonly deps: ExecuteInstructionDeps) {
         if (deps.knowledgeBase) {
@@ -71,7 +75,9 @@ export class ExecuteInstructionUseCase {
         }
         this.evaluator = deps.evaluator ?? new Evaluator();
         this.orchestrator = deps.orchestrator ?? new Orchestrator(deps.llm, deps.registry);
-        this.fileEditTool = deps.fileEditTool ?? new FileEditTool(deps.diffEngine);
+        // fileSystem must be resolved before fileEditTool so the tool can share the same instance
+        this.fileSystem = deps.fileSystem ?? new LocalFileSystem();
+        this.fileEditTool = deps.fileEditTool ?? new FileEditTool(deps.diffEngine, this.fileSystem);
     }
 
     async execute(instruction: string, history: SessionMessage[]): Promise<InstructionResult> {
@@ -220,7 +226,7 @@ export class ExecuteInstructionUseCase {
             const absPath = path.resolve(this.deps.directory, artifact.path);
             let original = '';
             try {
-                original = fs.readFileSync(absPath, 'utf8');
+                original = this.fileSystem.read(absPath);
             } catch (error) {
                 if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
                     this.deps.emit('error', {

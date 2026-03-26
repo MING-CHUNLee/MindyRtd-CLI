@@ -13,9 +13,9 @@
  * The use case is responsible for the approval gate between drainStagedEdits() and applyEdit().
  */
 
-import fs from 'fs';
 import path from 'path';
 import { AgentTool, ToolInput, ToolResult, ToolSchema } from '../../domain/interfaces/agent-tool';
+import { IFileSystem } from '../../domain/interfaces/file-system';
 import { DiffEngine } from '../services/diff-engine';
 import { isFilenameEditable } from '../../domain/lib/agent-file-filters';
 
@@ -52,7 +52,10 @@ export class FileEditTool implements AgentTool {
 
     private readonly _staged: StagedEdit[] = [];
 
-    constructor(private readonly diffEngine: DiffEngine) {}
+    constructor(
+        private readonly diffEngine: DiffEngine,
+        private readonly fileSystem: IFileSystem,
+    ) {}
 
     async execute(input: ToolInput): Promise<ToolResult> {
         const filePath = input.path as string | undefined;
@@ -72,12 +75,12 @@ export class FileEditTool implements AgentTool {
         }
 
         const absPath = path.resolve(filePath);
-        const exists = fs.existsSync(absPath);
+        const exists = this.fileSystem.exists(absPath);
 
         let original = '';
         if (exists) {
             try {
-                original = fs.readFileSync(absPath, 'utf8');
+                original = this.fileSystem.read(absPath);
             } catch (err) {
                 const msg = err instanceof Error ? err.message : String(err);
                 return { content: `Cannot read ${path.basename(absPath)}: ${msg}`, isError: true };
@@ -116,7 +119,7 @@ export class FileEditTool implements AgentTool {
      */
     applyEdit(edit: StagedEdit): void {
         const absPath = path.resolve(edit.path);
-        fs.mkdirSync(path.dirname(absPath), { recursive: true });
-        fs.writeFileSync(absPath, edit.content, 'utf8');
+        this.fileSystem.mkdir(path.dirname(absPath));
+        this.fileSystem.write(absPath, edit.content);
     }
 }

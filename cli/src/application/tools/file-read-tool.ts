@@ -5,13 +5,15 @@
  * Uses the domain content-size guard to reject oversized files.
  */
 
-import fs from 'fs';
 import path from 'path';
 import { AgentTool, ToolInput, ToolResult, ToolSchema } from '../../domain/interfaces/agent-tool';
+import { IFileSystem } from '../../domain/interfaces/file-system';
 import { isContentEditable } from '../../domain/lib/agent-file-filters';
 
 export class FileReadTool implements AgentTool {
     readonly name = 'file_read';
+
+    constructor(private readonly fileSystem: IFileSystem) {}
 
     readonly schema: ToolSchema = {
         name: 'file_read',
@@ -34,13 +36,13 @@ export class FileReadTool implements AgentTool {
 
         const absPath = path.resolve(filePath);
 
-        if (!fs.existsSync(absPath)) {
+        if (!this.fileSystem.exists(absPath)) {
             return { content: `File not found: ${absPath}`, isError: true };
         }
 
         let content: string;
         try {
-            content = fs.readFileSync(absPath, 'utf8');
+            content = this.fileSystem.read(absPath);
         } catch (err) {
             const msg = err instanceof Error ? err.message : String(err);
             return { content: `Failed to read file: ${msg}`, isError: true };
