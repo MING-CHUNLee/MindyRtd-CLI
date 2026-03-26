@@ -1,19 +1,18 @@
 /**
  * Tool: FileReadTool
  *
- * Reads a file from disk and returns its content.
- * Uses the domain content-size guard to reject oversized files.
+ * Validates the LLM's tool-call input and delegates all fs I/O to
+ * FileReadService — no filesystem calls live here.
  */
 
 import path from 'path';
 import { AgentTool, ToolInput, ToolResult, ToolSchema } from '../../domain/interfaces/agent-tool';
-import { IFileSystem } from '../../domain/interfaces/file-system';
-import { isContentEditable } from '../../domain/lib/agent-file-filters';
+import { FileReadService } from '../services/file-read-service';
 
 export class FileReadTool implements AgentTool {
     readonly name = 'file_read';
 
-    constructor(private readonly fileSystem: IFileSystem) {}
+    constructor(private readonly fileReadService: FileReadService) {}
 
     readonly schema: ToolSchema = {
         name: 'file_read',
@@ -30,37 +29,16 @@ export class FileReadTool implements AgentTool {
 
     async execute(input: ToolInput): Promise<ToolResult> {
         const filePath = input.path as string | undefined;
-        if (!filePath?.trim()) {
-            return { content: 'No file path provided.', isError: true };
-        }
+        if (!filePath?.trim()) return { content: 'No file path provided.', isError: true };
 
-        const absPath = path.resolve(filePath);
-
-        if (!this.fileSystem.exists(absPath)) {
-            return { content: `File not found: ${absPath}`, isError: true };
-        }
-
-        let content: string;
-        try {
-            content = this.fileSystem.read(absPath);
-        } catch (err) {
-            const msg = err instanceof Error ? err.message : String(err);
-            return { content: `Failed to read file: ${msg}`, isError: true };
-        }
-
-        const sizeCheck = isContentEditable(absPath, content);
-        if (!sizeCheck.ok) {
-            return {
-                content: `File too large to read: ${sizeCheck.reason}`,
-                isError: true,
-            };
-        }
+        const result = this.fileReadService.read(filePath);
+        if ('error' in result) return { content: result.error, isError: true };
 
         return {
-            content: `--- ${path.basename(absPath)} ---\n${content}`,
-            data: content,
+            content: `--- ${path.basename(result.absPath)} ---\n${result.content}`,
+            data: result.content,
             isError: false,
-            estimatedTokens: Math.ceil(content.length / 4),
+            estimatedTokens: Math.ceil(result.content.length / 4),
         };
     }
 }

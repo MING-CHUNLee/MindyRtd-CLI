@@ -8,8 +8,6 @@
  * session turn.
  */
 
-import path from 'path';
-
 import { LLMController } from '../../infrastructure/api/llm-controller';
 import { IFileSystem } from '../../domain/interfaces/file-system';
 import { LocalFileSystem } from '../../infrastructure/filesystem/local-file-system';
@@ -23,7 +21,7 @@ import { LLMOutput } from '../../domain/entities/llm-output';
 import { Evaluator } from '../services/evaluator';
 import { KnowledgeBase } from '../services/knowledge-base';
 import { KnowledgeRepository } from '../../infrastructure/persistence/knowledge-repository';
-import { FileEditTool, StagedEdit } from '../tools/file-edit-tool';
+import { EditStagingService, StagedEdit } from '../services/edit-staging-service';
 
 type EmitFn = (type: string, data: Record<string, unknown>) => void;
 
@@ -41,8 +39,8 @@ export interface ExecuteInstructionDeps {
     evaluator?: Evaluator;
     /** Optional — defaults to new Orchestrator(llm, registry). */
     orchestrator?: Orchestrator;
-    /** Optional — defaults to a new FileEditTool(diffEngine, fileSystem). */
-    fileEditTool?: FileEditTool;
+    /** Optional — defaults to new EditStagingService(fileSystem, diffEngine). */
+    stagingService?: EditStagingService;
     /** Optional — defaults to LocalFileSystem. Must be provided explicitly in tests. */
     fileSystem?: IFileSystem;
 }
@@ -62,8 +60,7 @@ export class ExecuteInstructionUseCase {
     private readonly knowledgeBase: KnowledgeBase;
     private readonly evaluator: Evaluator;
     private readonly orchestrator: Orchestrator;
-    private readonly fileEditTool: FileEditTool;
-    private readonly fileSystem: IFileSystem;
+    private readonly stagingService: EditStagingService;
 
     constructor(private readonly deps: ExecuteInstructionDeps) {
         if (deps.knowledgeBase) {
@@ -75,9 +72,8 @@ export class ExecuteInstructionUseCase {
         }
         this.evaluator = deps.evaluator ?? new Evaluator();
         this.orchestrator = deps.orchestrator ?? new Orchestrator(deps.llm, deps.registry);
-        // fileSystem must be resolved before fileEditTool so the tool can share the same instance
-        this.fileSystem = deps.fileSystem ?? new LocalFileSystem();
-        this.fileEditTool = deps.fileEditTool ?? new FileEditTool(deps.diffEngine, this.fileSystem);
+        const fileSystem = deps.fileSystem ?? new LocalFileSystem();
+        this.stagingService = deps.stagingService ?? new EditStagingService(fileSystem, deps.diffEngine);
     }
 
     async execute(instruction: string, history: SessionMessage[]): Promise<InstructionResult> {
@@ -92,10 +88,10 @@ export class ExecuteInstructionUseCase {
         const { validatedEdits, outputs } = await this.validateArtifacts(orchResult, baseRequest);
 
         // Collect edits from two sources:
-        //   1. ReAct tool calls  → already staged inside FileEditTool with original + diff pre-computed
+        //   1. ReAct tool calls  → already staged inside EditStagingService with original + diff pre-computed
         //   2. LLM artifact JSON → converted to StagedEdit here (read original, compute diff)
-        const toolStagedEdits = this.fileEditTool.drainStagedEdits();
-        const artifactEdits = this.buildStagedEditsFromArtifacts(validatedEdits);
+        const toolStagedEdits = this.stagingService.drainStagedEdits();
+        const artifactEdits = this.stagingService.stageFromArtifacts(validatedEdits, this.deps.directory, this.deps.emit);
         const allEdits = [...toolStagedEdits, ...artifactEdits];
 
         if (allEdits.length === 0) {
@@ -214,45 +210,8 @@ export class ExecuteInstructionUseCase {
     }
 
     /**
-     * Convert artifact-extracted edits (from LLM JSON blob) into StagedEdit objects
-     * by reading the original file from disk and computing the diff.
-     * Skips edits where the proposed content is identical to the current file.
-     */
-    private buildStagedEditsFromArtifacts(
-        artifacts: Array<{ path: string; content: string }>,
-    ): StagedEdit[] {
-        const staged: StagedEdit[] = [];
-        for (const artifact of artifacts) {
-            const absPath = path.resolve(this.deps.directory, artifact.path);
-            let original = '';
-            try {
-                original = this.fileSystem.read(absPath);
-            } catch (error) {
-                if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-                    this.deps.emit('error', {
-                        message: `Cannot read ${absPath}: ${(error as Error).message}`,
-                        phase: 'review',
-                    });
-                    continue;
-                }
-                // ENOENT = new file being created — original stays ''
-            }
-
-            if (original === artifact.content) continue;
-
-            staged.push({
-                path: artifact.path,
-                content: artifact.content,
-                original,
-                diff: this.deps.diffEngine.generateColoredDiff(original, artifact.content),
-            });
-        }
-        return staged;
-    }
-
-    /**
-     * Present each staged edit to the user for approval and apply approved ones via FileEditTool.
-     * No direct fs calls here — all I/O is delegated to fileEditTool.applyEdit().
+     * Present each staged edit to the user for approval and apply approved ones via EditStagingService.
+     * No direct fs calls here — all I/O is delegated to stagingService.applyEdit().
      */
     private async applyEditsWithApproval(edits: StagedEdit[]): Promise<string[]> {
         this.deps.emit('phase_start', { phase: 'review', description: 'Review proposed changes' });
@@ -274,7 +233,7 @@ export class ExecuteInstructionUseCase {
             });
 
             if (approved) {
-                this.fileEditTool.applyEdit(edit);
+                this.stagingService.applyEdit(edit);
                 this.deps.emit('edit_applied', { path: edit.path });
                 appliedFiles.push(edit.path);
             } else {

@@ -7,10 +7,12 @@
 
 import path from 'path';
 import { AgentTool, ToolInput, ToolResult, ToolSchema } from '../../domain/interfaces/agent-tool';
-import { scanDirectory } from '../../infrastructure/filesystem/file-scanner';
+import { IDirectoryScanner } from '../../domain/interfaces/directory-scanner';
 
 export class FileScanTool implements AgentTool {
     readonly name = 'file_scan';
+
+    constructor(private readonly scanner: IDirectoryScanner) {}
 
     readonly schema: ToolSchema = {
         name: 'file_scan',
@@ -29,7 +31,7 @@ export class FileScanTool implements AgentTool {
         const directory = (input.directory as string | undefined) ?? '.';
         const absDir = path.resolve(directory);
 
-        const result = await scanDirectory({
+        const result = await this.scanner.scan({
             targetDir: absDir,
             recursive: true,
             includeHidden: false,

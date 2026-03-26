@@ -9,7 +9,9 @@ import { ContextStatusBar } from '../../presentation/views/context-status-bar';
 import { HistorySummarizer } from '../../application/services/history-summarizer';
 import { ToolRegistry } from '../../application/services/tool-registry';
 import { FileScanTool } from '../../application/tools/file-scan-tool';
+import { DirectoryScanner } from '../../infrastructure/filesystem/directory-scanner';
 import { FileReadTool } from '../../application/tools/file-read-tool';
+import { FileReadService } from '../../application/services/file-read-service';
 import { PdfReadTool } from '../../application/tools/pdf-read-tool';
 import { LocalFileSystem } from '../../infrastructure/filesystem/local-file-system';
 import { ExecuteAskUseCase, AskResult } from '../../application/use-cases/execute-ask-use-case';
@@ -62,8 +64,8 @@ export async function executeAskCommand(
 
     // ── Wire use case ─────────────────────────────────────────────────────────
     const registry = new ToolRegistry();
-    registry.register(new FileScanTool());
-    registry.register(new FileReadTool(new LocalFileSystem()));
+    registry.register(new FileScanTool(new DirectoryScanner()));
+    registry.register(new FileReadTool(new FileReadService(new LocalFileSystem())));
     registry.register(new PdfReadTool());
 
     let spinner: Ora | null = null;

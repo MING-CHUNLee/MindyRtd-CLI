@@ -22,8 +22,11 @@ import { TurnUsage } from '../../domain/entities/conversation-turn';
 
 import { ToolRegistry } from './tool-registry';
 import { FileScanTool } from '../tools/file-scan-tool';
+import { DirectoryScanner } from '../../infrastructure/filesystem/directory-scanner';
 import { FileReadTool } from '../tools/file-read-tool';
 import { FileEditTool } from '../tools/file-edit-tool';
+import { EditStagingService } from './edit-staging-service';
+import { FileReadService } from './file-read-service';
 import { LocalFileSystem } from '../../infrastructure/filesystem/local-file-system';
 import { PdfReadTool } from '../tools/pdf-read-tool';
 import { RExecTool } from '../tools/r-exec-tool';
@@ -132,9 +135,11 @@ export class AgentService {
 
         // Register built-in tools
         const fs = new LocalFileSystem();
-        const fileEditTool = new FileEditTool(this.diffEngine, fs);
-        this.registry.register(new FileScanTool());
-        this.registry.register(new FileReadTool(fs));
+        const stagingService = new EditStagingService(fs, this.diffEngine);
+        const fileEditTool = new FileEditTool(stagingService);
+        const fileReadService = new FileReadService(fs);
+        this.registry.register(new FileScanTool(new DirectoryScanner()));
+        this.registry.register(new FileReadTool(fileReadService));
         this.registry.register(fileEditTool);
         this.registry.register(new PdfReadTool());
         this.registry.register(new RExecTool());
@@ -158,7 +163,7 @@ export class AgentService {
             diffEngine: this.diffEngine,
             directory: this.directory,
             onApproval: this.onApproval,
-            fileEditTool,
+            stagingService,
             emit,
         });
 
