@@ -3,9 +3,9 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { Evaluator } from '../src/application/services/evaluator';
-import { LLMController } from '../src/infrastructure/api/llm-controller';
-import { LLMRequestPayload } from '../src/shared/types/llm-types';
+import { Evaluator } from '../../../src/application/services/evaluator';
+import { LLMController } from '../../../src/infrastructure/api/llm-controller';
+import { LLMRequestPayload } from '../../../src/shared/types/llm-types';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 

@@ -10,7 +10,7 @@ import {
     createLibraryScanResult,
     LibraryInfo,
     LibraryScanResult,
-} from '../src/shared/types/library-info';
+} from '../../../src/shared/types/library-info';
 
 describe('Library Info Types', () => {
     describe('createLibraryInfo', () => {

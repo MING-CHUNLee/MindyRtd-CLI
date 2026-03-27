@@ -6,8 +6,8 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { IntentRouter, Intent } from '../src/application/services/intent-router';
-import { LLMController } from '../src/infrastructure/api/llm-controller';
+import { IntentRouter, Intent } from '../../../src/application/services/intent-router';
+import { LLMController } from '../../../src/infrastructure/api/llm-controller';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 

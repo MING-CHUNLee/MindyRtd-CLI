@@ -8,9 +8,9 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { FileResolver, ResolvedFile } from '../src/infrastructure/filesystem/file-resolver';
-import { FileFinder } from '../src/infrastructure/filesystem/file-finder';
-import { RubyApiClient } from '../src/infrastructure/api/ruby-api-client';
+import { FileResolver, ResolvedFile } from '../../../src/infrastructure/filesystem/file-resolver';
+import { FileFinder } from '../../../src/infrastructure/filesystem/file-finder';
+import { RubyApiClient } from '../../../src/infrastructure/api/ruby-api-client';
 
 // ── helpers ────────────────────────────────────────────────────────────────
 

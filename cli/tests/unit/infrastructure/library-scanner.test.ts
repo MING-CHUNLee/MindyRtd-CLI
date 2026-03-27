@@ -32,7 +32,7 @@ describe('Library Scanner Service', () => {
 
     describe('Error Classes', () => {
         it('should create RNotFoundError with correct message', async () => {
-            const { RNotFoundError } = await import('../src/shared/utils/errors');
+            const { RNotFoundError } = await import('../../../src/shared/utils/errors');
 
             const error = new RNotFoundError();
             expect(error.message).toContain('R is not installed');
@@ -40,7 +40,7 @@ describe('Library Scanner Service', () => {
         });
 
         it('should create LibraryScanError with custom message', async () => {
-            const { LibraryScanError } = await import('../src/shared/utils/errors');
+            const { LibraryScanError } = await import('../../../src/shared/utils/errors');
 
             const error = new LibraryScanError('Failed to parse output');
             expect(error.message).toBe('Failed to parse output');
@@ -293,7 +293,7 @@ LIBPATHS|C:/Users/test/R/win-library/4.4;C:/Program Files/R/R-4.4.2/library`;
 
     describe('Library Info Type Creation', () => {
         it('should create LibraryInfo with all fields', async () => {
-            const { createLibraryInfo } = await import('../src/shared/types/library-info');
+            const { createLibraryInfo } = await import('../../../src/shared/types/library-info');
 
             const info = createLibraryInfo({
                 name: 'ggplot2',
@@ -312,7 +312,7 @@ LIBPATHS|C:/Users/test/R/win-library/4.4;C:/Program Files/R/R-4.4.2/library`;
         });
 
         it('should create LibraryInfo for base package', async () => {
-            const { createLibraryInfo } = await import('../src/shared/types/library-info');
+            const { createLibraryInfo } = await import('../../../src/shared/types/library-info');
 
             const info = createLibraryInfo({
                 name: 'stats',
@@ -330,7 +330,7 @@ LIBPATHS|C:/Users/test/R/win-library/4.4;C:/Program Files/R/R-4.4.2/library`;
 
     describe('Library Scan Result Creation', () => {
         it('should create LibraryScanResult with correct structure', async () => {
-            const { createLibraryScanResult, createLibraryInfo } = await import('../src/shared/types/library-info');
+            const { createLibraryScanResult, createLibraryInfo } = await import('../../../src/shared/types/library-info');
 
             const libraries = [
                 createLibraryInfo({
@@ -363,7 +363,7 @@ LIBPATHS|C:/Users/test/R/win-library/4.4;C:/Program Files/R/R-4.4.2/library`;
         });
 
         it('should calculate totalLibraries correctly', async () => {
-            const { createLibraryScanResult, createLibraryInfo } = await import('../src/shared/types/library-info');
+            const { createLibraryScanResult, createLibraryInfo } = await import('../../../src/shared/types/library-info');
 
             const libraries = Array.from({ length: 5 }, (_, i) =>
                 createLibraryInfo({

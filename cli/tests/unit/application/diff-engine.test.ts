@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { DiffEngine } from '../src/application/services/diff-engine';
+import { DiffEngine } from '../../../src/application/services/diff-engine';
 
 // Strip ANSI escape codes so we can assert on plain text
 function stripAnsi(str: string): string {

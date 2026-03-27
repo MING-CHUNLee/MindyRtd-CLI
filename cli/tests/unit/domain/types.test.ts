@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { FileInfo, ProjectInfo, ScanResult, ScanOptions } from '../src/shared/types';
+import { FileInfo, ProjectInfo, ScanResult, ScanOptions } from '../../../src/shared/types';
 
 describe('Types', () => {
     describe('FileInfo', () => {

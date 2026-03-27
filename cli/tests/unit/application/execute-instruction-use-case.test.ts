@@ -10,19 +10,19 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
     ExecuteInstructionUseCase,
     ExecuteInstructionDeps,
-} from '../src/application/use-cases/execute-instruction-use-case';
-import { LLMController } from '../src/infrastructure/api/llm-controller';
-import { ToolRegistry } from '../src/application/services/tool-registry';
-import { DiffEngine } from '../src/application/services/diff-engine';
-import { EditStagingService, StagedEdit } from '../src/application/services/edit-staging-service';
-import { Orchestrator, OrchestratorResult } from '../src/application/services/orchestrator';
-import { Evaluator } from '../src/application/services/evaluator';
-import { KnowledgeBase } from '../src/application/services/knowledge-base';
-import { IFileSystem } from '../src/domain/interfaces/file-system';
+} from '../../../src/application/use-cases/execute-instruction-use-case';
+import { LLMController } from '../../../src/infrastructure/api/llm-controller';
+import { ToolRegistry } from '../../../src/application/services/tool-registry';
+import { DiffEngine } from '../../../src/application/services/diff-engine';
+import { EditStagingService, StagedEdit } from '../../../src/application/services/edit-staging-service';
+import { Orchestrator, OrchestratorResult } from '../../../src/application/services/orchestrator';
+import { Evaluator } from '../../../src/application/services/evaluator';
+import { KnowledgeBase } from '../../../src/application/services/knowledge-base';
+import { IFileSystem } from '../../../src/domain/interfaces/file-system';
 
 // ── Module-level mocks (prevent real infra being imported) ─────────────────────
 
-vi.mock('../src/infrastructure/persistence/knowledge-repository', () => ({
+vi.mock('../../../src/infrastructure/persistence/knowledge-repository', () => ({
     KnowledgeRepository: vi.fn(function () {
         return { load: vi.fn().mockReturnValue([]) };
     }),

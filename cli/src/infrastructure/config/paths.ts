@@ -10,7 +10,13 @@ import fs from 'fs';
 
 export function getProjectBase(): string {
     const dir = path.join(process.cwd(), '.mindy');
-    fs.mkdirSync(dir, { recursive: true });
+    try {
+        fs.mkdirSync(dir, { recursive: true });
+    } catch (err) {
+        // Bun on Windows throws EEXIST even with recursive:true when the dir
+        // already exists — swallow it; the directory is there either way.
+        if ((err as NodeJS.ErrnoException).code !== 'EEXIST') throw err;
+    }
     return dir;
 }
 

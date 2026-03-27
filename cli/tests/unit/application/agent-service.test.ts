@@ -11,17 +11,17 @@ import {
     AgentServiceDeps,
     AgentEvent,
     ProposedEdit,
-} from '../src/application/services/agent-service';
-import { LLMController } from '../src/infrastructure/api/llm-controller';
-import { SessionRepository } from '../src/infrastructure/persistence/session-repository';
-import { DiffEngine } from '../src/application/services/diff-engine';
-import { PluginLoader } from '../src/infrastructure/plugins/plugin-loader';
-import { ConversationSession } from '../src/domain/entities/conversation-session';
+} from '../../../src/application/services/agent-service';
+import { LLMController } from '../../../src/infrastructure/api/llm-controller';
+import { SessionRepository } from '../../../src/infrastructure/persistence/session-repository';
+import { DiffEngine } from '../../../src/application/services/diff-engine';
+import { PluginLoader } from '../../../src/infrastructure/plugins/plugin-loader';
+import { ConversationSession } from '../../../src/domain/entities/conversation-session';
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
 
-vi.mock('../src/application/tools/file-scan-tool', () => ({
+vi.mock('../../../src/application/tools/file-scan-tool', () => ({
     FileScanTool: vi.fn(function() {
         return {
             name: 'file_scan',
@@ -31,7 +31,7 @@ vi.mock('../src/application/tools/file-scan-tool', () => ({
     }),
 }));
 
-vi.mock('../src/application/tools/file-read-tool', () => ({
+vi.mock('../../../src/application/tools/file-read-tool', () => ({
     FileReadTool: vi.fn(function() {
         return {
             name: 'file_read',
@@ -41,7 +41,7 @@ vi.mock('../src/application/tools/file-read-tool', () => ({
     }),
 }));
 
-vi.mock('../src/application/tools/r-exec-tool', () => ({
+vi.mock('../../../src/application/tools/r-exec-tool', () => ({
     RExecTool: vi.fn(function() {
         return {
             name: 'r_exec',
@@ -51,7 +51,7 @@ vi.mock('../src/application/tools/r-exec-tool', () => ({
     }),
 }));
 
-vi.mock('../src/infrastructure/persistence/knowledge-repository', () => ({
+vi.mock('../../../src/infrastructure/persistence/knowledge-repository', () => ({
     KnowledgeRepository: vi.fn(function() {
         return { load: vi.fn().mockReturnValue([]) };
     }),

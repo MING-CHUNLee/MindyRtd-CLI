@@ -6,9 +6,9 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { FileEditTool } from '../src/application/tools/file-edit-tool';
-import { EditStagingService } from '../src/application/services/edit-staging-service';
-import { StagedEdit } from '../src/application/services/edit-staging-service';
+import { FileEditTool } from '../../../src/application/tools/file-edit-tool';
+import { EditStagingService } from '../../../src/application/services/edit-staging-service';
+import { StagedEdit } from '../../../src/application/services/edit-staging-service';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 

@@ -3,8 +3,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { KnowledgeBase } from '../src/application/services/knowledge-base';
-import { KnowledgeEntry } from '../src/domain/entities/knowledge-entry';
+import { KnowledgeBase } from '../../../src/application/services/knowledge-base';
+import { KnowledgeEntry } from '../../../src/domain/entities/knowledge-entry';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 

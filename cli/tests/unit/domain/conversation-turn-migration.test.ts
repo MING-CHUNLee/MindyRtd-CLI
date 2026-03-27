@@ -7,9 +7,9 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { ConversationTurn, TurnJSON } from '../src/domain/entities/conversation-turn';
-import { FileChange } from '../src/domain/entities/file-change';
-import { LLMOutput } from '../src/domain/entities/llm-output';
+import { ConversationTurn, TurnJSON } from '../../../src/domain/entities/conversation-turn';
+import { FileChange } from '../../../src/domain/entities/file-change';
+import { LLMOutput } from '../../../src/domain/entities/llm-output';
 
 const BASE_USAGE = {
     inputTokens: 10,
