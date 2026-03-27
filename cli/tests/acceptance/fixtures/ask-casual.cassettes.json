@@ -1,0 +1,24 @@
+[
+  {
+    "response": {
+      "content": "ask",
+      "usage": {
+        "promptTokens": 131,
+        "completionTokens": 2,
+        "totalTokens": 133
+      },
+      "model": "gpt-4o-2024-11-20",
+      "provider": "openai",
+      "responseTimeMs": 845
+    }
+  },
+  {
+    "response": {
+      "content": "Hello! How can I assist you today?",
+      "model": "gpt-4o",
+      "provider": "openai",
+      "responseTimeMs": 1443
+    },
+    "stream": true
+  }
+]
