@@ -34,6 +34,8 @@ import { RInstallTool } from '../tools/r-install-tool';
 import { RRenderTool } from '../tools/r-render-tool';
 import { HistorySummarizer } from './history-summarizer';
 import { IntentRouter, Intent } from './intent-router';
+import { ModeManager } from './mode-manager';
+import { SlashCommandRouter } from './slash-command-router';
 
 import { FileChange } from '../../domain/entities/file-change';
 import { PluginLoader } from '../../infrastructure/plugins/plugin-loader';
@@ -44,7 +46,7 @@ import { ExecuteInstructionUseCase } from '../use-cases/execute-instruction-use-
 import { ExecuteRunUseCase } from '../use-cases/execute-run-use-case';
 import { ExecuteSolverUseCase } from '../use-cases/execute-solver-use-case';
 import { ExecuteTutorUseCase } from '../use-cases/execute-tutor-use-case';
-import { getSettings, saveSettings, WorkflowMode } from '../../infrastructure/config/settings';
+import { WorkflowMode } from '../../infrastructure/config/settings';
 
 // ── Event Types (discriminated union) ────────────────────────────────────────
 
@@ -104,6 +106,8 @@ export interface AgentServiceDeps {
     tutorSocraticUseCase?: ExecuteTutorUseCase;
     /** Optional — for testability. */
     tutorGuideUseCase?: ExecuteTutorUseCase;
+    /** Optional — for testability. */
+    modeManager?: ModeManager;
 }
 
 // ── AgentService ─────────────────────────────────────────────────────────────
@@ -128,7 +132,8 @@ export class AgentService {
     private readonly solverUseCase: ExecuteSolverUseCase;
     private readonly tutorSocraticUseCase: ExecuteTutorUseCase;
     private readonly tutorGuideUseCase: ExecuteTutorUseCase;
-    private activeMode: WorkflowMode = 'default';
+    private readonly modeManager: ModeManager;
+    private readonly slashRouter: SlashCommandRouter;
 
     /** Throws if initialize() has not been called yet. */
     private get session(): ConversationSession {
@@ -218,6 +223,20 @@ export class AgentService {
             { llm: this.llm, registry: this.registry, directory: this.directory, emit },
             'guide',
         );
+
+        this.modeManager = deps?.modeManager ?? new ModeManager();
+
+        // The context object uses a getter for `session` so the router always
+        // sees the current session (which changes on /new).
+        const self = this;
+        this.slashRouter = new SlashCommandRouter({
+            get session() { return self.session; },
+            repo: this.repo,
+            modeManager: this.modeManager,
+            llm: this.llm,
+            setSession: (s) => { this._session = s; },
+            setPreviousSummary: (s) => { this.previousSessionSummary = s; },
+        });
     }
 
     /** Initialize: load/create session, load plugins */
@@ -232,11 +251,11 @@ export class AgentService {
         } else {
             // forceNew: load the last session's summary for cross-session context
             const prev = await this.repo.loadLast();
-            if (prev) this.previousSessionSummary = AgentService.formatSessionSummary(prev);
+            if (prev) this.previousSessionSummary = SlashCommandRouter.formatSessionSummary(prev);
             this._session = ConversationSession.create(model);
         }
 
-        this.activeMode = getSettings().workflowMode;
+        // ModeManager reads settings in its constructor; no extra init needed.
 
         this.emit({ type: 'session_loaded', data: {
             sessionId: this.session.id,
@@ -264,7 +283,7 @@ export class AgentService {
 
     /** Get the currently active workflow mode */
     getMode(): WorkflowMode {
-        return this.activeMode;
+        return this.modeManager.getMode();
     }
 
     /** Execute one instruction through the full agent pipeline */
@@ -272,7 +291,8 @@ export class AgentService {
         const history = await this.prepareHistory();
 
         // Mode overrides normal intent classification
-        if (this.activeMode === 'solver') {
+        const mode = this.modeManager.getMode();
+        if (mode === 'solver') {
             return this.executeWithMode(
                 instruction,
                 () => this.solverUseCase.execute(instruction, history),
@@ -282,7 +302,7 @@ export class AgentService {
             );
         }
 
-        if (this.activeMode === 'tutor-socratic') {
+        if (mode === 'tutor-socratic') {
             return this.executeWithMode(
                 instruction,
                 () => this.tutorSocraticUseCase.execute(instruction, history),
@@ -290,7 +310,7 @@ export class AgentService {
             );
         }
 
-        if (this.activeMode === 'tutor-guide') {
+        if (mode === 'tutor-guide') {
             return this.executeWithMode(
                 instruction,
                 () => this.tutorGuideUseCase.execute(instruction, history),
@@ -401,57 +421,9 @@ export class AgentService {
         this.emitTurnSaved(usage);
     }
 
-    /** Handle slash commands */
+    /** Handle slash commands — delegates to SlashCommandRouter */
     async handleSlashCommand(command: string): Promise<string> {
-        const [cmd, ...args] = command.slice(1).split(' ');
-        switch (cmd) {
-            case 'status':
-                return this.getStatusText();
-            case 'new': {
-                this.previousSessionSummary = AgentService.formatSessionSummary(this.session);
-                const model = this.llm.getProviderInfo().model;
-                this._session = ConversationSession.create(model);
-                return `New session created: ${this.session.id.slice(-6)}`;
-            }
-            case 'rollback': {
-                const target = parseInt(args[0] ?? String(this.session.turnCount - 1), 10);
-                try {
-                    this.session.rollbackTo(target);
-                    await this.repo.save(this.session);
-                    return `Rolled back to turn ${target}. Session now has ${this.session.turnCount} turn(s).`;
-                } catch (error) {
-                    return `Rollback failed: ${error instanceof Error ? error.message : String(error)}`;
-                }
-            }
-            case 'solver':
-            case 'tutor-socratic':
-            case 'tutor-guide':
-            case 'default': {
-                const newMode = cmd as WorkflowMode;
-                this.activeMode = newMode;
-                const settings = getSettings();
-                saveSettings({ ...settings, workflowMode: newMode });
-                return `Mode: ${newMode}`;
-            }
-            case 'mode':
-                return `Current mode: ${this.activeMode}`;
-            case 'help':
-                return [
-                    'Available commands:',
-                    '  /status          — Show session info',
-                    '  /new             — Start a new session',
-                    '  /rollback [n]    — Roll back to turn n',
-                    '  /solver          — Switch to solver mode (generates solution files)',
-                    '  /tutor-socratic  — Switch to Socratic tutor mode (guides with questions)',
-                    '  /tutor-guide     — Switch to guided tutor mode (step-by-step hints)',
-                    '  /default         — Return to normal mode',
-                    '  /mode            — Show current active mode',
-                    '  /exit            — Exit the REPL',
-                    '  /help            — Show this help',
-                ].join('\n');
-            default:
-                return `Unknown command: /${cmd}. Type /help for available commands.`;
-        }
+        return this.slashRouter.handle(command);
     }
 
     // ── Private utilities ─────────────────────────────────────────────────────
@@ -464,19 +436,6 @@ export class AgentService {
 
     private async classifyIntent(instruction: string, history: SessionMessage[]): Promise<Intent> {
         return this.intentRouter.classify(instruction, history);
-    }
-
-    /** Build a compact summary of the last few turns for cross-session context. */
-    private static formatSessionSummary(session: ConversationSession): string {
-        const history = session.getHistory();
-        if (history.length === 0) return '';
-        const lastN = history.slice(-6); // at most 3 user+assistant pairs
-        const lines = lastN.map(m => {
-            const role = m.role === 'user' ? 'User' : 'Assistant';
-            const snippet = m.content.length > 300 ? m.content.slice(0, 300) + '…' : m.content;
-            return `${role}: ${snippet}`;
-        });
-        return `[Previous session — last ${Math.floor(lastN.length / 2)} turn(s)]\n${lines.join('\n')}`;
     }
 
     private emit(event: AgentEvent): void {
@@ -496,14 +455,4 @@ export class AgentService {
         } });
     }
 
-    private getStatusText(): string {
-        const budget = this.session.tokenBudget;
-        const cache = this.session.cacheStatus;
-        return [
-            `Session: ${this.session.id.slice(-6)} | Turn: ${this.session.turnCount} | Model: ${this.session.model}`,
-            `Context: ${budget.usagePercent}% (${budget.health})`,
-            `Cost: ~$${this.session.totalCostUSD.toFixed(4)}`,
-            cache.hasCacheActivity ? `Cache: ${(cache.cacheReadTokens / 1_000).toFixed(1)}k tokens saved` : '',
-        ].filter(Boolean).join('\n');
-    }
 }
