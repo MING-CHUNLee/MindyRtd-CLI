@@ -93,6 +93,12 @@ export interface AgentServiceDeps {
     /** Optional — defaults to new PluginLoader(). */
     pluginLoader?: PluginLoader;
     /** Optional — for testability. */
+    askUseCase?: ExecuteAskUseCase;
+    /** Optional — for testability. */
+    instructionUseCase?: ExecuteInstructionUseCase;
+    /** Optional — for testability. */
+    runUseCase?: ExecuteRunUseCase;
+    /** Optional — for testability. */
     solverUseCase?: ExecuteSolverUseCase;
     /** Optional — for testability. */
     tutorSocraticUseCase?: ExecuteTutorUseCase;
@@ -169,14 +175,14 @@ export class AgentService {
 
         // Cast to the wider string type expected by use cases (safe: use cases only
         // call emit with valid AgentEventType literals at runtime).
-        this.askUseCase = new ExecuteAskUseCase({
+        this.askUseCase = deps?.askUseCase ?? new ExecuteAskUseCase({
             llm: this.llm,
             registry: this.registry,
             directory: this.directory,
             emit,
         });
 
-        this.instructionUseCase = new ExecuteInstructionUseCase({
+        this.instructionUseCase = deps?.instructionUseCase ?? new ExecuteInstructionUseCase({
             llm: this.llm,
             registry: this.registry,
             diffEngine: this.diffEngine,
@@ -186,7 +192,7 @@ export class AgentService {
             emit,
         });
 
-        this.runUseCase = new ExecuteRunUseCase({
+        this.runUseCase = deps?.runUseCase ?? new ExecuteRunUseCase({
             llm: this.llm,
             registry: this.registry,
             directory: this.directory,
@@ -267,68 +273,47 @@ export class AgentService {
 
         // Mode overrides normal intent classification
         if (this.activeMode === 'solver') {
-            try {
-                const result = await this.solverUseCase.execute(instruction, history);
-                const summary = result.appliedFiles.length > 0
+            return this.executeWithMode(
+                instruction,
+                () => this.solverUseCase.execute(instruction, history),
+                result => result.appliedFiles.length > 0
                     ? `Solution written to: ${result.appliedFiles.join(', ')}.`
-                    : 'No solution file was generated.';
-                this.session.addTurn(instruction, summary, result.usage);
-                await this.repo.save(this.session);
-                this.emitTurnSaved(result.usage);
-            } catch {
-                // Error already emitted by the use case
-            }
-            return;
+                    : 'No solution file was generated.',
+            );
         }
 
         if (this.activeMode === 'tutor-socratic') {
-            try {
-                const result = await this.tutorSocraticUseCase.execute(instruction, history);
-                this.session.addTurn(instruction, result.content, result.usage);
-                await this.repo.save(this.session);
-                this.emitTurnSaved(result.usage);
-            } catch {
-                // Error already emitted by the use case
-            }
-            return;
+            return this.executeWithMode(
+                instruction,
+                () => this.tutorSocraticUseCase.execute(instruction, history),
+                result => result.content,
+            );
         }
 
         if (this.activeMode === 'tutor-guide') {
-            try {
-                const result = await this.tutorGuideUseCase.execute(instruction, history);
-                this.session.addTurn(instruction, result.content, result.usage);
-                await this.repo.save(this.session);
-                this.emitTurnSaved(result.usage);
-            } catch {
-                // Error already emitted by the use case
-            }
-            return;
+            return this.executeWithMode(
+                instruction,
+                () => this.tutorGuideUseCase.execute(instruction, history),
+                result => result.content,
+            );
         }
 
         const intent = await this.classifyIntent(instruction, history);
 
         if (intent === 'ask') {
-            try {
-                const result = await this.askUseCase.execute(instruction, history, this.previousSessionSummary);
-                this.session.addTurn(instruction, result.content, result.usage);
-                await this.repo.save(this.session);
-                this.emitTurnSaved(result.usage);
-            } catch {
-                // Error already emitted by the use case
-            }
-            return;
+            return this.executeWithMode(
+                instruction,
+                () => this.askUseCase.execute(instruction, history, this.previousSessionSummary),
+                result => result.content,
+            );
         }
 
         if (intent === 'run') {
-            try {
-                const result = await this.runUseCase.execute(instruction, history);
-                this.session.addTurn(instruction, result.analysis, result.usage);
-                await this.repo.save(this.session);
-                this.emitTurnSaved(result.usage);
-            } catch {
-                // Error already emitted by the use case
-            }
-            return;
+            return this.executeWithMode(
+                instruction,
+                () => this.runUseCase.execute(instruction, history),
+                result => result.analysis,
+            );
         }
 
         if (intent === 'install') {
@@ -339,8 +324,11 @@ export class AgentService {
         let result;
         try {
             result = await this.instructionUseCase.execute(instruction, history);
-        } catch {
-            return; // Error already emitted by the use case
+        } catch (error) {
+            this.emit({ type: 'error', data: {
+                message: error instanceof Error ? error.message : String(error),
+            } });
+            return;
         }
 
         if (result.analysisSummary !== undefined) {
@@ -351,14 +339,39 @@ export class AgentService {
                 ? `Applied changes to: ${result.appliedFiles.join(', ')}.`
                 : 'No changes were applied.';
 
-            const fileChanges = result.appliedFiles.map(filePath =>
-                FileChange.create('edit', filePath, result.validatedEdits.find(e => e.path === filePath)?.content ?? ''));
+            const fileChanges = result.appliedFiles
+                .map(filePath => {
+                    const edit = result.validatedEdits.find(e => e.path === filePath);
+                    return edit ? FileChange.create('edit', filePath, edit.content) : null;
+                })
+                .filter((fc): fc is FileChange => fc !== null);
 
             this.session.addTurn(instruction, assistantSummary, result.usage, fileChanges, result.outputs);
         }
 
         await this.repo.save(this.session);
         this.emitTurnSaved(result.usage);
+    }
+
+    /**
+     * Generic helper that executes a use case, persists the turn, and emits
+     * turn_saved — or emits an error event if the use case throws unexpectedly.
+     */
+    private async executeWithMode<T extends { usage: TurnUsage }>(
+        instruction: string,
+        execute: () => Promise<T>,
+        toTurnContent: (result: T) => string,
+    ): Promise<void> {
+        try {
+            const result = await execute();
+            this.session.addTurn(instruction, toTurnContent(result), result.usage);
+            await this.repo.save(this.session);
+            this.emitTurnSaved(result.usage);
+        } catch (error) {
+            this.emit({ type: 'error', data: {
+                message: error instanceof Error ? error.message : String(error),
+            } });
+        }
     }
 
     /**
