@@ -11,3 +11,13 @@ export {
     formatCapabilities,
     formatCompactSummary
 } from './environment-result';
+export {
+    outputAsJson,
+    outputAsText,
+    displayContextHeader,
+    displayContextEnvironmentSummary,
+    displayContextPromptStatistics,
+    displayContextFullPrompt,
+    displayContextTips,
+    highlightPrompt,
+} from './context-result';

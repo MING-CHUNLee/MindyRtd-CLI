@@ -9,14 +9,16 @@
 import chalk from 'chalk';
 import { ConversationSession } from '../../domain/entities/conversation-session';
 import { ContextHealth } from '../../domain/values/token-budget';
-import { getSettings, StatusBarItem } from '../../infrastructure/config/settings';
+import { getSettings, StatusBarItem, WorkflowMode } from '../../infrastructure/config/settings';
 import { formatDuration } from '../../shared/utils/format';
 
 const BAR_WIDTH = 20;
 
-type ItemRenderer = (session: ConversationSession) => string | undefined;
+type ItemRenderer = (session: ConversationSession, mode?: WorkflowMode) => string | undefined;
 
 const RENDERERS: Record<StatusBarItem, ItemRenderer> = {
+    mode: (_s, mode) => (mode && mode !== 'default') ? chalk.bold.cyan(`[${mode}]`) : undefined,
+
     model: (s) => chalk.white(s.model),
 
     context: (s) => {
@@ -49,14 +51,15 @@ const RENDERERS: Record<StatusBarItem, ItemRenderer> = {
 };
 
 export class ContextStatusBar {
-    render(session: ConversationSession): void {
+    render(session: ConversationSession, mode?: WorkflowMode): void {
         const settings = getSettings();
+        const activeMode = mode ?? settings.workflowMode;
         const parts: string[] = [];
 
         for (const key of settings.statusBar.items) {
             const renderer = RENDERERS[key];
             if (!renderer) continue;
-            const text = renderer(session);
+            const text = renderer(session, activeMode);
             if (text) parts.push(text);
         }
 

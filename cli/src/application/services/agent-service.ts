@@ -42,6 +42,9 @@ import { SessionMessage } from '../../shared/types/messages';
 import { ExecuteAskUseCase } from '../use-cases/execute-ask-use-case';
 import { ExecuteInstructionUseCase } from '../use-cases/execute-instruction-use-case';
 import { ExecuteRunUseCase } from '../use-cases/execute-run-use-case';
+import { ExecuteSolverUseCase } from '../use-cases/execute-solver-use-case';
+import { ExecuteTutorUseCase } from '../use-cases/execute-tutor-use-case';
+import { getSettings, saveSettings, WorkflowMode } from '../../infrastructure/config/settings';
 
 // ── Event Types (discriminated union) ────────────────────────────────────────
 
@@ -89,6 +92,18 @@ export interface AgentServiceDeps {
     summarizer?: HistorySummarizer;
     /** Optional — defaults to new PluginLoader(). */
     pluginLoader?: PluginLoader;
+    /** Optional — for testability. */
+    askUseCase?: ExecuteAskUseCase;
+    /** Optional — for testability. */
+    instructionUseCase?: ExecuteInstructionUseCase;
+    /** Optional — for testability. */
+    runUseCase?: ExecuteRunUseCase;
+    /** Optional — for testability. */
+    solverUseCase?: ExecuteSolverUseCase;
+    /** Optional — for testability. */
+    tutorSocraticUseCase?: ExecuteTutorUseCase;
+    /** Optional — for testability. */
+    tutorGuideUseCase?: ExecuteTutorUseCase;
 }
 
 // ── AgentService ─────────────────────────────────────────────────────────────
@@ -110,6 +125,10 @@ export class AgentService {
     private readonly askUseCase: ExecuteAskUseCase;
     private readonly instructionUseCase: ExecuteInstructionUseCase;
     private readonly runUseCase: ExecuteRunUseCase;
+    private readonly solverUseCase: ExecuteSolverUseCase;
+    private readonly tutorSocraticUseCase: ExecuteTutorUseCase;
+    private readonly tutorGuideUseCase: ExecuteTutorUseCase;
+    private activeMode: WorkflowMode = 'default';
 
     /** Throws if initialize() has not been called yet. */
     private get session(): ConversationSession {
@@ -156,14 +175,14 @@ export class AgentService {
 
         // Cast to the wider string type expected by use cases (safe: use cases only
         // call emit with valid AgentEventType literals at runtime).
-        this.askUseCase = new ExecuteAskUseCase({
+        this.askUseCase = deps?.askUseCase ?? new ExecuteAskUseCase({
             llm: this.llm,
             registry: this.registry,
             directory: this.directory,
             emit,
         });
 
-        this.instructionUseCase = new ExecuteInstructionUseCase({
+        this.instructionUseCase = deps?.instructionUseCase ?? new ExecuteInstructionUseCase({
             llm: this.llm,
             registry: this.registry,
             diffEngine: this.diffEngine,
@@ -173,12 +192,32 @@ export class AgentService {
             emit,
         });
 
-        this.runUseCase = new ExecuteRunUseCase({
+        this.runUseCase = deps?.runUseCase ?? new ExecuteRunUseCase({
             llm: this.llm,
             registry: this.registry,
             directory: this.directory,
             emit,
         });
+
+        this.solverUseCase = deps?.solverUseCase ?? new ExecuteSolverUseCase({
+            llm: this.llm,
+            registry: this.registry,
+            diffEngine: this.diffEngine,
+            directory: this.directory,
+            onApproval: this.onApproval,
+            stagingService,
+            emit,
+        });
+
+        this.tutorSocraticUseCase = deps?.tutorSocraticUseCase ?? new ExecuteTutorUseCase(
+            { llm: this.llm, registry: this.registry, directory: this.directory, emit },
+            'socratic',
+        );
+
+        this.tutorGuideUseCase = deps?.tutorGuideUseCase ?? new ExecuteTutorUseCase(
+            { llm: this.llm, registry: this.registry, directory: this.directory, emit },
+            'guide',
+        );
     }
 
     /** Initialize: load/create session, load plugins */
@@ -196,6 +235,8 @@ export class AgentService {
             if (prev) this.previousSessionSummary = AgentService.formatSessionSummary(prev);
             this._session = ConversationSession.create(model);
         }
+
+        this.activeMode = getSettings().workflowMode;
 
         this.emit({ type: 'session_loaded', data: {
             sessionId: this.session.id,
@@ -221,33 +262,58 @@ export class AgentService {
         return this.session;
     }
 
+    /** Get the currently active workflow mode */
+    getMode(): WorkflowMode {
+        return this.activeMode;
+    }
+
     /** Execute one instruction through the full agent pipeline */
     async executeInstruction(instruction: string): Promise<void> {
         const history = await this.prepareHistory();
+
+        // Mode overrides normal intent classification
+        if (this.activeMode === 'solver') {
+            return this.executeWithMode(
+                instruction,
+                () => this.solverUseCase.execute(instruction, history),
+                result => result.appliedFiles.length > 0
+                    ? `Solution written to: ${result.appliedFiles.join(', ')}.`
+                    : 'No solution file was generated.',
+            );
+        }
+
+        if (this.activeMode === 'tutor-socratic') {
+            return this.executeWithMode(
+                instruction,
+                () => this.tutorSocraticUseCase.execute(instruction, history),
+                result => result.content,
+            );
+        }
+
+        if (this.activeMode === 'tutor-guide') {
+            return this.executeWithMode(
+                instruction,
+                () => this.tutorGuideUseCase.execute(instruction, history),
+                result => result.content,
+            );
+        }
+
         const intent = await this.classifyIntent(instruction, history);
 
         if (intent === 'ask') {
-            try {
-                const result = await this.askUseCase.execute(instruction, history, this.previousSessionSummary);
-                this.session.addTurn(instruction, result.content, result.usage);
-                await this.repo.save(this.session);
-                this.emitTurnSaved(result.usage);
-            } catch {
-                // Error already emitted by the use case
-            }
-            return;
+            return this.executeWithMode(
+                instruction,
+                () => this.askUseCase.execute(instruction, history, this.previousSessionSummary),
+                result => result.content,
+            );
         }
 
         if (intent === 'run') {
-            try {
-                const result = await this.runUseCase.execute(instruction, history);
-                this.session.addTurn(instruction, result.analysis, result.usage);
-                await this.repo.save(this.session);
-                this.emitTurnSaved(result.usage);
-            } catch {
-                // Error already emitted by the use case
-            }
-            return;
+            return this.executeWithMode(
+                instruction,
+                () => this.runUseCase.execute(instruction, history),
+                result => result.analysis,
+            );
         }
 
         if (intent === 'install') {
@@ -258,8 +324,11 @@ export class AgentService {
         let result;
         try {
             result = await this.instructionUseCase.execute(instruction, history);
-        } catch {
-            return; // Error already emitted by the use case
+        } catch (error) {
+            this.emit({ type: 'error', data: {
+                message: error instanceof Error ? error.message : String(error),
+            } });
+            return;
         }
 
         if (result.analysisSummary !== undefined) {
@@ -270,14 +339,39 @@ export class AgentService {
                 ? `Applied changes to: ${result.appliedFiles.join(', ')}.`
                 : 'No changes were applied.';
 
-            const fileChanges = result.appliedFiles.map(filePath =>
-                FileChange.create('edit', filePath, result.validatedEdits.find(e => e.path === filePath)?.content ?? ''));
+            const fileChanges = result.appliedFiles
+                .map(filePath => {
+                    const edit = result.validatedEdits.find(e => e.path === filePath);
+                    return edit ? FileChange.create('edit', filePath, edit.content) : null;
+                })
+                .filter((fc): fc is FileChange => fc !== null);
 
             this.session.addTurn(instruction, assistantSummary, result.usage, fileChanges, result.outputs);
         }
 
         await this.repo.save(this.session);
         this.emitTurnSaved(result.usage);
+    }
+
+    /**
+     * Generic helper that executes a use case, persists the turn, and emits
+     * turn_saved — or emits an error event if the use case throws unexpectedly.
+     */
+    private async executeWithMode<T extends { usage: TurnUsage }>(
+        instruction: string,
+        execute: () => Promise<T>,
+        toTurnContent: (result: T) => string,
+    ): Promise<void> {
+        try {
+            const result = await execute();
+            this.session.addTurn(instruction, toTurnContent(result), result.usage);
+            await this.repo.save(this.session);
+            this.emitTurnSaved(result.usage);
+        } catch (error) {
+            this.emit({ type: 'error', data: {
+                message: error instanceof Error ? error.message : String(error),
+            } });
+        }
     }
 
     /**
@@ -329,14 +423,31 @@ export class AgentService {
                     return `Rollback failed: ${error instanceof Error ? error.message : String(error)}`;
                 }
             }
+            case 'solver':
+            case 'tutor-socratic':
+            case 'tutor-guide':
+            case 'default': {
+                const newMode = cmd as WorkflowMode;
+                this.activeMode = newMode;
+                const settings = getSettings();
+                saveSettings({ ...settings, workflowMode: newMode });
+                return `Mode: ${newMode}`;
+            }
+            case 'mode':
+                return `Current mode: ${this.activeMode}`;
             case 'help':
                 return [
                     'Available commands:',
-                    '  /status   — Show session info',
-                    '  /new      — Start a new session',
-                    '  /rollback [n] — Roll back to turn n',
-                    '  /exit     — Exit the REPL',
-                    '  /help     — Show this help',
+                    '  /status          — Show session info',
+                    '  /new             — Start a new session',
+                    '  /rollback [n]    — Roll back to turn n',
+                    '  /solver          — Switch to solver mode (generates solution files)',
+                    '  /tutor-socratic  — Switch to Socratic tutor mode (guides with questions)',
+                    '  /tutor-guide     — Switch to guided tutor mode (step-by-step hints)',
+                    '  /default         — Return to normal mode',
+                    '  /mode            — Show current active mode',
+                    '  /exit            — Exit the REPL',
+                    '  /help            — Show this help',
                 ].join('\n');
             default:
                 return `Unknown command: /${cmd}. Type /help for available commands.`;

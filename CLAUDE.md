@@ -4,15 +4,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Commands
 
-All commands run from the `cli/` directory:
+All commands run from the `cli/` directory (`cd cli` first):
 
 > **This project uses [Bun](https://bun.sh/) instead of npm.** Use `bun` for all package management and script execution.
 
 ```bash
 bun run build        # Compile TypeScript → dist/
 bun run dev          # Run via tsx (no build needed)
-bun test             # Run all tests (Vitest)
-bun test path/to/test.test.ts   # Run a single test file
+bun run test         # Run all tests via Vitest — must cd cli first; do NOT use "bun test"
+bun run test -- path/to/test.test.ts   # Run a single test file
 bun run mindy -- agent "instruction"  # Run CLI in dev mode
 ```
 
