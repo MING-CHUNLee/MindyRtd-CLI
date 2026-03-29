@@ -6,25 +6,30 @@
  */
 
 import fs from 'fs';
+import path from 'path';
 import { getSettingsFile } from './paths';
 
 export const VALID_STATUS_ITEMS = [
-    'model', 'context', 'rpm', 'cost', 'turn', 'duration', 'tps', 'latency',
+    'mode', 'model', 'context', 'rpm', 'cost', 'turn', 'duration', 'tps', 'latency',
 ] as const;
 
 export type StatusBarItem = typeof VALID_STATUS_ITEMS[number];
 
-const DEFAULT_STATUS_ITEMS: StatusBarItem[] = ['model', 'context', 'rpm'];
+const DEFAULT_STATUS_ITEMS: StatusBarItem[] = ['mode', 'model', 'context', 'rpm'];
+
+export type WorkflowMode = 'default' | 'solver' | 'tutor-socratic' | 'tutor-guide';
 
 export interface Settings {
     statusBar: {
         items: StatusBarItem[];
     };
+    workflowMode: WorkflowMode;
 }
 
 export function getSettings(): Settings {
     const defaults: Settings = {
         statusBar: { items: [...DEFAULT_STATUS_ITEMS] },
+        workflowMode: 'default',
     };
 
     try {
@@ -40,9 +45,20 @@ export function getSettings(): Settings {
                 defaults.statusBar.items = valid;
             }
         }
+
+        const VALID_MODES: WorkflowMode[] = ['default', 'solver', 'tutor-socratic', 'tutor-guide'];
+        if (typeof parsed?.workflowMode === 'string' && VALID_MODES.includes(parsed.workflowMode as WorkflowMode)) {
+            defaults.workflowMode = parsed.workflowMode as WorkflowMode;
+        }
     } catch {
         // Missing or invalid file — use defaults
     }
 
     return defaults;
+}
+
+export function saveSettings(settings: Settings): void {
+    const filePath = getSettingsFile();
+    fs.mkdirSync(path.dirname(filePath), { recursive: true });
+    fs.writeFileSync(filePath, JSON.stringify(settings, null, 2), 'utf-8');
 }

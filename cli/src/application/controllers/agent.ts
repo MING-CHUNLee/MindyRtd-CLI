@@ -56,6 +56,8 @@ async function executeAgentCommand(
 ): Promise<void> {
     const statusBar = new ContextStatusBar();
     let spinner: Ora | null = null;
+    // Forward reference so the event handler can access mode after service is created
+    let serviceRef: AgentService | undefined;
 
     // Console-based event handler
     const onEvent = (event: AgentEvent): void => {
@@ -66,6 +68,10 @@ async function executeAgentCommand(
                     console.log(chalk.cyan(`\n↩  Resuming session ${(sessionId as string).slice(-6)} (${turnCount} previous turns)`));
                 } else {
                     console.log(chalk.dim(`\n  New session ${(sessionId as string).slice(-6)}`));
+                }
+                const mode = serviceRef?.getMode();
+                if (mode && mode !== 'default') {
+                    console.log(chalk.bold.cyan(`  [Mode: ${mode}]`));
                 }
                 break;
             }
@@ -141,6 +147,7 @@ async function executeAgentCommand(
         onEvent,
         onApproval,
     );
+    serviceRef = service;
 
     await service.initialize({
         sessionId: options.session,
@@ -149,8 +156,8 @@ async function executeAgentCommand(
 
     await service.executeInstruction(instruction);
 
-    // Render final status bar
-    statusBar.render(service.getSession());
+    // Render final status bar (pass mode so it shows as prefix when active)
+    statusBar.render(service.getSession(), service.getMode());
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
