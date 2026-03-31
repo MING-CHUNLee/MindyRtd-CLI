@@ -19,7 +19,7 @@
  */
 
 import { ConversationSession } from '../../domain/entities/conversation-session';
-import { LLMController } from '../../infrastructure/api/llm-controller';
+import { LLMController } from '../../infrastructure/api';
 import { SessionMessage } from '../../shared/types/messages';
 import { SUMMARIZER_SYSTEM_PROMPT } from '../prompts/summarizer';
 

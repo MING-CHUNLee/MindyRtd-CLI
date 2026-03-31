@@ -19,7 +19,7 @@
  * workingMessages is an ephemeral ReAct scratchpad — never persisted to session.
  */
 
-import { LLMController } from '../../infrastructure/api/llm-controller';
+import { LLMController } from '../../infrastructure/api';
 import { LLMRequestPayload } from '../../shared/types/llm-types';
 import { SessionMessage } from '../../shared/types/messages';
 import { ToolRegistry } from './tool-registry';

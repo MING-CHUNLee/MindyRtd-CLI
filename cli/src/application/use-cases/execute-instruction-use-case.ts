@@ -8,7 +8,7 @@
  * session turn.
  */
 
-import { LLMController } from '../../infrastructure/api/llm-controller';
+import { LLMController } from '../../infrastructure/api';
 import { IFileSystem } from '../../domain/interfaces/file-system';
 import { LocalFileSystem } from '../../infrastructure/filesystem/local-file-system';
 import { LLMRequestPayload } from '../../shared/types/llm-types';

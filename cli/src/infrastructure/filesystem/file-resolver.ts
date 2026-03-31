@@ -14,7 +14,7 @@
  */
 
 import { resolve } from 'path';
-import { RubyApiClient } from '../api/ruby-api-client';
+import { LLMController } from '../api/llm';
 import { FileFinder } from './file-finder';
 
 // ============================================
@@ -40,11 +40,11 @@ export interface ResolvedFile {
 // ============================================
 
 export class FileResolver {
-    private client: RubyApiClient;
+    private llm: LLMController;
     private finder: FileFinder;
 
-    constructor(client?: RubyApiClient, finder?: FileFinder) {
-        this.client = client ?? new RubyApiClient();
+    constructor(llm?: LLMController, finder?: FileFinder) {
+        this.llm = llm ?? LLMController.fromEnv();
         this.finder = finder ?? new FileFinder();
     }
 
@@ -64,10 +64,10 @@ export class FileResolver {
         }
 
         // Step 2: Ask LLM which files are relevant
-        const { targetFiles } = await this.client.resolveFiles({
+        const { targets: targetFiles } = await this.llm.resolveFiles(
             instruction,
-            files: previews,
-        });
+            previews.map(p => ({ path: p.path, content: p.preview })),
+        );
 
         // Step 3: Map back to absolute paths
         return targetFiles.map((relativePath) => ({

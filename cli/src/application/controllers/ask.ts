@@ -2,7 +2,7 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import ora, { Ora } from 'ora';
 
-import { LLMController } from '../../infrastructure/api/llm-controller';
+import { LLMController } from '../../infrastructure/api';
 import { SessionRepository } from '../../infrastructure/persistence/session-repository';
 import { ConversationSession } from '../../domain/entities/conversation-session';
 import { ContextStatusBar } from '../../presentation/views/context-status-bar';

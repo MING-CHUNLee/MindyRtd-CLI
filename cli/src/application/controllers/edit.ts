@@ -27,7 +27,7 @@ import chalk from 'chalk';
 import ora from 'ora';
 import { DiffEngine } from '../../application/services/diff-engine';
 import { FileResolver } from '../../infrastructure/filesystem/file-resolver';
-import { RubyApiClient } from '../../infrastructure/api/ruby-api-client';
+import { LLMController } from '../../infrastructure/api/llm';
 import { handleError } from '../../shared/utils/error-handler';
 
 // ============================================
@@ -61,7 +61,7 @@ async function executeEditCommand(
     skipConfirm: boolean
 ): Promise<void> {
     try {
-        const client = new RubyApiClient();
+        const llm = LLMController.fromEnv();
         const engine = new DiffEngine();
 
         // -----------------------------------------------
@@ -76,7 +76,7 @@ async function executeEditCommand(
         } else {
             // Smart mode — ask the LLM which files are relevant
             const spinner = ora('Scanning workspace and resolving relevant files...').start();
-            const resolver = new FileResolver(client);
+            const resolver = new FileResolver(llm);
 
             const resolved = await resolver.resolve(instruction);
 
@@ -100,7 +100,7 @@ async function executeEditCommand(
         // Edit each target file
         // -----------------------------------------------
         for (const target of targets) {
-            await editOneFile(client, engine, target, instruction, skipConfirm);
+            await editOneFile(llm, engine, target, instruction, skipConfirm);
         }
     } catch (error) {
         handleError(error, 'edit');
@@ -108,7 +108,7 @@ async function executeEditCommand(
 }
 
 async function editOneFile(
-    client: RubyApiClient,
+    llm: LLMController,
     engine: DiffEngine,
     target: { absolutePath: string; displayName: string },
     instruction: string,
@@ -120,17 +120,16 @@ async function editOneFile(
     // 1. Read original content
     const originalContent = await readFile(absolutePath, 'utf-8');
 
-    // 2. Call Ruby API → LLM edits the file
-    const spinner = ora(`[${fileName}] Sending to LLM via Ruby API...`).start();
+    // 2. Call LLM to edit the file
+    const spinner = ora(`[${fileName}] Sending to LLM...`).start();
     let modifiedContent: string;
 
     try {
-        const result = await client.editFile({
-            filePath: displayName,
-            content: originalContent,
+        const result = await llm.editFiles(
             instruction,
-        });
-        modifiedContent = result.modifiedContent;
+            [{ path: displayName, content: originalContent }],
+        );
+        modifiedContent = result.files[0]?.content ?? originalContent;
         spinner.succeed(chalk.green(`[${fileName}] LLM edit received`));
     } catch (error) {
         spinner.fail(chalk.red(`[${fileName}] LLM edit failed`));

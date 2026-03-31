@@ -1,16 +1,9 @@
 /**
- * Controllers Module
- * 
- * Exports all API controllers for external service communication.
- * 
- * Controllers follow the Gateway/Adapter pattern:
- * - Abstract away external API details
- * - Services use controllers without knowing API specifics
- * - Easy to swap providers (OpenAI → Anthropic) via environment variables
- * 
- * Reference Projects:
- * - LangChain.js: Provider abstraction pattern
- * - Vercel AI SDK: Unified interface for multiple providers
+ * API Module
+ *
+ * Two sub-modules:
+ *   llm/     — LLM provider gateway (OpenAI, Anthropic, Azure, Gemini, Ollama)
+ *   logging/ — Analytics/logging backends (SessionLogger, RubyLogClient)
  */
 
 export {
@@ -19,14 +12,10 @@ export {
     LLMRequest,
     LLMResponse,
     LLMControllerOptions,
+    LLMValidationError,
+    LLMAPIError,
     createLLMController,
-} from './llm-controller';
+} from './llm';
 
-export {
-    RubyApiClient,
-    FilePreview,
-    ResolveFilesRequest,
-    ResolveFilesResponse,
-    EditFileRequest,
-    EditFileResponse,
-} from './ruby-api-client';
+export { SessionLogger, LogPayload } from './logging';
+export { RubyLogClient, LogEvent, SessionSummary } from './logging';

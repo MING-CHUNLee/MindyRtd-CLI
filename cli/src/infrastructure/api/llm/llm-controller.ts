@@ -16,12 +16,12 @@
  * - Input validation before API calls
  */
 
-import { GeneratedPrompt } from '../../shared/types/prompt-context';
-import { LLMRequestPayload, LLMResponse } from '../../shared/types/llm-types';
-import { LLMConfig, getLLMConfigFromEnv, LLMProvider } from '../config';
-import { LLM } from '../config/constants';
-import { SessionLogger } from './session-logger';
-import { FILE_RELEVANCE_SYSTEM_PROMPT, CODE_EDITOR_SYSTEM_PROMPT } from '../../application/prompts/file-ops';
+import { GeneratedPrompt } from '../../../shared/types/prompt-context';
+import { LLMRequestPayload, LLMResponse } from '../../../shared/types/llm-types';
+import { LLMConfig, getLLMConfigFromEnv, LLMProvider } from '../../config';
+import { LLM } from '../../config/constants';
+import { SessionLogger } from '../logging/session-logger';
+import { FILE_RELEVANCE_SYSTEM_PROMPT, CODE_EDITOR_SYSTEM_PROMPT } from '../../../application/prompts/file-ops';
 
 // ============================================
 // Error Classes
@@ -54,7 +54,7 @@ export interface LLMMessage {
     content: string;
 }
 
-export type { LLMRequestPayload as LLMRequest, LLMResponse } from '../../shared/types/llm-types';
+export type { LLMRequestPayload as LLMRequest, LLMResponse } from '../../../shared/types/llm-types';
 
 export interface LLMControllerOptions {
     /** Override config from environment */

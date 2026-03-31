@@ -12,7 +12,7 @@
  * and use-case orchestration.
  */
 
-import { LLMController } from '../../infrastructure/api/llm-controller';
+import { LLMController } from '../../infrastructure/api';
 import { INTENT_CLASSIFIER_SYSTEM_PROMPT } from '../prompts/intent-classifier';
 import { SessionMessage } from '../../shared/types/messages';
 

@@ -11,7 +11,13 @@
 import { readFile } from 'fs/promises';
 import { relative } from 'path';
 import { glob } from 'glob';
-import { FilePreview } from '../api/ruby-api-client';
+/** One file entry sent to the LLM for relevance scoring */
+export interface FilePreview {
+    /** Relative path shown to the LLM (e.g. "src/load_data.R") */
+    path: string;
+    /** First ~10 lines — enough for the LLM to judge relevance */
+    preview: string;
+}
 
 // ============================================
 // Constants

@@ -19,7 +19,7 @@
  *   those are extracted as edit artifacts. Otherwise the result is a text artifact.
  */
 
-import { LLMController } from '../../infrastructure/api/llm-controller';
+import { LLMController } from '../../infrastructure/api';
 import { LLMRequestPayload } from '../../shared/types/llm-types';
 import { TurnUsage } from '../../domain/entities/conversation-turn';
 import { FileChange } from '../../domain/entities/file-change';

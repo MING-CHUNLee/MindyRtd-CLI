@@ -13,7 +13,7 @@
  * If invalid, call retryWithCorrection() to get a second chance before giving up.
  */
 
-import { LLMController } from '../../infrastructure/api/llm-controller';
+import { LLMController } from '../../infrastructure/api';
 import { LLMRequestPayload } from '../../shared/types/llm-types';
 import { extractJsonArray } from '../../shared/utils/json-extractor';
 import { JSON_FORMATTER_SYSTEM_PROMPT } from '../prompts/evaluator';

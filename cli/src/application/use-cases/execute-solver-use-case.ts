@@ -10,7 +10,7 @@
  * Returns SolverResult — the caller is responsible for persisting the turn.
  */
 
-import { LLMController } from '../../infrastructure/api/llm-controller';
+import { LLMController } from '../../infrastructure/api';
 import { IFileSystem } from '../../domain/interfaces/file-system';
 import { LocalFileSystem } from '../../infrastructure/filesystem/local-file-system';
 import { TurnUsage } from '../../domain/entities/conversation-turn';
