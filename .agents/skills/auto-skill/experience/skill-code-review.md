@@ -87,3 +87,29 @@
 - `cli/src/application/use-cases/execute-instruction-use-case.ts`（use buildInstructionAgentPrompt）
 
 **keywords：** refactor, intent-router, system-prompt, type-guard, ErrnoException, SRP, agent-service, MindyCLI
+
+---
+
+## 🔧 Multi-Mode 功能 PR 的 Review 模式（小範圍 diff review）
+**日期：** 2026-03-29
+**技能：** code-review
+**情境：** 針對 `feat/homework-workflow-modes` branch 的新增檔案做定向 review（非全專案掃描）
+
+**解法：**
+1. 讀取 git status 確認 diff 範圍（modified + untracked files）
+2. 只讀 diff 範圍內的檔案：`mode-manager.ts`、`slash-command-router.ts`、`agent-service.ts`（modified）、兩個 test 檔
+3. 對照 experience/_index.json → 載入 `skill-code-review.md` 取得既有評分基準
+
+**關鍵發現模式（本次 PR）：**
+- **Test gap 模式重現**：新功能每次都有 happy-path 未覆蓋（本次：`/rollback` success path、`formatSessionSummary` 非空 case）
+- **Error propagation gap**：新的 `executeInstall()` 沒有包 try-catch，`tool.execute()` 拋出時不會 emit error 事件 — 修法：在 `executeInstall` 內的 `tool.execute()` 包 try-catch + emit error
+- **saveSettings 無 error handling**：`ModeManager.setMode()` 的 `saveSettings()` 是同步 fs call，應用 try-catch 或改成 async
+- **Magic number**：snippet 截斷長度 300 應抽為 named const `MAX_SNIPPET_LENGTH`
+- **Cast 缺少注解**：`cmd as WorkflowMode` 因 switch case 保證安全，但需加注解說明
+
+**小範圍 review 流程（3 步）：**
+1. `git status` → 確認 diff 邊界
+2. 只讀 changed files（不全掃）
+3. 輸出 Verdict 表格（Priority / File:line / Issue）
+
+**keywords：** code-review, slash-command, mode-manager, test-gap, error-propagation, executeInstall, saveSettings, MindyCLI

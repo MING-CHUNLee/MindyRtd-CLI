@@ -411,7 +411,16 @@ export class AgentService {
         const match = instruction.match(/(?:install|安裝)\s+([\w.,\s]+)/i);
         const packages = match ? match[1].replace(/\s+/g, ',') : instruction;
 
-        const result = await tool.execute({ packages });
+        let result;
+        try {
+            result = await tool.execute({ packages });
+        } catch (error) {
+            this.emit({ type: 'error', data: {
+                message: error instanceof Error ? error.message : String(error),
+                phase: 'install',
+            } });
+            return;
+        }
         this.emit({ type: 'phase_end', data: { phase: 'install', success: !result.isError } });
         this.emit({ type: 'text_output', data: { content: result.content } });
 

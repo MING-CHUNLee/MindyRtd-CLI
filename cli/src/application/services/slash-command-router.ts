@@ -24,6 +24,7 @@ export class SlashCommandRouter {
     constructor(private ctx: SlashCommandContext) {}
 
     async handle(command: string): Promise<string> {
+        if (!command.startsWith('/')) return `Not a slash command: ${command}`;
         const [cmd, ...args] = command.slice(1).split(' ');
         switch (cmd) {
             case 'status':
@@ -49,6 +50,7 @@ export class SlashCommandRouter {
             case 'tutor-socratic':
             case 'tutor-guide':
             case 'default': {
+                // Switch cases enumerate all valid WorkflowMode values — cast is safe.
                 this.ctx.modeManager.setMode(cmd as WorkflowMode);
                 return `Mode: ${cmd}`;
             }
@@ -87,6 +89,8 @@ export class SlashCommandRouter {
         ].filter(Boolean).join('\n');
     }
 
+    private static readonly MAX_SNIPPET_LENGTH = 300;
+
     /** Build a compact summary of the last few turns for cross-session context. */
     static formatSessionSummary(session: ConversationSession): string {
         const history = session.getHistory();
@@ -94,7 +98,9 @@ export class SlashCommandRouter {
         const lastN = history.slice(-6);
         const lines = lastN.map(m => {
             const role = m.role === 'user' ? 'User' : 'Assistant';
-            const snippet = m.content.length > 300 ? m.content.slice(0, 300) + '…' : m.content;
+            const snippet = m.content.length > SlashCommandRouter.MAX_SNIPPET_LENGTH
+                ? m.content.slice(0, SlashCommandRouter.MAX_SNIPPET_LENGTH) + '…'
+                : m.content;
             return `${role}: ${snippet}`;
         });
         return `[Previous session — last ${Math.floor(lastN.length / 2)} turn(s)]\n${lines.join('\n')}`;

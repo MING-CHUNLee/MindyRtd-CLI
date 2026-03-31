@@ -60,6 +60,19 @@ describe('SlashCommandRouter', () => {
             const result = await router.handle('/rollback 99');
             expect(result).toContain('Rollback failed');
         });
+
+        it('rolls back to a valid turn', async () => {
+            const session = ConversationSession.create('test-model');
+            const usage = { inputTokens: 0, outputTokens: 0, cacheCreationTokens: 0, cacheReadTokens: 0 };
+            session.addTurn('q1', 'a1', usage);
+            session.addTurn('q2', 'a2', usage);
+            const ctx = makeContext({ session });
+            const router = new SlashCommandRouter(ctx);
+            const result = await router.handle('/rollback 1');
+            expect(result).toContain('Rolled back to turn 1');
+            expect(result).toContain('1 turn(s)');
+            expect(ctx.repo.save).toHaveBeenCalledWith(session);
+        });
     });
 
     describe('mode commands', () => {
@@ -134,6 +147,26 @@ describe('SlashCommandRouter', () => {
         it('returns empty string for session with no history', () => {
             const session = ConversationSession.create('test');
             expect(SlashCommandRouter.formatSessionSummary(session)).toBe('');
+        });
+
+        it('returns summary for session with history', () => {
+            const session = ConversationSession.create('test');
+            const usage = { inputTokens: 0, outputTokens: 0, cacheCreationTokens: 0, cacheReadTokens: 0 };
+            session.addTurn('Hello', 'Hi there', usage);
+            const result = SlashCommandRouter.formatSessionSummary(session);
+            expect(result).toContain('[Previous session');
+            expect(result).toContain('User: Hello');
+            expect(result).toContain('Assistant: Hi there');
+        });
+
+        it('truncates long messages in summary', () => {
+            const session = ConversationSession.create('test');
+            const usage = { inputTokens: 0, outputTokens: 0, cacheCreationTokens: 0, cacheReadTokens: 0 };
+            const longMsg = 'x'.repeat(500);
+            session.addTurn(longMsg, 'short', usage);
+            const result = SlashCommandRouter.formatSessionSummary(session);
+            expect(result).toContain('…');
+            expect(result).not.toContain('x'.repeat(400));
         });
     });
 });
