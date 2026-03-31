@@ -20,8 +20,13 @@ export class ModeManager {
 
     setMode(mode: WorkflowMode): void {
         this.activeMode = mode;
-        const settings = getSettings();
-        saveSettings({ ...settings, workflowMode: mode });
+        try {
+            const settings = getSettings();
+            saveSettings({ ...settings, workflowMode: mode });
+        } catch {
+            // In-memory mode is updated; persistence failure is non-fatal.
+            // The change will not survive a restart.
+        }
     }
 
     isDefault(): boolean {
