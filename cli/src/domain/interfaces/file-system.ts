@@ -13,6 +13,9 @@ export interface IFileSystem {
     /** Reads the file at filePath as UTF-8 text. Throws on error. */
     read(filePath: string): string;
 
+    /** Reads the file at filePath as a raw Buffer. Throws on error. */
+    readBuffer(filePath: string): Buffer;
+
     /**
      * Writes content to filePath as UTF-8 text.
      * Creates the file if it does not exist; overwrites it if it does.

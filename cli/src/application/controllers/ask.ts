@@ -72,8 +72,9 @@ export async function executeAskCommand(
     // ── Wire use case ─────────────────────────────────────────────────────────
     const registry = new ToolRegistry();
     registry.register(new FileScanTool(new DirectoryScanner()));
-    registry.register(new FileReadTool(new FileReadService(new LocalFileSystem())));
-    registry.register(new PdfReadTool());
+    const localFs = new LocalFileSystem();
+    registry.register(new FileReadTool(new FileReadService(localFs)));
+    registry.register(new PdfReadTool(localFs));
 
     let spinner: Ora | null = null;
 

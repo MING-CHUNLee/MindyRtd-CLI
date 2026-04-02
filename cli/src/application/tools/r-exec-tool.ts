@@ -7,7 +7,7 @@
  */
 
 import { AgentTool, ToolInput, ToolResult, ToolSchema } from '../../domain/interfaces/agent-tool';
-import { execRscriptCode } from '../../infrastructure/r-adapter/r-script-runner';
+import { IRScriptRunner } from '../../domain/interfaces/r-script-runner';
 
 // Patterns that indicate potentially unsafe R code (write side-effects)
 const UNSAFE_PATTERNS = /write|sink|file\.create|saveRDS|save\(|system\(/i;
@@ -28,6 +28,8 @@ export class RExecTool implements AgentTool {
         example: '[ACTION {"tool":"r_exec","input":{"code":"cat(R.version.string)"}}]',
     };
 
+    constructor(private readonly rRunner: IRScriptRunner) {}
+
     async execute(input: ToolInput): Promise<ToolResult> {
         const code = input.code as string | undefined;
         if (!code?.trim()) {
@@ -41,7 +43,7 @@ export class RExecTool implements AgentTool {
             };
         }
 
-        const { stdout, stderr } = await execRscriptCode(code);
+        const { stdout, stderr } = await this.rRunner.exec(code);
         const combined = [stdout.trim(), stderr.trim()].filter(Boolean).join('\n--- stderr ---\n');
         const content = combined || '(no output)';
 

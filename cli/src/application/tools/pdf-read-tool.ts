@@ -8,10 +8,10 @@
  * this tool handles that correctly using the pdf-parse v2 class API.
  */
 
-import fs from 'fs';
 import path from 'path';
 import { PDFParse } from 'pdf-parse';
 import { AgentTool, ToolInput, ToolResult, ToolSchema } from '../../domain/interfaces/agent-tool';
+import { IFileSystem } from '../../domain/interfaces/file-system';
 import { MAX_FILE_CONTENT_CHARS } from '../../domain/lib/agent-file-filters';
 
 export class PdfReadTool implements AgentTool {
@@ -31,6 +31,8 @@ export class PdfReadTool implements AgentTool {
         example: '[ACTION {"tool":"pdf_read","input":{"path":"report.pdf"}}]',
     };
 
+    constructor(private readonly fileSystem: IFileSystem) {}
+
     async execute(input: ToolInput): Promise<ToolResult> {
         const filePath = input.path as string | undefined;
         if (!filePath?.trim()) {
@@ -46,13 +48,13 @@ export class PdfReadTool implements AgentTool {
             };
         }
 
-        if (!fs.existsSync(absPath)) {
+        if (!this.fileSystem.exists(absPath)) {
             return { content: `File not found: ${absPath}`, isError: true };
         }
 
         let buffer: Buffer;
         try {
-            buffer = fs.readFileSync(absPath);
+            buffer = this.fileSystem.readBuffer(absPath);
         } catch (err) {
             const msg = err instanceof Error ? err.message : String(err);
             return { content: `Failed to read file: ${msg}`, isError: true };

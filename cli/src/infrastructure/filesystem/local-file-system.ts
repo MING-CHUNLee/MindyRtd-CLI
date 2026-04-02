@@ -19,6 +19,10 @@ export class LocalFileSystem implements IFileSystem {
         return fs.readFileSync(filePath, 'utf8');
     }
 
+    readBuffer(filePath: string): Buffer {
+        return fs.readFileSync(filePath);
+    }
+
     write(filePath: string, content: string): void {
         fs.writeFileSync(filePath, content, 'utf8');
     }

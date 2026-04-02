@@ -3,13 +3,13 @@
  *
  * Renders an R Markdown (.Rmd) file via rmarkdown::render().
  * Bypasses the r_exec safety guard (which blocks write operations)
- * by calling execRscriptCode directly.
+ * by calling IRScriptRunner.exec directly.
  */
 
-import fs from 'fs';
 import path from 'path';
 import { AgentTool, ToolInput, ToolResult, ToolSchema } from '../../domain/interfaces/agent-tool';
-import { execRscriptCode } from '../../infrastructure/r-adapter/r-script-runner';
+import { IFileSystem } from '../../domain/interfaces/file-system';
+import { IRScriptRunner } from '../../domain/interfaces/r-script-runner';
 
 const VALID_FORMATS = new Set(['html_document', 'pdf_document', 'word_document', 'github_document']);
 
@@ -34,13 +34,18 @@ export class RRenderTool implements AgentTool {
         example: '[ACTION {"tool":"r_render","input":{"path":"/path/to/Hw5.Rmd"}}]',
     };
 
+    constructor(
+        private readonly fileSystem: IFileSystem,
+        private readonly rRunner: IRScriptRunner,
+    ) {}
+
     async execute(input: ToolInput): Promise<ToolResult> {
         const filePath = input.path as string | undefined;
         if (!filePath?.trim()) {
             return { content: 'No file path provided.', isError: true };
         }
 
-        if (!fs.existsSync(filePath)) {
+        if (!this.fileSystem.exists(filePath)) {
             return { content: `File not found: ${filePath}`, isError: true };
         }
 
@@ -51,7 +56,7 @@ export class RRenderTool implements AgentTool {
 
         const code = `rmarkdown::render("${forwardSlash}", output_format="${outputFormat}", output_dir="${outputDir}")`;
 
-        const { stdout, stderr } = await execRscriptCode(code);
+        const { stdout, stderr } = await this.rRunner.exec(code);
         const combined = [stdout.trim(), stderr.trim()].filter(Boolean).join('\n--- stderr ---\n');
         return {
             content: combined || '(render completed with no output)',
