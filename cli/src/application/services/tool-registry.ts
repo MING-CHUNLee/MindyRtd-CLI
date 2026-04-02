@@ -30,6 +30,9 @@ export class ToolRegistry {
     /**
      * Execute a tool by name.
      * Guarantees: NEVER throws — all errors become ToolResult { isError: true }.
+     *
+     * Schema pre-validation: required parameters (schema.parameters[key].required === true)
+     * are checked before the tool is called. Individual tools only need semantic validation.
      */
     async execute(name: string, input: ToolInput): Promise<ToolResult> {
         const tool = this._tools.get(name);
@@ -39,6 +42,18 @@ export class ToolRegistry {
                 isError: true,
             };
         }
+
+        const missing = Object.entries(tool.schema.parameters)
+            .filter(([key, param]) => param.required === true && input[key] == null)
+            .map(([key]) => key);
+
+        if (missing.length > 0) {
+            return {
+                content: `Tool "${name}" missing required parameter(s): ${missing.join(', ')}`,
+                isError: true,
+            };
+        }
+
         try {
             return await tool.execute(input);
         } catch (error) {

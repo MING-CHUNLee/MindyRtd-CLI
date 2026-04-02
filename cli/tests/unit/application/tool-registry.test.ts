@@ -129,4 +129,88 @@ describe('ToolRegistry', () => {
             expect(tool.execute).toHaveBeenCalledWith(input);
         });
     });
+
+    describe('schema pre-validation', () => {
+        function makeToolWithRequired(name: string): ITool {
+            return {
+                name,
+                schema: {
+                    name,
+                    description: 'tool with required params',
+                    parameters: {
+                        path: { type: 'string', description: 'file path', required: true },
+                        encoding: { type: 'string', description: 'file encoding', required: false },
+                        verbose: { type: 'boolean', description: 'verbose flag' },
+                    },
+                },
+                execute: vi.fn().mockResolvedValue({ content: 'ok', isError: false }),
+            };
+        }
+
+        it('returns error when a required parameter is missing', async () => {
+            const registry = new ToolRegistry();
+            registry.register(makeToolWithRequired('reader'));
+
+            const result = await registry.execute('reader', {});
+
+            expect(result.isError).toBe(true);
+            expect(result.content).toContain('"reader"');
+            expect(result.content).toContain('path');
+        });
+
+        it('returns error listing all missing required parameters', async () => {
+            const registry = new ToolRegistry();
+            const tool: ITool = {
+                name: 'multi',
+                schema: {
+                    name: 'multi',
+                    description: 'multi required',
+                    parameters: {
+                        a: { type: 'string', description: 'a', required: true },
+                        b: { type: 'string', description: 'b', required: true },
+                    },
+                },
+                execute: vi.fn().mockResolvedValue({ content: 'ok', isError: false }),
+            };
+            registry.register(tool);
+
+            const result = await registry.execute('multi', { a: 'present' });
+
+            expect(result.isError).toBe(true);
+            // only 'b' should be listed — 'a' was provided
+            expect(result.content).toMatch(/missing required parameter\(s\): b$/);
+        });
+
+        it('does not call tool.execute when required params are missing', async () => {
+            const registry = new ToolRegistry();
+            const tool = makeToolWithRequired('reader');
+            registry.register(tool);
+
+            await registry.execute('reader', {});
+
+            expect(tool.execute).not.toHaveBeenCalled();
+        });
+
+        it('calls tool.execute when all required params are provided', async () => {
+            const registry = new ToolRegistry();
+            const tool = makeToolWithRequired('reader');
+            registry.register(tool);
+
+            const result = await registry.execute('reader', { path: '/tmp/file.R' });
+
+            expect(result.isError).toBe(false);
+            expect(tool.execute).toHaveBeenCalledWith({ path: '/tmp/file.R' });
+        });
+
+        it('does not enforce optional parameters (required: false or absent)', async () => {
+            const registry = new ToolRegistry();
+            const tool = makeToolWithRequired('reader');
+            registry.register(tool);
+
+            // encoding is required: false, verbose has no required flag — both omitted
+            const result = await registry.execute('reader', { path: '/tmp/file.R' });
+
+            expect(result.isError).toBe(false);
+        });
+    });
 });
