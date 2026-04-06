@@ -11,7 +11,7 @@ import {
     AgentServiceDeps,
     AgentEvent,
     ProposedEdit,
-} from '../../../src/application/services/agent-service';
+} from '../../../src/application/facade/agent-service';
 import { LLMController } from '../../../src/infrastructure/api/llm-controller';
 import { SessionRepository } from '../../../src/infrastructure/persistence/session-repository';
 import { DiffEngine } from '../../../src/application/services/diff-engine';

@@ -20,7 +20,7 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import path from 'path';
 import { PluginLoader } from '../../infrastructure/plugins/plugin-loader';
-import { ToolRegistry } from '../../application/services/tool-registry';
+import { ToolRegistry } from '../../application/orchestration/tool-registry';
 
 export const pluginsCommand = new Command('plugins')
     .description('Manage agent tool plugins from ~/.mindy/plugins/')

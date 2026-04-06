@@ -41,7 +41,7 @@ import { beforeEach, afterEach, describe, it, expect, vi } from 'vitest';
 import { RecordReplayLLM } from './helpers/record-replay-llm';
 import { TestWorkspace } from './helpers/test-workspace';
 import { createHarness } from './helpers/test-harness';
-import type { ApprovalCallback } from '../../src/application/services/agent-service';
+import type { ApprovalCallback } from '../../src/application/facade/agent-service';
 
 // ── shared fixtures ───────────────────────────────────────────────────────────
 

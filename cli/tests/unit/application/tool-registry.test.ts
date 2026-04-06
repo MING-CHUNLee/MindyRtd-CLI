@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { ToolRegistry } from '../../../src/application/services/tool-registry';
+import { ToolRegistry } from '../../../src/application/orchestration/tool-registry';
 import { ITool, ToolInput, ToolResult, ToolSchema } from '../../../src/domain/interfaces/i-tool';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

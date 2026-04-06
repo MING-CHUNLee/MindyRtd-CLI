@@ -7,7 +7,7 @@ import { SessionRepository } from '../../infrastructure/persistence/session-repo
 import { ConversationSession } from '../../domain/entities/conversation-session';
 import { ContextStatusBar } from '../../presentation/views/context-status-bar';
 import { HistorySummarizer } from '../../application/services/history-summarizer';
-import { ToolRegistry } from '../../application/services/tool-registry';
+import { ToolRegistry } from '../../application/orchestration/tool-registry';
 import { FileScanTool } from '../../application/tools/file-scan-tool';
 import { DirectoryScanner } from '../../infrastructure/filesystem/directory-scanner';
 import { FileReadTool } from '../../application/tools/file-read-tool';
@@ -15,7 +15,7 @@ import { FileReadService } from '../../application/services/file-read-service';
 import { PdfReadTool } from '../../application/tools/pdf-read-tool';
 import { LocalFileSystem } from '../../infrastructure/filesystem/local-file-system';
 import { ExecuteAskUseCase, AskResult } from '../../application/use-cases/execute-ask-use-case';
-import { AgentEvent } from '../services/agent-service';
+import { AgentEvent } from '../facade/agent-service';
 
 export interface AskOptions {
     directory: string;

@@ -12,7 +12,7 @@ import chalk from 'chalk';
 import ora, { Ora } from 'ora';
 import readline from 'readline';
 
-import { AgentService, AgentEvent, ProposedEdit } from '../services/agent-service';
+import { AgentService, AgentEvent, ProposedEdit } from '../facade/agent-service';
 import { ContextStatusBar } from '../../presentation/views/context-status-bar';
 
 // ── Types ─────────────────────────────────────────────────────────────────────

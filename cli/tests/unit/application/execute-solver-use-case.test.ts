@@ -5,9 +5,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import { ExecuteSolverUseCase, ExecuteSolverDeps } from '../../../src/application/use-cases/execute-solver-use-case';
 import { LLMController } from '../../../src/infrastructure/api/llm-controller';
-import { ToolRegistry } from '../../../src/application/services/tool-registry';
+import { ToolRegistry } from '../../../src/application/orchestration/tool-registry';
 import { DiffEngine } from '../../../src/application/services/diff-engine';
-import { Orchestrator, OrchestratorResult } from '../../../src/application/services/orchestrator';
+import { Orchestrator, OrchestratorResult } from '../../../src/application/orchestration/orchestrator';
 import { EditStagingService, StagedEdit } from '../../../src/application/services/edit-staging-service';
 import { Evaluator } from '../../../src/application/services/evaluator';
 

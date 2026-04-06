@@ -11,7 +11,7 @@ import fs from 'fs';
 import path from 'path';
 import { LLMController } from '../../infrastructure/api';
 import { TurnUsage } from '../../domain/entities/conversation-turn';
-import { ToolRegistry } from '../services/tool-registry';
+import { ToolRegistry } from '../orchestration/tool-registry';
 import { SessionMessage } from '../../shared/types/messages';
 
 type EmitFn = (type: string, data: Record<string, unknown>) => void;

@@ -39,7 +39,7 @@ import { RecordReplayLLM } from './helpers/record-replay-llm';
 import type { CassetteEntry } from './helpers/record-replay-llm';
 import { TestWorkspace } from './helpers/test-workspace';
 import { ExecuteRunUseCase } from '../../src/application/use-cases/execute-run-use-case';
-import { ToolRegistry } from '../../src/application/services/tool-registry';
+import { ToolRegistry } from '../../src/application/orchestration/tool-registry';
 import { FileScanTool } from '../../src/application/tools/file-scan-tool';
 import { DirectoryScanner } from '../../src/infrastructure/filesystem/directory-scanner';
 import { LLMController } from '../../src/infrastructure/api/llm-controller';

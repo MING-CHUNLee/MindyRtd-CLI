@@ -5,7 +5,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { ExecuteTutorUseCase, ExecuteTutorDeps } from '../../../src/application/use-cases/execute-tutor-use-case';
 import { LLMController } from '../../../src/infrastructure/api/llm-controller';
-import { ToolRegistry } from '../../../src/application/services/tool-registry';
+import { ToolRegistry } from '../../../src/application/orchestration/tool-registry';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 

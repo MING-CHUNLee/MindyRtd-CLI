@@ -37,7 +37,10 @@ src/
 │   └── values/           ← Value objects (CacheStatus, TokenBudget)
 ├── application/          ← Use cases & orchestration — depends only on domain
 │   ├── controllers/      ← CLI command handlers (Commander-based: agent, ask, edit, scan, …)
-│   ├── services/         ← Business services (Orchestrator, DiffEngine, FileResolver, RBridge, …)
+│   ├── use-cases/        ← Core business logic for each user-visible action
+│   ├── orchestration/    ← Agent loop coordination (ReActLoop, Orchestrator, ToolRegistry)
+│   ├── facade/           ← AgentService — DI wiring, session lifecycle, events
+│   ├── services/         ← Domain services (DiffEngine, FileReadService, Evaluator, …)
 │   ├── tools/            ← Agent tool implementations (FileScanTool, FileReadTool, RExecTool)
 │   └── prompts/          ← Prompt templates & section builders
 ├── infrastructure/       ← External I/O — APIs, persistence, plugins

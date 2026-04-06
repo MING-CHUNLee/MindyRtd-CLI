@@ -15,28 +15,28 @@
 import path from 'path';
 
 import { LLMController } from '../../infrastructure/api';
-import { DiffEngine } from './diff-engine';
+import { DiffEngine } from '../services/diff-engine';
 import { SessionRepository } from '../../infrastructure/persistence/session-repository';
 import { ConversationSession } from '../../domain/entities/conversation-session';
 import { TurnUsage } from '../../domain/entities/conversation-turn';
 
-import { ToolRegistry } from './tool-registry';
+import { ToolRegistry } from '../orchestration/tool-registry';
 import { FileScanTool } from '../tools/file-scan-tool';
 import { DirectoryScanner } from '../../infrastructure/filesystem/directory-scanner';
 import { FileReadTool } from '../tools/file-read-tool';
 import { FileEditTool } from '../tools/file-edit-tool';
-import { EditStagingService } from './edit-staging-service';
-import { FileReadService } from './file-read-service';
+import { EditStagingService } from '../services/edit-staging-service';
+import { FileReadService } from '../services/file-read-service';
 import { LocalFileSystem } from '../../infrastructure/filesystem/local-file-system';
 import { PdfReadTool } from '../tools/pdf-read-tool';
 import { RExecTool } from '../tools/r-exec-tool';
 import { RInstallTool } from '../tools/r-install-tool';
 import { RRenderTool } from '../tools/r-render-tool';
 import { RScriptRunner } from '../../infrastructure/r-adapter/r-script-runner';
-import { HistorySummarizer } from './history-summarizer';
-import { IntentRouter, Intent } from './intent-router';
-import { ModeManager } from './mode-manager';
-import { SlashCommandRouter } from './slash-command-router';
+import { HistorySummarizer } from '../services/history-summarizer';
+import { IntentRouter, Intent } from '../services/intent-router';
+import { ModeManager } from '../services/mode-manager';
+import { SlashCommandRouter } from '../services/slash-command-router';
 
 import { FileChange } from '../../domain/entities/file-change';
 import { PluginLoader } from '../../infrastructure/plugins/plugin-loader';
