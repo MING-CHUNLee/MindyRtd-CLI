@@ -174,7 +174,7 @@ const App: React.FC<AppProps> = ({ config }) => {
     // (dynamic import avoids ESM/CJS named-export mismatch at module load time)
     useEffect(() => {
         const initAgent = async () => {
-            const mod = await import('../../application/services/agent-service.js');
+            const mod = await import('../../application/facade/agent-service.js');
             const AgentServiceClass = mod.AgentService;
             const service = new AgentServiceClass(
                 { directory: config?.directory ?? process.cwd() },
