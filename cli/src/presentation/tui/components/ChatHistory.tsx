@@ -1,9 +1,31 @@
 import React from 'react';
 import { Box, Text } from 'ink';
-import { TUIMessage } from '../types.js';
+import { TUIMessage, ToolResultRenderer, ToolResultVM } from '../types.js';
+import ScanResultCard     from './ScanResultCard.js';
+import LibraryResultCard  from './LibraryResultCard.js';
+import ContextResultCard  from './ContextResultCard.js';
+import RExecResultCard    from './RExecResultCard.js';
+import RInstallResultCard from './RInstallResultCard.js';
+import {
+    ScanResultVM,
+    LibraryScanResultVM,
+    ContextDisplayVM,
+    RExecResultVM,
+    RInstallResultVM,
+} from '../../view-models/index.js';
 
 interface ChatHistoryProps {
     messages: TUIMessage[];
+}
+
+function renderToolResult(renderer: ToolResultRenderer, vm: ToolResultVM): React.ReactNode {
+    switch (renderer) {
+        case 'scan':       return <ScanResultCard     vm={vm as ScanResultVM} />;
+        case 'library':    return <LibraryResultCard  vm={vm as LibraryScanResultVM} />;
+        case 'context':    return <ContextResultCard  vm={vm as ContextDisplayVM} />;
+        case 'r_exec':     return <RExecResultCard    vm={vm as RExecResultVM} />;
+        case 'r_install':  return <RInstallResultCard vm={vm as RInstallResultVM} />;
+    }
 }
 
 function messageColor(type: TUIMessage['type']): string {
@@ -37,19 +59,28 @@ function messagePrefix(type: TUIMessage['type']): string {
 const ChatHistory: React.FC<ChatHistoryProps> = ({ messages }) => {
     return (
         <Box flexDirection="column" paddingY={1}>
-            {messages.map((message) => (
-                <Box key={message.id} flexDirection="column" marginBottom={message.type === 'user' || message.type === 'assistant' ? 1 : 0}>
-                    <Box>
-                        <Text
-                            color={messageColor(message.type)}
-                            dimColor={message.type === 'thinking' || message.type === 'observation' || message.type === 'status'}
-                            bold={message.type === 'user' || message.type === 'assistant' || message.type === 'error'}
-                        >
-                            {messagePrefix(message.type)}{message.content}
-                        </Text>
+            {messages.map((message) => {
+                if (message.type === 'tool_result' && message.renderer && message.vm) {
+                    return (
+                        <Box key={message.id}>
+                            {renderToolResult(message.renderer, message.vm)}
+                        </Box>
+                    );
+                }
+                return (
+                    <Box key={message.id} flexDirection="column" marginBottom={message.type === 'user' || message.type === 'assistant' ? 1 : 0}>
+                        <Box>
+                            <Text
+                                color={messageColor(message.type)}
+                                dimColor={message.type === 'thinking' || message.type === 'observation' || message.type === 'status'}
+                                bold={message.type === 'user' || message.type === 'assistant' || message.type === 'error'}
+                            >
+                                {messagePrefix(message.type)}{message.content}
+                            </Text>
+                        </Box>
                     </Box>
-                </Box>
-            ))}
+                );
+            })}
         </Box>
     );
 };

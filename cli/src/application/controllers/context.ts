@@ -22,7 +22,7 @@ import {
     outputAsText,
     displayContextTips,
 } from '../../presentation/views/context-result';
-import { DISPLAY } from '../../infrastructure/config/constants';
+import { ContextDisplayVM } from '../../presentation/view-models';
 import { handleError } from '../../shared/utils/error-handler';
 
 // ============================================
@@ -74,10 +74,38 @@ async function executeContextCommand(options: ContextOptions): Promise<void> {
         const report = await buildEnvironmentReport(options);
         spinner.succeed(chalk.green('Context built successfully!'));
 
+        // Map EnvironmentReport → ContextDisplayVM (Application → Presentation boundary)
+        const vm: ContextDisplayVM = {
+            summary: {
+                rVersion:      report.summary.rVersion,
+                projectName:   report.summary.projectName ?? '',
+                totalPackages: report.summary.totalPackages,
+                totalFiles:    report.summary.totalFiles,
+                keyPackages:   report.summary.keyPackages,
+                fileTypes: {
+                    rScripts:  report.summary.fileTypes['R Scripts'] ?? 0,
+                    rMarkdown: report.summary.fileTypes['R Markdown'] ?? 0,
+                    rData:     report.summary.fileTypes['R Data'] ?? 0,
+                },
+            },
+            prompt: {
+                estimatedTokens: report.prompt.estimatedTokens,
+                charCount:       report.prompt.systemPrompt.length,
+                systemPrompt:    report.prompt.systemPrompt,
+            },
+            warnings: report.warnings,
+            options: {
+                showSummaryOnly: options.summary,
+                showTokenStats:  options.tokens,
+                lang:            options.lang,
+                minimal:         options.minimal,
+            },
+        };
+
         if (options.json) {
-            outputAsJson(report, options);
+            outputAsJson(vm);
         } else {
-            outputAsText(report, options);
+            outputAsText(vm);
         }
 
         if (options.save) {
@@ -96,15 +124,19 @@ async function executeContextCommand(options: ContextOptions): Promise<void> {
 // ============================================
 
 async function buildEnvironmentReport(options: ContextOptions): Promise<EnvironmentReport> {
+    // Inline constants (previously in DISPLAY from infrastructure/config/constants)
+    const MAX_PACKAGES = options.minimal ? 10 : 50;
+    const MAX_FILES    = options.minimal ?  5 : 20;
+
     const service = new REnvironmentService({
         workingDir: options.dir,
         includeBasePackages: options.includeBase,
         contextOptions: {
             language: options.lang,
             includePackageDetails: !options.minimal,
-            includeFilePreview: !options.minimal,
-            maxPackagesToList: options.minimal ? DISPLAY.MINIMAL_PACKAGES_LIMIT : DISPLAY.MAX_PACKAGES_TO_LIST,
-            maxFilesToList: options.minimal ? DISPLAY.MINIMAL_FILES_LIMIT : DISPLAY.MAX_FILES_TO_LIST,
+            includeFilePreview:    !options.minimal,
+            maxPackagesToList: MAX_PACKAGES,
+            maxFilesToList:    MAX_FILES,
         },
     });
 

@@ -6,39 +6,27 @@
 
 import React from 'react';
 import { Box, Text } from 'ink';
+import { StatusBarVM, StatusBarDisplayConfig, ContextHealthVM } from '../../view-models/index.js';
+import { formatDuration } from '../../../shared/utils/format.js';
 
-export interface StatusBarProps {
-    model: string;
-    usagePercent: number;
-    health: 'healthy' | 'warning' | 'critical' | 'overflow_risk';
-    items: string[];
-    totalCostUSD?: number;
-    turnCount?: number;
-    elapsedMs?: number;
-    requestsPerMinute?: number;
-    lastTokensPerSecond?: number;
-    lastResponseTimeMs?: number;
+interface StatusBarProps {
+    vm: StatusBarVM;
+    config: StatusBarDisplayConfig;
 }
 
 const BAR_WIDTH = 20;
 
-function healthColor(health: string): string {
+function healthColor(health: ContextHealthVM): string {
     switch (health) {
         case 'healthy': return 'green';
         case 'warning': return 'yellow';
         case 'critical': case 'overflow_risk': return 'red';
-        default: return 'gray';
     }
 }
 
-function formatDuration(ms: number): string {
-    if (ms < 1000) return `${ms}ms`;
-    if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
-    return `${(ms / 60000).toFixed(1)}m`;
-}
-
-const StatusBar: React.FC<StatusBarProps> = (props) => {
-    const { items = ['model', 'context', 'rpm'], health, usagePercent } = props;
+const StatusBar: React.FC<StatusBarProps> = ({ vm, config }) => {
+    const { items = ['model', 'context', 'rpm'] } = config;
+    const { health, usagePercent } = vm;
     const color = healthColor(health);
 
     const filled = Math.round((usagePercent / 100) * BAR_WIDTH);
@@ -46,24 +34,24 @@ const StatusBar: React.FC<StatusBarProps> = (props) => {
     const bar = '\u2588'.repeat(filled) + '\u2591'.repeat(empty);
 
     const renderers: Record<string, () => React.ReactNode | null> = {
-        model: () => <Text>{props.model}</Text>,
+        model: () => <Text>{vm.model}</Text>,
         context: () => (
             <Text>
                 <Text color={color}>{bar}</Text>
                 <Text color={color}> {usagePercent}%</Text>
             </Text>
         ),
-        rpm: () => <Text dimColor>{props.requestsPerMinute ?? 0} req/min</Text>,
-        cost: () => props.totalCostUSD !== undefined
-            ? <Text dimColor>~${props.totalCostUSD.toFixed(4)}</Text> : null,
-        turn: () => props.turnCount !== undefined
-            ? <Text dimColor>turn {props.turnCount}</Text> : null,
-        duration: () => props.elapsedMs !== undefined
-            ? <Text dimColor>{formatDuration(props.elapsedMs)}</Text> : null,
-        tps: () => props.lastTokensPerSecond !== undefined
-            ? <Text dimColor>{props.lastTokensPerSecond} tok/s</Text> : null,
-        latency: () => props.lastResponseTimeMs !== undefined
-            ? <Text dimColor>{formatDuration(props.lastResponseTimeMs)}</Text> : null,
+        rpm: () => <Text dimColor>{vm.requestsPerMinute ?? 0} req/min</Text>,
+        cost: () => vm.totalCostUSD !== undefined
+            ? <Text dimColor>~${vm.totalCostUSD.toFixed(4)}</Text> : null,
+        turn: () => vm.turnCount !== undefined
+            ? <Text dimColor>turn {vm.turnCount}</Text> : null,
+        duration: () => vm.elapsedMs !== undefined
+            ? <Text dimColor>{formatDuration(vm.elapsedMs)}</Text> : null,
+        tps: () => vm.lastTokensPerSecond !== undefined
+            ? <Text dimColor>{vm.lastTokensPerSecond} tok/s</Text> : null,
+        latency: () => vm.lastResponseTimeMs !== undefined
+            ? <Text dimColor>{formatDuration(vm.lastResponseTimeMs)}</Text> : null,
     };
 
     const parts: React.ReactNode[] = [];

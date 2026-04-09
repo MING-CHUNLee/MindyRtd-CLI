@@ -1,124 +1,143 @@
 /**
- * Views: Library Scan Result Display
- * 
+ * Views: Library Scan Result
+ *
  * Formats and displays library scan results to the console.
+ *
+ * Design rules (Presentation Layer SKILL.md):
+ *   - `formatXxx()` functions are PURE — return string[] only, no console.log.
+ *   - `displayXxx()` functions are thin I/O wrappers around formatters.
+ *   - No imports from domain/, application/, or infrastructure/.
+ *   - Accepts LibraryScanResultVM (Presentation View Model) only.
  */
 
 import chalk from 'chalk';
-import { LibraryScanResult, LibraryInfo } from '../../shared/types/library-info';
+import { LibraryScanResultVM, LibraryInfoVM } from '../view-models';
 
 const MAX_LIBRARIES_DISPLAY = 20;
 
-/**
- * Display library scan results
- */
-export function displayLibraryResult(result: LibraryScanResult): void {
-    console.log('');
-    console.log(chalk.bold.underline('📦 R Library Scan Results'));
-    console.log('');
-
-    // R Environment Info
-    displayREnvironmentInfo(result);
-
-    // Library Summary
-    displayLibrarySummary(result);
-
-    // Library List
-    displayLibraryList(result.libraries);
-
-    // Next Steps
-    displayNextSteps();
-}
+// ─── Pure Formatters ───────────────────────────────────────────────────────
 
 /**
- * Display R environment information
+ * Format R environment info section.
  */
-function displayREnvironmentInfo(result: LibraryScanResult): void {
-    console.log(chalk.cyan('🔧 R Environment:'));
-    console.log(`   ${chalk.bold('R Version:')} ${chalk.green(result.rVersion)}`);
-    console.log(`   ${chalk.bold('R Home:')} ${result.rHome}`);
-    console.log('');
-
-    console.log(chalk.cyan('📁 Library Paths:'));
-    for (const libPath of result.libraryPaths) {
-        console.log(`   ${chalk.gray('•')} ${libPath}`);
+export function formatREnvironmentInfo(vm: LibraryScanResultVM): string[] {
+    const lines: string[] = [
+        chalk.cyan('🔧 R Environment:'),
+        `   ${chalk.bold('R Version:')} ${chalk.green(vm.rVersion)}`,
+        `   ${chalk.bold('R Home:')} ${vm.rHome}`,
+        '',
+        chalk.cyan('📁 Library Paths:'),
+    ];
+    for (const libPath of vm.libraryPaths) {
+        lines.push(`   ${chalk.gray('•')} ${libPath}`);
     }
-    console.log('');
+    lines.push('');
+    return lines;
 }
 
 /**
- * Display library summary
+ * Format library count summary.
  */
-function displayLibrarySummary(result: LibraryScanResult): void {
-    console.log(chalk.bold('📊 Summary:'));
-    console.log(chalk.gray('─'.repeat(50)));
-    console.log(`   📚 ${chalk.yellow(result.totalLibraries.toString().padStart(4))} Total Libraries`);
-    console.log(`   🏠 ${chalk.blue(result.basePackages.toString().padStart(4))} Base/Recommended Packages`);
-    console.log(`   👤 ${chalk.green(result.userPackages.toString().padStart(4))} User-Installed Packages`);
-    console.log(chalk.gray('─'.repeat(50)));
-    console.log('');
+export function formatLibrarySummary(vm: LibraryScanResultVM): string[] {
+    return [
+        chalk.bold('📊 Summary:'),
+        chalk.gray('─'.repeat(50)),
+        `   📚 ${chalk.yellow(vm.totalLibraries.toString().padStart(4))} Total Libraries`,
+        `   🏠 ${chalk.blue(vm.basePackages.toString().padStart(4))} Base/Recommended Packages`,
+        `   👤 ${chalk.green(vm.userPackages.toString().padStart(4))} User-Installed Packages`,
+        chalk.gray('─'.repeat(50)),
+        '',
+    ];
 }
 
 /**
- * Display library list
+ * Format library table with header and rows.
  */
-function displayLibraryList(libraries: LibraryInfo[]): void {
+export function formatLibraryList(libraries: LibraryInfoVM[]): string[] {
     if (libraries.length === 0) {
-        console.log(chalk.yellow('No libraries found matching the criteria.'));
-        console.log('');
-        return;
+        return [chalk.yellow('No libraries found matching the criteria.'), ''];
     }
 
-    console.log(chalk.bold('📚 Installed Libraries:'));
-    console.log('');
-
-    // Header
-    const nameHeader = 'Package Name'.padEnd(30);
+    const nameHeader    = 'Package Name'.padEnd(30);
     const versionHeader = 'Version'.padEnd(15);
-    const typeHeader = 'Type';
-    console.log(chalk.dim(`   ${nameHeader} ${versionHeader} ${typeHeader}`));
-    console.log(chalk.dim('   ' + '─'.repeat(60)));
+    const typeHeader    = 'Type';
 
-    // Library rows
+    const lines: string[] = [
+        chalk.bold('📚 Installed Libraries:'),
+        '',
+        chalk.dim(`   ${nameHeader} ${versionHeader} ${typeHeader}`),
+        chalk.dim('   ' + '─'.repeat(60)),
+    ];
+
     const displayLibraries = libraries.slice(0, MAX_LIBRARIES_DISPLAY);
     for (const lib of displayLibraries) {
-        const name = lib.name.padEnd(30);
+        const name    = lib.name.padEnd(30);
         const version = lib.version.padEnd(15);
-        const type = lib.isBase ? chalk.blue('base') : chalk.green('user');
-
-        console.log(`   ${chalk.white(name)} ${chalk.gray(version)} ${type}`);
+        const type    = lib.isBase ? chalk.blue('base') : chalk.green('user');
+        lines.push(`   ${chalk.white(name)} ${chalk.gray(version)} ${type}`);
     }
 
     if (libraries.length > MAX_LIBRARIES_DISPLAY) {
-        console.log('');
-        console.log(chalk.dim(`   ... and ${libraries.length - MAX_LIBRARIES_DISPLAY} more libraries`));
+        lines.push('');
+        lines.push(chalk.dim(`   ... and ${libraries.length - MAX_LIBRARIES_DISPLAY} more libraries`));
     }
-    console.log('');
+    lines.push('');
+    return lines;
 }
 
 /**
- * Display next steps
+ * Format library usage tips.
  */
-function displayNextSteps(): void {
-    console.log(chalk.cyan.bold('💡 Tips:'));
-    console.log(chalk.gray('   • Use `--filter <name>` to search for specific packages'));
-    console.log(chalk.gray('   • Use `--include-base` to show base R packages'));
-    console.log(chalk.gray('   • Use `--json` to output results as JSON'));
-    console.log('');
+export function formatLibraryNextSteps(): string[] {
+    return [
+        chalk.cyan.bold('💡 Tips:'),
+        chalk.gray('   • Use `--filter <name>` to search for specific packages'),
+        chalk.gray('   • Use `--include-base` to show base R packages'),
+        chalk.gray('   • Use `--json` to output results as JSON'),
+        '',
+    ];
 }
 
 /**
- * Display compact library list (for embedding in other views)
+ * Format entire library scan result as lines. Pure — no I/O.
  */
-export function displayCompactLibraryList(libraries: LibraryInfo[], maxItems: number = 5): void {
-    console.log(chalk.cyan('📦 Key Libraries:'));
+export function formatLibraryResult(vm: LibraryScanResultVM): string[] {
+    return [
+        '',
+        chalk.bold.underline('📦 R Library Scan Results'),
+        '',
+        ...formatREnvironmentInfo(vm),
+        ...formatLibrarySummary(vm),
+        ...formatLibraryList(vm.libraries),
+        ...formatLibraryNextSteps(),
+    ];
+}
 
+/**
+ * Format a compact inline list (for embedding in other views). Pure.
+ */
+export function formatCompactLibraryList(libraries: LibraryInfoVM[], maxItems = 5): string[] {
+    const lines: string[] = [chalk.cyan('📦 Key Libraries:')];
     const displayLibs = libraries.slice(0, maxItems);
     for (const lib of displayLibs) {
-        console.log(`   ${chalk.gray('•')} ${lib.name} ${chalk.dim(`(${lib.version})`)}`);
+        lines.push(`   ${chalk.gray('•')} ${lib.name} ${chalk.dim(`(${lib.version})`)}`);
     }
-
     if (libraries.length > maxItems) {
-        console.log(chalk.dim(`   ... and ${libraries.length - maxItems} more`));
+        lines.push(chalk.dim(`   ... and ${libraries.length - maxItems} more`));
+    }
+    return lines;
+}
+
+// ─── Display (thin I/O wrappers) ──────────────────────────────────────────
+
+export function displayLibraryResult(vm: LibraryScanResultVM): void {
+    for (const line of formatLibraryResult(vm)) {
+        console.log(line);
+    }
+}
+
+export function displayCompactLibraryList(libraries: LibraryInfoVM[], maxItems = 5): void {
+    for (const line of formatCompactLibraryList(libraries, maxItems)) {
+        console.log(line);
     }
 }

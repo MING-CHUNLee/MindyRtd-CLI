@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Box, Text, useInput, useApp } from 'ink';
+import { Box, useInput, useApp } from 'ink';
 import Header from './components/Header.js';
 import Footer from './components/Footer.js';
 import ChatHistory from './components/ChatHistory.js';
@@ -8,161 +8,91 @@ import StatusBar from './components/StatusBar.js';
 import ThinkingIndicator from './components/ThinkingIndicator.js';
 import StreamingMessage from './components/StreamingMessage.js';
 import { TUIMessage, AppState, PendingEdit, TUIConfig } from './types.js';
+import { mapAgentEventToMessage, AgentEvent, ProposedEdit, nextId } from './event-mapper.js';
+import { StatusBarVM, StatusBarDisplayConfig } from '../view-models/index.js';
 
-// Type-only imports (erased at runtime — avoids ESM/CJS interop issues)
-// The actual AgentService class is loaded via dynamic import() in useEffect.
-type AgentEvent = { type: string; data: Record<string, unknown> };
-type ProposedEdit = { path: string; diff: string; original: string; proposed: string };
-
-// Re-export for backward compat
-export interface Message {
-    id: string;
-    role: 'user' | 'assistant';
-    content: string;
-    timestamp: Date;
-}
+// Type-only — erased at runtime (avoids ESM/CJS interop issues at module load).
+// AgentService is loaded via dynamic import() in useEffect.
 
 interface AppProps {
     config?: TUIConfig;
 }
 
-let msgCounter = 0;
-function nextId(): string {
-    return `msg-${Date.now()}-${++msgCounter}`;
+const DEFAULT_STATUS_CONFIG: StatusBarDisplayConfig = {
+    items: ['model', 'context', 'turn', 'cost'],
+};
+
+function makeStatusMessage(content: string): TUIMessage {
+    return { id: nextId(), type: 'status', content, timestamp: new Date() };
 }
+
+// ──────────────────────────────────────────────────────────────────────────────
 
 const App: React.FC<AppProps> = ({ config }) => {
     const { exit } = useApp();
+
     const [messages, setMessages] = useState<TUIMessage[]>([
-        {
-            id: nextId(),
-            type: 'status',
-            content: 'Welcome to Mindy CLI! Type your instruction and press Enter. /help for commands.',
-            timestamp: new Date(),
-        },
+        makeStatusMessage('Welcome to Mindy CLI! Type your instruction and press Enter. /help for commands.'),
     ]);
-    const [input, setInput] = useState('');
-    const [appState, setAppState] = useState<AppState>('idle');
+    const [input, setInput]           = useState('');
+    const [appState, setAppState]     = useState<AppState>('idle');
     const [pendingReview, setPendingReview] = useState<PendingEdit | null>(null);
     const [streamingContent, setStreamingContent] = useState('');
     const [isStreaming, setIsStreaming] = useState(false);
-    const [statusData, setStatusData] = useState<{
-        sessionId: string; turnCount: number; model: string;
-        usagePercent: number; health: 'healthy' | 'warning' | 'critical' | 'overflow_risk';
-        totalCostUSD: number;
-    } | null>(null);
+    const [statusData, setStatusData] = useState<StatusBarVM | null>(null);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const agentServiceRef = useRef<any>(null);
+    const agentServiceRef     = useRef<any>(null);
     const approvalResolverRef = useRef<((approved: boolean) => void) | null>(null);
 
-    // Helper to add a message
-    const addMessage = useCallback((type: TUIMessage['type'], content: string, metadata?: TUIMessage['metadata']) => {
-        setMessages(prev => [...prev, {
-            id: nextId(),
-            type,
-            content,
-            timestamp: new Date(),
-            metadata,
-        }]);
+    // ── Message helpers ───────────────────────────────────────────────────
+
+    const addMessage = useCallback((msg: TUIMessage) => {
+        setMessages(prev => [...prev, msg]);
     }, []);
 
-    // Event handler for AgentService
+    const addStatusMessage = useCallback((content: string) => {
+        addMessage(makeStatusMessage(content));
+    }, [addMessage]);
+
+    // ── Agent event handler ───────────────────────────────────────────────
+    // Delegates all mapping to the pure event-mapper module.
+
     const handleAgentEvent = useCallback((event: AgentEvent) => {
-        switch (event.type) {
-            case 'session_loaded': {
-                const { sessionId, turnCount, model } = event.data as { sessionId: string; turnCount: number; model: string };
-                if (turnCount > 0) {
-                    addMessage('status', `Resumed session ${(sessionId as string).slice(-6)} (${turnCount} previous turns) · ${model}`);
-                } else {
-                    addMessage('status', `New session ${(sessionId as string).slice(-6)} · ${model}`);
-                }
-                break;
-            }
-            case 'intent_classified':
-                addMessage('status', `Intent: ${event.data.intent}`);
-                break;
-            case 'phase_start':
-                addMessage('status', `${event.data.description}...`);
-                break;
-            case 'phase_end':
-                if (event.data.summary) {
-                    addMessage('status', event.data.summary as string);
-                }
-                break;
-            case 'react_step': {
-                const { thought, action, observation } = event.data;
-                if (thought) addMessage('thinking', (thought as string).slice(0, 200));
-                if (action) addMessage('tool_call', `${(action as { tool: string }).tool}`);
-                if (observation) addMessage('observation', (observation as string).slice(0, 150));
-                break;
-            }
-            case 'text_output': {
-                // Finalize any streaming content first
+        const { message, sideEffect } = mapAgentEventToMessage(event);
+
+        if (message) addMessage(message);
+
+        if (sideEffect) {
+            if (sideEffect.finalizeStream) {
                 setIsStreaming(false);
                 setStreamingContent('');
-                addMessage('assistant', event.data.content as string);
-                break;
             }
-            case 'stream_token': {
+            if (sideEffect.streamingToken !== undefined) {
                 setIsStreaming(true);
-                setStreamingContent(prev => prev + (event.data.token as string));
-                break;
+                setStreamingContent(prev => prev + sideEffect.streamingToken);
             }
-            case 'diff_proposed': {
-                const edit = event.data as unknown as ProposedEdit;
-                setPendingReview({
-                    path: edit.path,
-                    diff: edit.diff,
-                    original: edit.original,
-                    proposed: edit.proposed,
-                });
+            if (sideEffect.pendingReview) {
+                setPendingReview(sideEffect.pendingReview);
                 setAppState('reviewing');
-                break;
             }
-            case 'edit_applied':
-                addMessage('status', `Applied: ${event.data.path}`);
-                break;
-            case 'edit_rejected':
-                addMessage('status', `Rejected: ${event.data.path}`);
-                break;
-            case 'turn_saved': {
-                const d = event.data as {
-                    sessionId: string; turnCount: number; model: string;
-                    usagePercent: number; health: string; totalCostUSD: number;
-                };
-                setStatusData({
-                    sessionId: d.sessionId,
-                    turnCount: d.turnCount as number,
-                    model: d.model as string,
-                    usagePercent: d.usagePercent as number,
-                    health: d.health as 'healthy' | 'warning' | 'critical' | 'overflow_risk',
-                    totalCostUSD: d.totalCostUSD as number,
-                });
-                break;
+            if (sideEffect.nextAppState && sideEffect.nextAppState !== 'reviewing') {
+                setAppState(sideEffect.nextAppState);
             }
-            case 'status_update':
-                if (event.data.plugins) {
-                    addMessage('status', `Plugins: ${(event.data.plugins as string[]).join(', ')}`);
-                }
-                if (event.data.knowledge) {
-                    addMessage('status', `Knowledge: ${(event.data.knowledge as string[]).join(', ')}`);
-                }
-                break;
-            case 'error':
-                addMessage('error', `[${event.data.phase}] ${event.data.message}`);
-                break;
+            if (sideEffect.statusData) {
+                setStatusData(sideEffect.statusData);
+            }
         }
     }, [addMessage]);
 
-    // Approval callback — suspends agent until user decides
+    // ── Approval callback — suspends agent until user decides ─────────────
+
     const onApproval = useCallback(async (_edit: ProposedEdit): Promise<boolean> => {
-        return new Promise<boolean>((resolve) => {
+        return new Promise<boolean>(resolve => {
             approvalResolverRef.current = resolve;
         });
     }, []);
 
-    // Handle review decision from DiffReview component
     const handleReviewDecision = useCallback((approved: boolean) => {
         approvalResolverRef.current?.(approved);
         approvalResolverRef.current = null;
@@ -170,8 +100,8 @@ const App: React.FC<AppProps> = ({ config }) => {
         setAppState('processing');
     }, []);
 
-    // Initialize AgentService on mount via dynamic import
-    // (dynamic import avoids ESM/CJS named-export mismatch at module load time)
+    // ── Agent initialization (dynamic import avoids ESM/CJS mismatch) ────
+
     useEffect(() => {
         const initAgent = async () => {
             const mod = await import('../../application/facade/agent-service.js');
@@ -183,48 +113,47 @@ const App: React.FC<AppProps> = ({ config }) => {
             );
             await service.initialize({
                 sessionId: config?.sessionId,
-                forceNew: config?.forceNew,
+                forceNew:  config?.forceNew,
             });
             agentServiceRef.current = service;
         };
         initAgent().catch(err => {
-            const isApiKeyError = err.message?.includes('No API key found') || err.message?.includes('API key');
-            if (isApiKeyError) {
-                addMessage('error', err.message);
-            } else {
-                addMessage('error', `Failed to initialize agent: ${err.message ?? err}`);
-            }
+            const isApiKeyError =
+                err.message?.includes('No API key found') || err.message?.includes('API key');
+            const content = isApiKeyError
+                ? err.message
+                : `Failed to initialize agent: ${err.message ?? err}`;
+            addMessage({ id: nextId(), type: 'error', content, timestamp: new Date() });
         });
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // Handle keyboard shortcuts
-    useInput((input: string, key: { escape?: boolean; ctrl?: boolean; return?: boolean }) => {
+    // ── Keyboard shortcuts ────────────────────────────────────────────────
+
+    useInput((input: string, key: { escape?: boolean; ctrl?: boolean }) => {
         if (appState === 'idle' && (key.escape || (key.ctrl && input === 'c'))) {
             exit();
         }
     });
 
-    // Submit handler
+    // ── Submit handler ────────────────────────────────────────────────────
+
     const handleSubmit = useCallback(async (userInput: string) => {
         if (!userInput.trim() || appState !== 'idle') return;
 
         const service = agentServiceRef.current;
         if (!service) {
-            addMessage('error', 'Agent is not ready. Please check your .env file has a valid API key and restart mindy-cli.');
+            addStatusMessage('Agent is not ready. Please check your .env file has a valid API key and restart mindy-cli.');
             return;
         }
 
-        addMessage('user', userInput);
+        addMessage({ id: nextId(), type: 'user', content: userInput, timestamp: new Date() });
         setInput('');
 
-        // Handle slash commands
+        // Slash commands
         if (userInput.startsWith('/')) {
-            if (userInput.trim() === '/exit') {
-                exit();
-                return;
-            }
+            if (userInput.trim() === '/exit') { exit(); return; }
             const result = await service.handleSlashCommand(userInput.trim());
-            addMessage('assistant', result);
+            addMessage({ id: nextId(), type: 'assistant', content: result, timestamp: new Date() });
             return;
         }
 
@@ -236,17 +165,19 @@ const App: React.FC<AppProps> = ({ config }) => {
         try {
             await service.executeInstruction(userInput);
         } catch (err) {
-            addMessage('error', `Agent error: ${err instanceof Error ? err.message : String(err)}`);
+            addMessage({
+                id: nextId(), type: 'error',
+                content: `Agent error: ${err instanceof Error ? err.message : String(err)}`,
+                timestamp: new Date(),
+            });
         }
 
-        // Finalize streaming if any
-        if (isStreaming) {
-            setIsStreaming(false);
-            setStreamingContent('');
-        }
-
+        setIsStreaming(false);
+        setStreamingContent('');
         setAppState('idle');
-    }, [appState, addMessage, exit, isStreaming]);
+    }, [appState, addMessage, addStatusMessage, exit]);
+
+    // ── Render ────────────────────────────────────────────────────────────
 
     return (
         <Box flexDirection="column" height="100%">
@@ -272,14 +203,7 @@ const App: React.FC<AppProps> = ({ config }) => {
             </Box>
 
             {statusData && (
-                <StatusBar
-                    model={statusData.model}
-                    usagePercent={statusData.usagePercent}
-                    health={statusData.health}
-                    totalCostUSD={statusData.totalCostUSD}
-                    turnCount={statusData.turnCount}
-                    items={['model', 'context', 'turn', 'cost']}
-                />
+                <StatusBar vm={statusData} config={DEFAULT_STATUS_CONFIG} />
             )}
 
             <Footer

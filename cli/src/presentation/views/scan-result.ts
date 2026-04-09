@@ -1,113 +1,136 @@
 /**
- * Views: Scan Result Display
+ * Views: Scan Result
  *
  * Formats and displays scan results to the console.
+ *
+ * Design rules (Presentation Layer SKILL.md):
+ *   - `formatXxx()` functions are PURE — return string[] only, no console.log.
+ *   - `displayXxx()` functions are thin I/O wrappers around formatters.
+ *   - No imports from domain/, application/, or infrastructure/.
+ *   - Accepts ScanResultVM (Presentation View Model) only.
  */
 
 import chalk from 'chalk';
-import { ScanResult } from '../../shared/types';
+import { ScanResultVM } from '../view-models';
 import { formatFileSize, formatRelativePath } from '../../shared/utils/format';
-import { DISPLAY } from '../../infrastructure/config/constants';
 
-// ============================================
-// Types
-// ============================================
+// ─── Types ─────────────────────────────────────────────────────────────────
 
 interface FileCategory {
-    key: keyof ScanResult['files'];
+    key: keyof Omit<ScanResultVM, 'totalFiles' | 'projectName' | 'projectPath' | 'baseDir' | 'maxFilesDisplay'>;
     label: string;
     icon: string;
     color: chalk.Chalk;
 }
 
-// ============================================
-// Constants
-// ============================================
+// ─── Constants ─────────────────────────────────────────────────────────────
 
 const FILE_CATEGORIES: FileCategory[] = [
-    { key: 'rScripts', label: 'R Scripts (.R)', icon: '📜', color: chalk.yellow },
-    { key: 'rMarkdown', label: 'R Markdown (.Rmd)', icon: '📝', color: chalk.magenta },
-    { key: 'rData', label: 'R Data (.RData/.rds)', icon: '💾', color: chalk.blue },
-    { key: 'rProject', label: 'R Project (.Rproj)', icon: '📦', color: chalk.green },
-    { key: 'dataFiles', label: 'Data Files (.csv/.xlsx/.json/...)', icon: '📊', color: chalk.cyan },
-    { key: 'documents', label: 'Documents (.pdf/.html/.tex)', icon: '📄', color: chalk.white },
+    { key: 'rScripts',   label: 'R Scripts (.R)',                   icon: '📜', color: chalk.yellow  },
+    { key: 'rMarkdown',  label: 'R Markdown (.Rmd)',                icon: '📝', color: chalk.magenta },
+    { key: 'rData',      label: 'R Data (.RData/.rds)',             icon: '💾', color: chalk.blue    },
+    { key: 'rProject',   label: 'R Project (.Rproj)',               icon: '📦', color: chalk.green   },
+    { key: 'dataFiles',  label: 'Data Files (.csv/.xlsx/.json/...)', icon: '📊', color: chalk.cyan    },
+    { key: 'documents',  label: 'Documents (.pdf/.html/.tex)',      icon: '📄', color: chalk.white   },
 ];
 
-// ============================================
-// Display Functions
-// ============================================
+// ─── Pure Formatters ───────────────────────────────────────────────────────
 
-export function displayScanResult(result: ScanResult, baseDir: string): void {
-    console.log('');
-    console.log(chalk.bold.underline('📁 Scan Results'));
-    console.log('');
-
-    displayProjectInfo(result);
-    displaySummary(result);
-    displayFileList(result, baseDir);
-    displayNextSteps();
+/**
+ * Format project info section. Returns empty array when no project detected.
+ */
+export function formatProjectInfo(vm: ScanResultVM): string[] {
+    if (!vm.projectName) return [];
+    return [
+        chalk.cyan('📊 RStudio Project Detected:'),
+        `   ${chalk.bold(vm.projectName)}`,
+        `   Path: ${vm.projectPath ?? ''}`,
+        '',
+    ];
 }
 
 /**
- * Display project information if detected
+ * Format file count summary table.
  */
-function displayProjectInfo(result: ScanResult): void {
-    if (result.projectInfo) {
-        console.log(chalk.cyan('📊 RStudio Project Detected:'));
-        console.log(`   ${chalk.bold(result.projectInfo.name)}`);
-        console.log(`   Path: ${result.projectInfo.path}`);
-        console.log('');
-    }
-}
-
-/**
- * Display summary of file counts
- */
-function displaySummary(result: ScanResult): void {
-    console.log(chalk.bold('📈 Summary:'));
-    console.log(chalk.gray('─'.repeat(50)));
+export function formatScanSummary(vm: ScanResultVM): string[] {
+    const lines: string[] = [
+        chalk.bold('📈 Summary:'),
+        chalk.gray('─'.repeat(50)),
+    ];
 
     for (const cat of FILE_CATEGORIES) {
-        const files = result.files[cat.key];
+        const files = vm[cat.key] as Array<{ path: string; size: number }>;
         const count = files.length.toString().padStart(4);
-        console.log(`   ${cat.icon} ${cat.color(count)} ${cat.label}`);
+        lines.push(`   ${cat.icon} ${cat.color(count)} ${cat.label}`);
     }
 
-    console.log(chalk.gray('─'.repeat(50)));
-    console.log(`   ${chalk.bold('Total:')} ${chalk.bold.white(result.totalFiles.toString())} files found`);
-    console.log('');
+    lines.push(chalk.gray('─'.repeat(50)));
+    lines.push(`   ${chalk.bold('Total:')} ${chalk.bold.white(vm.totalFiles.toString())} files found`);
+    lines.push('');
+    return lines;
 }
 
 /**
- * Display detailed file list for each category
+ * Format detailed file list for each file category.
  */
-function displayFileList(result: ScanResult, baseDir: string): void {
+export function formatScanFileList(vm: ScanResultVM): string[] {
+    const lines: string[] = [];
+
     for (const cat of FILE_CATEGORIES) {
-        const files = result.files[cat.key];
-        if (files.length > 0) {
-            console.log(cat.color.bold(`${cat.icon} ${cat.label}:`));
+        const files = vm[cat.key] as Array<{ path: string; size: number }>;
+        if (files.length === 0) continue;
 
-            const displayFiles = files.slice(0, DISPLAY.MAX_FILES_DISPLAY);
-            for (const file of displayFiles) {
-                const relativePath = formatRelativePath(file.path, baseDir);
-                const size = formatFileSize(file.size);
-                console.log(`   ${chalk.gray('•')} ${relativePath} ${chalk.dim(`(${size})`)}`);
-            }
+        lines.push(cat.color.bold(`${cat.icon} ${cat.label}:`));
 
-            if (files.length > DISPLAY.MAX_FILES_DISPLAY) {
-                console.log(chalk.dim(`   ... and ${files.length - DISPLAY.MAX_FILES_DISPLAY} more files`));
-            }
-            console.log('');
+        const displayFiles = files.slice(0, vm.maxFilesDisplay);
+        for (const file of displayFiles) {
+            const relativePath = formatRelativePath(file.path, vm.baseDir);
+            const size = formatFileSize(file.size);
+            lines.push(`   ${chalk.gray('•')} ${relativePath} ${chalk.dim(`(${size})`)}`);
         }
+
+        if (files.length > vm.maxFilesDisplay) {
+            lines.push(chalk.dim(`   ... and ${files.length - vm.maxFilesDisplay} more files`));
+        }
+        lines.push('');
     }
+    return lines;
 }
 
 /**
- * Display next steps hint
+ * Format next-steps hint.
  */
-function displayNextSteps(): void {
-    console.log(chalk.cyan.bold('💡 Next Steps:'));
-    console.log(chalk.gray('   • Use `mindy-cli analyze <file>` to analyze a specific file'));
-    console.log(chalk.gray('   • Use `mindy-cli analyze --all` to analyze all detected files'));
-    console.log('');
+export function formatScanNextSteps(): string[] {
+    return [
+        chalk.cyan.bold('💡 Next Steps:'),
+        chalk.gray('   • Use `mindy-cli analyze <file>` to analyze a specific file'),
+        chalk.gray('   • Use `mindy-cli analyze --all` to analyze all detected files'),
+        '',
+    ];
+}
+
+/**
+ * Format entire scan result as lines. Pure — no I/O.
+ */
+export function formatScanResult(vm: ScanResultVM): string[] {
+    return [
+        '',
+        chalk.bold.underline('📁 Scan Results'),
+        '',
+        ...formatProjectInfo(vm),
+        ...formatScanSummary(vm),
+        ...formatScanFileList(vm),
+        ...formatScanNextSteps(),
+    ];
+}
+
+// ─── Display (thin I/O wrapper) ────────────────────────────────────────────
+
+/**
+ * Display full scan result to stdout.
+ */
+export function displayScanResult(vm: ScanResultVM): void {
+    for (const line of formatScanResult(vm)) {
+        console.log(line);
+    }
 }

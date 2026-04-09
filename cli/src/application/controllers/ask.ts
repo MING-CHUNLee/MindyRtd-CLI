@@ -5,7 +5,8 @@ import ora, { Ora } from 'ora';
 import { LLMController } from '../../infrastructure/api';
 import { SessionRepository } from '../../infrastructure/persistence/session-repository';
 import { ConversationSession } from '../../domain/entities/conversation-session';
-import { ContextStatusBar } from '../../presentation/views/context-status-bar';
+import { displayStatusBar } from '../../presentation/views/context-status-bar';
+import { getSettings } from '../../infrastructure/config/settings';
 import { HistorySummarizer } from '../../application/services/history-summarizer';
 import { ToolRegistry } from '../../application/orchestration/tool-registry';
 import { FileScanTool } from '../../application/tools/file-scan-tool';
@@ -106,8 +107,18 @@ export async function executeAskCommand(
     session.addTurn(question, result.content, result.usage);
     await repo.save(session);
 
-    const statusBar = new ContextStatusBar();
-    statusBar.render(session);
+    // Map domain session → StatusBarVM (controller responsibility)
+    const settings = getSettings();
+    displayStatusBar(
+        {
+            model:        session.model,
+            usagePercent: session.tokenBudget.usagePercent,
+            health:       session.tokenBudget.health,
+            totalCostUSD: session.totalCostUSD,
+            turnCount:    session.turnCount,
+        },
+        { items: settings.statusBar.items },
+    );
 }
 
 // ── Event → terminal renderer ─────────────────────────────────────────────────

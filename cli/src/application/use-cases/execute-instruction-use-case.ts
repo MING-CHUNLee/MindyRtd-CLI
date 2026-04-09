@@ -154,6 +154,9 @@ export class ExecuteInstructionUseCase {
                     action: step.action,
                     observation: step.observation,
                 });
+                if (step.action && step.toolResultData !== undefined) {
+                    this.emitToolResult(step.action.tool, step.toolResultData);
+                }
             }
 
             return { orchResult, baseRequest };
@@ -233,6 +236,19 @@ export class ExecuteInstructionUseCase {
 
         this.deps.emit('phase_end', { phase: 'review', success: true });
         return appliedFiles;
+    }
+
+    private emitToolResult(toolName: string, data: unknown): void {
+        const eventMap: Record<string, string> = {
+            file_scan:    'tool_result_scan',
+            library_scan: 'tool_result_library',
+            r_exec:       'tool_result_r_exec',
+            r_install:    'tool_result_r_install',
+        };
+        const eventType = eventMap[toolName];
+        if (eventType) {
+            this.deps.emit(eventType, { data });
+        }
     }
 
     /** Format all registered tool schemas into the plain-text list injected into the system prompt. */

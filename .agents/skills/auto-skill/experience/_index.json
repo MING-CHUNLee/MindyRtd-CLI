@@ -23,6 +23,12 @@
       "file": "skill-ink-tui-repl.md",
       "summary": "Ink TUI 互動式 REPL：ESM/CJS 互通、Windows 路徑、Event-driven AgentService、狀態機設計",
       "keywords": ["ink", "tui", "repl", "esm", "cjs", "interop", "windows", "agent-service", "state-machine", "dynamic-import"]
+    },
+    {
+      "skill-id": "presentation-layer",
+      "file": "skill-presentation-layer.md",
+      "summary": "CLI Presentation Layer 完整重構：View Model 建立、dependency violation 修復、format/IO 分離、Event Mapper 抽取、App.tsx 瘦身、SKILL.md CLI 化",
+      "keywords": ["presentation-layer", "view-model", "dependency-violation", "format-io-separation", "event-mapper", "god-component", "clean-architecture", "CLI", "SKILL.md", "refactor"]
     }
   ]
 }

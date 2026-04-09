@@ -1,18 +1,6 @@
 # Ignore cluade local setting
 .claude/
 
-# Ignore all markdown files
-*.md
-
-# Except markdown files in skills/code-review/
-!skills/**/*.md
-
-!plan/**/*.md
-
-!.agents/**/*.md
-
-# Except docs in root docs/
-!docs/**/*.md
 
 # Except README.md in root docs/
 !README.md

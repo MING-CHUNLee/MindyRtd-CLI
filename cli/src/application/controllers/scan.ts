@@ -59,7 +59,20 @@ async function executeScanCommand(options: ScanCommandOptions): Promise<void> {
         if (options.json) {
             console.log(JSON.stringify(result, null, 2));
         } else {
-            displayScanResult(result, options.directory);
+            // Map domain ScanResult → Presentation ScanResultVM (controller responsibility)
+            displayScanResult({
+                rScripts:   result.files.rScripts,
+                rMarkdown:  result.files.rMarkdown,
+                rData:      result.files.rData,
+                rProject:   result.files.rProject,
+                dataFiles:  result.files.dataFiles,
+                documents:  result.files.documents,
+                totalFiles: result.totalFiles,
+                projectName: result.projectInfo?.name,
+                projectPath: result.projectInfo?.path,
+                baseDir:    options.directory,
+                maxFilesDisplay: 10,
+            });
         }
     } catch (error) {
         spinner.fail(chalk.red('Scan failed'));

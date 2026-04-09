@@ -49,6 +49,13 @@ export class RExecTool implements AgentTool {
 
         return {
             content,
+            data: {
+                command: code,
+                stdout: stdout.trim(),
+                stderr: stderr.trim(),
+                exitCode: 0,
+                success: true,
+            },
             isError: false,
             estimatedTokens: Math.ceil(content.length / 4),
         };

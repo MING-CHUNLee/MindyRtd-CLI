@@ -5,6 +5,8 @@
  * `mindy-cli agent "instruction"` one-shot usage.
  *
  * All business logic lives in AgentService.
+ * This controller is responsible for mapping domain → View Models before
+ * handing off to Presentation layer functions.
  */
 
 import { Command } from 'commander';
@@ -13,7 +15,8 @@ import ora, { Ora } from 'ora';
 import readline from 'readline';
 
 import { AgentService, AgentEvent, ProposedEdit } from '../facade/agent-service';
-import { ContextStatusBar } from '../../presentation/views/context-status-bar';
+import { displayStatusBar } from '../../presentation/views/context-status-bar';
+import { getSettings } from '../../infrastructure/config/settings';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -54,7 +57,6 @@ async function executeAgentCommand(
     instruction: string,
     options: AgentOptions,
 ): Promise<void> {
-    const statusBar = new ContextStatusBar();
     let spinner: Ora | null = null;
     // Forward reference so the event handler can access mode after service is created
     let serviceRef: AgentService | undefined;
@@ -156,8 +158,29 @@ async function executeAgentCommand(
 
     await service.executeInstruction(instruction);
 
-    // Render final status bar (pass mode so it shows as prefix when active)
-    statusBar.render(service.getSession(), service.getMode());
+    // Build VM + config from domain session, then hand off to pure presentation function.
+    // This controller owns the mapping: domain → StatusBarVM (Clean Architecture).
+    const session  = service.getSession();
+    const mode     = service.getMode();
+    const settings = getSettings();
+
+    displayStatusBar(
+        {
+            model:              session.model,
+            usagePercent:       session.tokenBudget.usagePercent,
+            health:             session.tokenBudget.health,
+            totalCostUSD:       session.totalCostUSD,
+            turnCount:          session.turnCount,
+            requestsPerMinute:  session.requestsPerMinute,
+            lastTokensPerSecond: session.lastTokensPerSecond,
+            lastResponseTimeMs: session.lastResponseTimeMs,
+            elapsedMs:          session.elapsedMs,
+        },
+        {
+            items:        settings.statusBar.items,
+            workflowMode: mode,
+        },
+    );
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

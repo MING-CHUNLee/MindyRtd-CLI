@@ -4,6 +4,14 @@
  * Extended message types for the interactive REPL TUI.
  */
 
+import {
+    ScanResultVM,
+    LibraryScanResultVM,
+    ContextDisplayVM,
+    RExecResultVM,
+    RInstallResultVM,
+} from '../view-models/index.js';
+
 export type MessageType =
     | 'user'
     | 'assistant'
@@ -12,13 +20,33 @@ export type MessageType =
     | 'observation'
     | 'diff'
     | 'status'
-    | 'error';
+    | 'error'
+    | 'tool_result';
+
+/**
+ * Identifies which Ink component should render a tool_result message.
+ */
+export type ToolResultRenderer = 'scan' | 'library' | 'context' | 'r_exec' | 'r_install';
+
+/**
+ * Union of all structured VMs that can appear in a tool_result message.
+ */
+export type ToolResultVM =
+    | ScanResultVM
+    | LibraryScanResultVM
+    | ContextDisplayVM
+    | RExecResultVM
+    | RInstallResultVM;
 
 export interface TUIMessage {
     id: string;
     type: MessageType;
     content: string;
     timestamp: Date;
+    /** Set when type === 'tool_result'. Selects the Ink component in ChatHistory. */
+    renderer?: ToolResultRenderer;
+    /** Structured VM payload — only present when type === 'tool_result'. */
+    vm?: ToolResultVM;
     metadata?: {
         toolName?: string;
         filePath?: string;

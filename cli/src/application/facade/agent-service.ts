@@ -32,6 +32,7 @@ import { PdfReadTool } from '../tools/pdf-read-tool';
 import { RExecTool } from '../tools/r-exec-tool';
 import { RInstallTool } from '../tools/r-install-tool';
 import { RRenderTool } from '../tools/r-render-tool';
+import { LibraryScanTool } from '../tools/library-scan-tool';
 import { RScriptRunner } from '../../infrastructure/r-adapter/r-script-runner';
 import { HistorySummarizer } from '../services/history-summarizer';
 import { IntentRouter, Intent } from '../services/intent-router';
@@ -179,6 +180,7 @@ export class AgentService {
         this.registry.register(new RExecTool(rRunner));
         this.registry.register(new RInstallTool());
         this.registry.register(new RRenderTool(fs, rRunner));
+        this.registry.register(new LibraryScanTool());
 
         // Cast to the wider string type expected by use cases (safe: use cases only
         // call emit with valid AgentEventType literals at runtime).

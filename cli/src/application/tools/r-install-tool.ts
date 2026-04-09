@@ -51,10 +51,16 @@ export class RInstallTool implements AgentTool {
 
         const { stdout, stderr } = await execRscriptCode(code);
         const combined = [stdout.trim(), stderr.trim()].filter(Boolean).join('\n');
+        const content = combined || '(no output)';
         return {
-            content: combined || '(no output)',
+            content,
+            data: {
+                packageName: pkgList.join(', '),
+                success: true,
+                message: content,
+            },
             isError: false,
-            estimatedTokens: Math.ceil(combined.length / 4),
+            estimatedTokens: Math.ceil(content.length / 4),
         };
     }
 }

@@ -60,7 +60,20 @@ async function executeLibraryCommand(options: LibraryCommandOptions): Promise<vo
         if (options.json) {
             console.log(JSON.stringify(result, null, 2));
         } else {
-            displayLibraryResult(result);
+            // Map domain LibraryScanResult → Presentation LibraryScanResultVM (controller responsibility)
+            displayLibraryResult({
+                rVersion:       result.rVersion,
+                rHome:          result.rHome,
+                libraryPaths:   result.libraryPaths,
+                totalLibraries: result.totalLibraries,
+                basePackages:   result.basePackages,
+                userPackages:   result.userPackages,
+                libraries:      result.libraries.map(lib => ({
+                    name:    lib.name,
+                    version: lib.version,
+                    isBase:  lib.isBase,
+                })),
+            });
         }
     } catch (error) {
         spinner.fail(chalk.red('Library scan failed'));

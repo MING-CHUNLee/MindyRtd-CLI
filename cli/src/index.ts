@@ -38,7 +38,6 @@ import { editCommand } from './application/controllers/edit';
 import { rollbackCommand } from './application/controllers/rollback';
 import { knowledgeCommand } from './application/controllers/knowledge';
 import { pluginsCommand } from './application/controllers/plugins';
-import { tuiCommand } from './application/controllers/tui';
 import { displayBanner } from './presentation/views/banner';
 import fs from 'fs';
 import path from 'path';
@@ -47,6 +46,25 @@ import path from 'path';
 const packageJsonPath = path.join(__dirname, '../package.json');
 const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
 const version = packageJson.version;
+
+async function launchTUI(): Promise<void> {
+    const { spawn } = await import('child_process');
+    const possiblePaths = [
+        path.join(__dirname, '..', 'src', 'presentation', 'tui', 'index.tsx'),
+        path.join(process.cwd(), 'src', 'presentation', 'tui', 'index.tsx'),
+        path.join(process.cwd(), 'cli', 'src', 'presentation', 'tui', 'index.tsx'),
+    ];
+    const tuiPath = possiblePaths.find(p => fs.existsSync(p)) ?? null;
+    if (!tuiPath) {
+        console.error('TUI source files not found. Searched in:');
+        possiblePaths.forEach(p => console.error(`   - ${p}`));
+        console.log('\nUse: mindy-cli agent "your instruction"');
+        return;
+    }
+    const tsx = spawn(`npx tsx "${tuiPath}"`, [], { stdio: 'inherit', shell: true, cwd: process.cwd() });
+    tsx.on('error', (error) => { console.error('Error starting TUI:', error); });
+    tsx.on('exit', (code) => { process.exit(code || 0); });
+}
 
 const program = new Command();
 
@@ -72,60 +90,11 @@ program.addCommand(editCommand);
 program.addCommand(rollbackCommand);
 program.addCommand(knowledgeCommand);
 program.addCommand(pluginsCommand);
-program.addCommand(tuiCommand);
 
 // ── Default action: Launch interactive TUI REPL ──────────────────────────────
 program.action(async () => {
     console.log('\n🚀 Launching interactive mode...\n');
-
-    // The TUI uses Ink (ESM-only) + JSX, so it must run through tsx.
-    // We spawn tsx to execute the TUI source file directly.
-    try {
-        const { spawn } = await import('child_process');
-
-        // Resolve the TUI entry point (source .tsx, not compiled .js)
-        const possiblePaths = [
-            path.join(__dirname, '..', 'src', 'presentation', 'tui', 'index.tsx'),
-            path.join(process.cwd(), 'src', 'presentation', 'tui', 'index.tsx'),
-            path.join(process.cwd(), 'cli', 'src', 'presentation', 'tui', 'index.tsx'),
-        ];
-
-        let tuiPath: string | null = null;
-        for (const testPath of possiblePaths) {
-            if (fs.existsSync(testPath)) {
-                tuiPath = testPath;
-                break;
-            }
-        }
-
-        if (!tuiPath) {
-            console.error('TUI source files not found.');
-            console.log('\nSearched in:');
-            possiblePaths.forEach(p => console.log(`   - ${p}`));
-            console.log('\nUse: mindy-cli agent "your instruction"');
-            return;
-        }
-
-        const command = `npx tsx "${tuiPath}"`;
-        const tsx = spawn(command, [], {
-            stdio: 'inherit',
-            shell: true,
-            cwd: process.cwd(),
-        });
-
-        tsx.on('error', (error) => {
-            console.error('Error starting TUI:', error);
-            program.help();
-        });
-
-        tsx.on('exit', (code) => {
-            process.exit(code || 0);
-        });
-    } catch (error) {
-        console.error('Failed to launch interactive TUI:', error instanceof Error ? error.message : error);
-        console.log('\nUse: mindy-cli agent "your instruction"');
-        program.help();
-    }
+    await launchTUI();
 });
 
 program.parse(process.argv);

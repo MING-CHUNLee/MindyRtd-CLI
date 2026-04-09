@@ -32,6 +32,8 @@ export interface ReActStep {
     thought?: string;
     action?: { tool: string; input: Record<string, unknown> };
     observation?: string;
+    /** Raw structured data from the tool (not sent to LLM — used by event-mapper for rich display). */
+    toolResultData?: unknown;
     answer?: string;
     isError?: boolean;
 }
@@ -145,6 +147,9 @@ export class ReActLoop {
                 );
                 const observation = toolResult.content;
                 stepRecord.observation = observation;
+                if (toolResult.data !== undefined) {
+                    stepRecord.toolResultData = toolResult.data;
+                }
 
                 // Track consecutive errors — abort if stuck in a failure loop
                 if (toolResult.isError) {

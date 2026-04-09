@@ -1,104 +1,138 @@
 /**
- * Presentation View: ContextStatusBar
+ * Views: Context Status Bar
  *
  * Single-line configurable status display after each agent turn.
- * Default: model · context bar % · req/min
- * Users can customize via .mindy/settings.json
+ * Default: mode · model · context bar % · turn · cost
+ *
+ * Design rules (Presentation Layer SKILL.md):
+ *   - `formatStatusBar()` is PURE — returns string[] only, no console.log.
+ *   - `displayStatusBar()` is a thin I/O wrapper.
+ *   - No imports from domain/, application/, or infrastructure/.
+ *   - Accepts StatusBarVM + StatusBarDisplayConfig (Presentation View Models only).
+ *   - Caller (controller) is responsible for reading settings and passing them in.
  */
 
 import chalk from 'chalk';
-import { ConversationSession } from '../../domain/entities/conversation-session';
-import { ContextHealth } from '../../domain/values/token-budget';
-import { getSettings, StatusBarItem, WorkflowMode } from '../../infrastructure/config/settings';
+import { StatusBarVM, StatusBarDisplayConfig, StatusBarItemKey, ContextHealthVM } from '../view-models';
 import { formatDuration } from '../../shared/utils/format';
 
 const BAR_WIDTH = 20;
 
-type ItemRenderer = (session: ConversationSession, mode?: WorkflowMode) => string | undefined;
+// ─── Item Renderers — pure functions ──────────────────────────────────────
 
-const RENDERERS: Record<StatusBarItem, ItemRenderer> = {
-    mode: (_s, mode) => (mode && mode !== 'default') ? chalk.bold.cyan(`[${mode}]`) : undefined,
+type ItemRenderer = (vm: StatusBarVM, config: StatusBarDisplayConfig) => string | undefined;
 
-    model: (s) => chalk.white(s.model),
+const RENDERERS: Record<StatusBarItemKey, ItemRenderer> = {
+    mode: (_vm, config) =>
+        config.workflowMode && config.workflowMode !== 'default'
+            ? chalk.bold.cyan(`[${config.workflowMode}]`)
+            : undefined,
 
-    context: (s) => {
-        const budget = s.tokenBudget;
-        const bar = makeBar(budget.usagePercent, budget.health);
-        const pct = colorByHealth(`${budget.usagePercent}%`, budget.health);
+    model: (vm) => chalk.white(vm.model),
+
+    context: (vm) => {
+        const bar = makeBar(vm.usagePercent, vm.health);
+        const pct = colorByHealth(`${vm.usagePercent}%`, vm.health);
         return `${bar} ${pct}`;
     },
 
-    rpm: (s) => {
-        const rpm = s.requestsPerMinute;
-        return chalk.dim(`${rpm} req/min`);
-    },
+    rpm: (vm) =>
+        vm.requestsPerMinute !== undefined
+            ? chalk.dim(`${vm.requestsPerMinute} req/min`)
+            : undefined,
 
-    cost: (s) => chalk.dim(`~$${s.totalCostUSD.toFixed(4)}`),
+    cost: (vm) => chalk.dim(`~$${vm.totalCostUSD.toFixed(4)}`),
 
-    turn: (s) => chalk.dim(`turn ${s.turnCount}`),
+    turn: (vm) => chalk.dim(`turn ${vm.turnCount}`),
 
-    duration: (s) => chalk.dim(formatDuration(s.elapsedMs)),
+    duration: (vm) =>
+        vm.elapsedMs !== undefined
+            ? chalk.dim(formatDuration(vm.elapsedMs))
+            : undefined,
 
-    tps: (s) => {
-        const tps = s.lastTokensPerSecond;
-        return tps !== undefined ? chalk.dim(`${tps} tok/s`) : undefined;
-    },
+    tps: (vm) =>
+        vm.lastTokensPerSecond !== undefined
+            ? chalk.dim(`${vm.lastTokensPerSecond} tok/s`)
+            : undefined,
 
-    latency: (s) => {
-        const ms = s.lastResponseTimeMs;
-        return ms !== undefined ? chalk.dim(formatDuration(ms)) : undefined;
-    },
+    latency: (vm) =>
+        vm.lastResponseTimeMs !== undefined
+            ? chalk.dim(formatDuration(vm.lastResponseTimeMs))
+            : undefined,
 };
 
-export class ContextStatusBar {
-    render(session: ConversationSession, mode?: WorkflowMode): void {
-        const settings = getSettings();
-        const activeMode = mode ?? settings.workflowMode;
-        const parts: string[] = [];
+// ─── Pure Formatters ───────────────────────────────────────────────────────
 
-        for (const key of settings.statusBar.items) {
-            const renderer = RENDERERS[key];
-            if (!renderer) continue;
-            const text = renderer(session, activeMode);
-            if (text) parts.push(text);
-        }
+/**
+ * Format the status bar line + optional health warning. Pure — returns string[].
+ */
+export function formatStatusBar(vm: StatusBarVM, config: StatusBarDisplayConfig): string[] {
+    const parts: string[] = [];
 
-        const line = parts.join(chalk.dim(' · '));
-        const border = chalk.dim('──');
-
-        console.log('');
-        console.log(`${border} ${line} ${border}`);
-        this.renderHealthWarning(session.tokenBudget.health, session.tokenBudget.usagePercent);
-        console.log('');
+    for (const key of config.items) {
+        const renderer = RENDERERS[key];
+        if (!renderer) continue;
+        const text = renderer(vm, config);
+        if (text) parts.push(text);
     }
 
-    private renderHealthWarning(health: ContextHealth, percent: number): void {
-        switch (health) {
-            case 'warning':
-                console.log(chalk.yellow(`   Context at ${percent}% — consider --new for a fresh session soon`));
-                break;
-            case 'critical':
-                console.log(chalk.red(`   Context critical (${percent}%) — agent may lose early context`));
-                break;
-            case 'overflow_risk':
-                console.log(chalk.bold.red(`   Context overflow risk (${percent}%) — run with --new to start fresh`));
-                break;
-        }
+    const line   = parts.join(chalk.dim(' · '));
+    const border = chalk.dim('──');
+
+    const lines: string[] = [
+        '',
+        `${border} ${line} ${border}`,
+    ];
+
+    const warning = formatHealthWarning(vm.health, vm.usagePercent);
+    if (warning) lines.push(warning);
+
+    lines.push('');
+    return lines;
+}
+
+/**
+ * Format a health warning message. Returns undefined when no warning needed.
+ */
+export function formatHealthWarning(health: ContextHealthVM, percent: number): string | undefined {
+    switch (health) {
+        case 'warning':
+            return chalk.yellow(`   Context at ${percent}% — consider --new for a fresh session soon`);
+        case 'critical':
+            return chalk.red(`   Context critical (${percent}%) — agent may lose early context`);
+        case 'overflow_risk':
+            return chalk.bold.red(`   Context overflow risk (${percent}%) — run with --new to start fresh`);
+        default:
+            return undefined;
     }
 }
 
-function makeBar(percent: number, health: ContextHealth): string {
+// ─── Display (thin I/O wrapper) ────────────────────────────────────────────
+
+/**
+ * Display the status bar to stdout.
+ * Caller must build StatusBarVM and StatusBarDisplayConfig from settings/session.
+ */
+export function displayStatusBar(vm: StatusBarVM, config: StatusBarDisplayConfig): void {
+    for (const line of formatStatusBar(vm, config)) {
+        console.log(line);
+    }
+}
+
+// ─── Helpers ───────────────────────────────────────────────────────────────
+
+function makeBar(percent: number, health: ContextHealthVM): string {
     const filled = Math.round((percent / 100) * BAR_WIDTH);
-    const empty = BAR_WIDTH - filled;
-    const raw = '\u2588'.repeat(filled) + '\u2591'.repeat(empty);
+    const empty  = BAR_WIDTH - filled;
+    const raw    = '\u2588'.repeat(filled) + '\u2591'.repeat(empty);
     return colorByHealth(raw, health);
 }
 
-function colorByHealth(text: string, health: ContextHealth): string {
+function colorByHealth(text: string, health: ContextHealthVM): string {
     switch (health) {
-        case 'healthy': return chalk.green(text);
-        case 'warning': return chalk.yellow(text);
-        case 'critical': return chalk.red(text);
+        case 'healthy':       return chalk.green(text);
+        case 'warning':       return chalk.yellow(text);
+        case 'critical':      return chalk.red(text);
         case 'overflow_risk': return chalk.bold.red(text);
     }
 }
