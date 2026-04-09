@@ -104,8 +104,8 @@ const App: React.FC<AppProps> = ({ config }) => {
 
     useEffect(() => {
         const initAgent = async () => {
-            const mod = await import('../../application/facade/agent-service.js');
-            const AgentServiceClass = mod.AgentService;
+            const mod = await import('../../application/controllers/agent-controller.js');
+            const AgentServiceClass = mod.AgentController;
             const service = new AgentServiceClass(
                 { directory: config?.directory ?? process.cwd() },
                 handleAgentEvent,

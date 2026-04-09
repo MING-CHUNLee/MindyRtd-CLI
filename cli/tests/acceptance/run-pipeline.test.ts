@@ -42,7 +42,7 @@ import { ExecuteRunUseCase } from '../../src/application/use-cases/execute-run-u
 import { ToolRegistry } from '../../src/application/orchestration/tool-registry';
 import { FileScanTool } from '../../src/application/tools/file-scan-tool';
 import { DirectoryScanner } from '../../src/infrastructure/filesystem/directory-scanner';
-import { LLMController } from '../../src/infrastructure/api/llm-controller';
+import { LLMController } from '../../src/infrastructure/api/llm';
 import type { AgentTool, ToolResult } from '../../src/domain/interfaces/agent-tool';
 
 // ── Record / replay mode setup ────────────────────────────────────────────────

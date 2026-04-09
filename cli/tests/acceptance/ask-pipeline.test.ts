@@ -39,7 +39,7 @@ import { RecordReplayLLM } from './helpers/record-replay-llm';
 import type { CassetteEntry } from './helpers/record-replay-llm';
 import { TestWorkspace } from './helpers/test-workspace';
 import { createHarness } from './helpers/test-harness';
-import { LLMController } from '../../src/infrastructure/api/llm-controller';
+import { LLMController } from '../../src/infrastructure/api/llm';
 
 // ── Record / replay mode setup ────────────────────────────────────────────────
 

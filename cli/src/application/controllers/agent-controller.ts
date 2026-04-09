@@ -1,15 +1,15 @@
 /**
- * Service: AgentService  (facade)
+ * Controller: AgentController
  *
  * Thin coordinator that manages session lifecycle, routes instructions to the
  * appropriate Use Case, and persists turns.  All I/O is event-driven — no
  * console.log, no readline, no ora.
  *
- * The TUI (or any other UI) subscribes to events and provides an approval
- * callback for the human-in-the-loop safety gate.
+ * The CLI adapter (or any other UI) subscribes to events and provides an
+ * approval callback for the human-in-the-loop safety gate.
  *
  * Dependencies (LLMController, SessionRepository, DiffEngine) are injected
- * via AgentServiceDeps for testability. If not provided, defaults are created.
+ * via AgentControllerDeps for testability. If not provided, defaults are created.
  */
 
 import path from 'path';
@@ -48,6 +48,7 @@ import { ExecuteInstructionUseCase } from '../use-cases/execute-instruction-use-
 import { ExecuteRunUseCase } from '../use-cases/execute-run-use-case';
 import { ExecuteSolverUseCase } from '../use-cases/execute-solver-use-case';
 import { ExecuteTutorUseCase } from '../use-cases/execute-tutor-use-case';
+import { ExecuteInstallUseCase } from '../use-cases/execute-install-use-case';
 import { WorkflowMode } from '../../infrastructure/config/settings';
 
 // ── Event Types (discriminated union) ────────────────────────────────────────
@@ -66,7 +67,11 @@ export type AgentEvent =
     | { type: 'edit_rejected';     data: { path: string } }
     | { type: 'turn_saved';        data: { turnCount: number; usage: unknown; sessionId: string; model: string; usagePercent: number; health: string; totalCostUSD: number } }
     | { type: 'error';             data: { message: string; phase?: string } }
-    | { type: 'status_update';     data: { plugins?: string[]; warning?: string; knowledge?: string[] } };
+    | { type: 'status_update';     data: { plugins?: string[]; warning?: string; knowledge?: string[] } }
+    | { type: 'tool_result_scan';     data: { data: unknown } }
+    | { type: 'tool_result_library';  data: { data: unknown } }
+    | { type: 'tool_result_r_exec';   data: { data: unknown } }
+    | { type: 'tool_result_r_install'; data: { data: unknown } };
 
 /** Convenience alias for the union of all valid event type strings. */
 export type AgentEventType = AgentEvent['type'];
@@ -81,14 +86,14 @@ export interface ProposedEdit {
 export type ApprovalCallback = (edit: ProposedEdit) => Promise<boolean>;
 export type EventCallback = (event: AgentEvent) => void;
 
-export interface AgentServiceOptions {
+export interface AgentControllerOptions {
     directory: string;
     sessionId?: string;
     forceNew?: boolean;
 }
 
 /** Injectable dependencies — omit any to use the default implementation. */
-export interface AgentServiceDeps {
+export interface AgentControllerDeps {
     llm: LLMController;
     repo: SessionRepository;
     diffEngine: DiffEngine;
@@ -109,20 +114,22 @@ export interface AgentServiceDeps {
     /** Optional — for testability. */
     tutorGuideUseCase?: ExecuteTutorUseCase;
     /** Optional — for testability. */
+    installUseCase?: ExecuteInstallUseCase;
+    /** Optional — for testability. */
     modeManager?: ModeManager;
 }
 
-// ── AgentService ─────────────────────────────────────────────────────────────
+// ── AgentController ───────────────────────────────────────────────────────────
 
-export class AgentService {
+export class AgentController {
     private _session?: ConversationSession;
     private previousSessionSummary = '';
     private readonly llm: LLMController;
     private readonly repo: SessionRepository;
     private readonly registry: ToolRegistry;
     private readonly diffEngine: DiffEngine;
-    private readonly onEvent: EventCallback;
-    private readonly onApproval: ApprovalCallback;
+    private readonly viewAdapter: EventCallback;
+    private readonly approvalGate: ApprovalCallback;
     private readonly directory: string;
 
     private readonly summarizer: HistorySummarizer;
@@ -134,24 +141,25 @@ export class AgentService {
     private readonly solverUseCase: ExecuteSolverUseCase;
     private readonly tutorSocraticUseCase: ExecuteTutorUseCase;
     private readonly tutorGuideUseCase: ExecuteTutorUseCase;
+    private readonly installUseCase: ExecuteInstallUseCase;
     private readonly modeManager: ModeManager;
     private readonly slashRouter: SlashCommandRouter;
 
     /** Throws if initialize() has not been called yet. */
     private get session(): ConversationSession {
-        if (!this._session) throw new Error('AgentService not initialized — call initialize() first');
+        if (!this._session) throw new Error('AgentController not initialized — call initialize() first');
         return this._session;
     }
 
     constructor(
-        options: AgentServiceOptions,
-        onEvent: EventCallback,
-        onApproval: ApprovalCallback,
-        deps?: Partial<AgentServiceDeps>,
+        options: AgentControllerOptions,
+        viewAdapter: EventCallback,
+        approvalGate: ApprovalCallback,
+        deps?: Partial<AgentControllerDeps>,
     ) {
         this.directory = path.resolve(options.directory);
-        this.onEvent = onEvent;
-        this.onApproval = onApproval;
+        this.viewAdapter = viewAdapter;
+        this.approvalGate = approvalGate;
         this.llm = deps?.llm ?? LLMController.fromEnv();
         this.repo = deps?.repo ?? new SessionRepository();
         this.diffEngine = deps?.diffEngine ?? new DiffEngine();
@@ -161,9 +169,9 @@ export class AgentService {
 
         // Sub-services (IntentRouter, use cases) use a broad (type: string, data: Record) emit
         // signature. Create a real bridge function rather than a cast so events are correctly
-        // forwarded as AgentEvent objects to onEvent.
+        // forwarded as AgentEvent objects to viewAdapter.
         const emit = (type: string, data: Record<string, unknown>): void => {
-            this.onEvent({ type, data } as AgentEvent);
+            this.viewAdapter({ type, data } as AgentEvent);
         };
         this.intentRouter = new IntentRouter(this.llm, emit);
 
@@ -196,7 +204,7 @@ export class AgentService {
             registry: this.registry,
             diffEngine: this.diffEngine,
             directory: this.directory,
-            onApproval: this.onApproval,
+            onApproval: this.approvalGate,
             stagingService,
             emit,
         });
@@ -213,7 +221,7 @@ export class AgentService {
             registry: this.registry,
             diffEngine: this.diffEngine,
             directory: this.directory,
-            onApproval: this.onApproval,
+            onApproval: this.approvalGate,
             stagingService,
             emit,
         });
@@ -227,6 +235,11 @@ export class AgentService {
             { llm: this.llm, registry: this.registry, directory: this.directory, emit },
             'guide',
         );
+
+        this.installUseCase = deps?.installUseCase ?? new ExecuteInstallUseCase({
+            registry: this.registry,
+            emit,
+        });
 
         this.modeManager = deps?.modeManager ?? new ModeManager();
 
@@ -290,6 +303,16 @@ export class AgentService {
         return this.modeManager.getMode();
     }
 
+    /** Execute a question through the ask pipeline (skips intent classification) */
+    async executeAsk(instruction: string): Promise<void> {
+        const history = await this.prepareHistory();
+        return this.executeWithMode(
+            instruction,
+            () => this.askUseCase.execute(instruction, history, this.previousSessionSummary),
+            result => result.content,
+        );
+    }
+
     /** Execute one instruction through the full agent pipeline */
     async executeInstruction(instruction: string): Promise<void> {
         const history = await this.prepareHistory();
@@ -341,8 +364,11 @@ export class AgentService {
         }
 
         if (intent === 'install') {
-            await this.executeInstall(instruction);
-            return;
+            return this.executeWithMode(
+                instruction,
+                () => this.installUseCase.execute(instruction),
+                result => result.content,
+            );
         }
 
         let result;
@@ -398,42 +424,6 @@ export class AgentService {
         }
     }
 
-    /**
-     * Install intent: extract package names from the instruction, call r_install,
-     * emit the output, and persist the turn.
-     */
-    private async executeInstall(instruction: string): Promise<void> {
-        this.emit({ type: 'phase_start', data: { phase: 'install', description: 'Installing R packages' } });
-
-        const tool = this.registry.get('r_install');
-        if (!tool) {
-            this.emit({ type: 'error', data: { message: 'r_install tool not available' } });
-            return;
-        }
-
-        // Extract package names: look for word after "install"/"安裝", or fall back to full instruction
-        const match = instruction.match(/(?:install|安裝)\s+([\w.,\s]+)/i);
-        const packages = match ? match[1].replace(/\s+/g, ',') : instruction;
-
-        let result;
-        try {
-            result = await tool.execute({ packages });
-        } catch (error) {
-            this.emit({ type: 'error', data: {
-                message: error instanceof Error ? error.message : String(error),
-                phase: 'install',
-            } });
-            return;
-        }
-        this.emit({ type: 'phase_end', data: { phase: 'install', success: !result.isError } });
-        this.emit({ type: 'text_output', data: { content: result.content } });
-
-        const usage: TurnUsage = { inputTokens: 0, outputTokens: 0, cacheCreationTokens: 0, cacheReadTokens: 0 };
-        this.session.addTurn(instruction, result.content, usage);
-        await this.repo.save(this.session);
-        this.emitTurnSaved(usage);
-    }
-
     /** Handle slash commands — delegates to SlashCommandRouter */
     async handleSlashCommand(command: string): Promise<string> {
         return this.slashRouter.handle(command);
@@ -452,7 +442,7 @@ export class AgentService {
     }
 
     private emit(event: AgentEvent): void {
-        this.onEvent(event);
+        this.viewAdapter(event);
     }
 
     private emitTurnSaved(usage: TurnUsage): void {
@@ -469,3 +459,9 @@ export class AgentService {
     }
 
 }
+
+// ── Backward-compat re-exports ────────────────────────────────────────────────
+// Keep the old names available so any code that hasn't migrated yet still compiles.
+export { AgentController as AgentService };
+export type { AgentControllerOptions as AgentServiceOptions };
+export type { AgentControllerDeps as AgentServiceDeps };

@@ -7,11 +7,11 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
-    AgentService,
-    AgentServiceDeps,
+    AgentController as AgentService,
+    AgentControllerDeps as AgentServiceDeps,
     AgentEvent,
     ProposedEdit,
-} from '../../../src/application/facade/agent-service';
+} from '../../../src/application/controllers/agent-controller';
 import { LLMController } from '../../../src/infrastructure/api/llm-controller';
 import { SessionRepository } from '../../../src/infrastructure/persistence/session-repository';
 import { DiffEngine } from '../../../src/application/services/diff-engine';

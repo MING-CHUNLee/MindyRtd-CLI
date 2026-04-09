@@ -20,19 +20,10 @@ import {
     ScanResultVM, LibraryScanResultVM, RExecResultVM, RInstallResultVM,
 } from '../view-models/index.js';
 
-// ─── Local Types ──────────────────────────────────────────────────────────
-
-export interface AgentEvent {
-    type: string;
-    data: Record<string, unknown>;
-}
-
-export interface ProposedEdit {
-    path: string;
-    diff: string;
-    original: string;
-    proposed: string;
-}
+// Import the canonical types from the application layer for local use,
+// and re-export them so App.tsx can continue importing from this module.
+import type { AgentEvent, ProposedEdit } from '../../application/controllers/agent-controller.js';
+export type { AgentEvent, ProposedEdit };
 
 /**
  * Side-effecting state mutations needed by some events (diff review, streaming).
@@ -156,10 +147,10 @@ export function mapAgentEventToMessage(event: AgentEvent): MappedEvent {
 
         case 'status_update': {
             const parts: string[] = [];
-            if (event.data.plugins)   parts.push(`Plugins: ${(event.data.plugins as string[]).join(', ')}`);
-            if (event.data.knowledge) parts.push(`Knowledge: ${(event.data.knowledge as string[]).join(', ')}`);
+            if (event.data.warning)   parts.push(`⚠ ${event.data.warning}`);
+            if (event.data.plugins)   parts.push(`Plugins: ${event.data.plugins.join(', ')}`);
+            if (event.data.knowledge) parts.push(`Knowledge: ${event.data.knowledge.join(', ')}`);
             if (parts.length === 0)   return {};
-            // Emit first message; additional parts are rare — combine into one
             return { message: makeMessage('status', parts.join(' | ')) };
         }
 

@@ -27,14 +27,13 @@
  */
 
 import { Command } from 'commander';
-import { agentCommand } from './application/controllers/agent';
+import { agentCommand } from './presentation/cli/agent-cli-adapter';
 import { askCommand } from './application/controllers/ask';
 import { scanCommand } from './application/controllers/scan';
 import { libraryCommand } from './application/controllers/library';
 import { contextCommand } from './application/controllers/context';
 import { runCommand } from './application/controllers/run';
 import { installCommand } from './application/controllers/install';
-import { editCommand } from './application/controllers/edit';
 import { rollbackCommand } from './application/controllers/rollback';
 import { knowledgeCommand } from './application/controllers/knowledge';
 import { pluginsCommand } from './application/controllers/plugins';
@@ -86,7 +85,6 @@ program.addCommand(libraryCommand);
 program.addCommand(contextCommand);
 program.addCommand(runCommand);
 program.addCommand(installCommand);
-program.addCommand(editCommand);
 program.addCommand(rollbackCommand);
 program.addCommand(knowledgeCommand);
 program.addCommand(pluginsCommand);

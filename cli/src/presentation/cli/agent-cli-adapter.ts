@@ -1,12 +1,14 @@
 /**
- * Controller: agent (one-shot CLI command)
+ * Presentation: AgentCliAdapter (CLI adapter for one-shot agent command)
  *
- * Thin wrapper around AgentService for backward-compatible
- * `mindy-cli agent "instruction"` one-shot usage.
+ * Thin presentation layer that wires chalk/ora/readline event handlers
+ * to AgentController for the `mindy-cli agent "instruction"` one-shot usage.
  *
- * All business logic lives in AgentService.
- * This controller is responsible for mapping domain → View Models before
- * handing off to Presentation layer functions.
+ * Responsibilities:
+ * - Build onEvent handler (chalk, ora, console.log)
+ * - Build onApproval handler (readline)
+ * - Instantiate AgentController
+ * - Call displayStatusBar after completion
  */
 
 import { Command } from 'commander';
@@ -14,8 +16,8 @@ import chalk from 'chalk';
 import ora, { Ora } from 'ora';
 import readline from 'readline';
 
-import { AgentService, AgentEvent, ProposedEdit } from '../facade/agent-service';
-import { displayStatusBar } from '../../presentation/views/context-status-bar';
+import { AgentController, AgentEvent, ProposedEdit } from '../../application/controllers/agent-controller';
+import { displayStatusBar } from '../views/context-status-bar';
 import { getSettings } from '../../infrastructure/config/settings';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -58,11 +60,11 @@ async function executeAgentCommand(
     options: AgentOptions,
 ): Promise<void> {
     let spinner: Ora | null = null;
-    // Forward reference so the event handler can access mode after service is created
-    let serviceRef: AgentService | undefined;
+    // Forward reference so the event handler can access mode after controller is created
+    let controllerRef: AgentController | undefined;
 
     // Console-based event handler
-    const onEvent = (event: AgentEvent): void => {
+    const viewAdapter = (event: AgentEvent): void => {
         switch (event.type) {
             case 'session_loaded': {
                 const { sessionId, turnCount } = event.data as { sessionId: string; turnCount: number };
@@ -71,7 +73,7 @@ async function executeAgentCommand(
                 } else {
                     console.log(chalk.dim(`\n  New session ${(sessionId as string).slice(-6)}`));
                 }
-                const mode = serviceRef?.getMode();
+                const mode = controllerRef?.getMode();
                 if (mode && mode !== 'default') {
                     console.log(chalk.bold.cyan(`  [Mode: ${mode}]`));
                 }
@@ -140,28 +142,28 @@ async function executeAgentCommand(
     };
 
     // Console-based approval callback
-    const onApproval = async (edit: ProposedEdit): Promise<boolean> => {
+    const approvalGate = async (edit: ProposedEdit): Promise<boolean> => {
         return promptConfirm(`Apply changes to ${chalk.cyan(edit.path)}? [Y/n] `);
     };
 
-    const service = new AgentService(
+    const controller = new AgentController(
         { directory: options.directory },
-        onEvent,
-        onApproval,
+        viewAdapter,
+        approvalGate,
     );
-    serviceRef = service;
+    controllerRef = controller;
 
-    await service.initialize({
+    await controller.initialize({
         sessionId: options.session,
         forceNew: options.new,
     });
 
-    await service.executeInstruction(instruction);
+    await controller.executeInstruction(instruction);
 
     // Build VM + config from domain session, then hand off to pure presentation function.
-    // This controller owns the mapping: domain → StatusBarVM (Clean Architecture).
-    const session  = service.getSession();
-    const mode     = service.getMode();
+    // This adapter owns the mapping: domain → StatusBarVM (Clean Architecture).
+    const session  = controller.getSession();
+    const mode     = controller.getMode();
     const settings = getSettings();
 
     displayStatusBar(
