@@ -32,3 +32,21 @@ export interface LLMResponse {
     /** Response time in ms */
     responseTimeMs?: number;
 }
+
+// ── Native API response shapes ─────────────────────────────────────────────────
+// Exported so LlmMapper and tests can reference the raw wire types without
+// duplicating the definitions inside llm-gateway.ts.
+
+export interface OpenAIRawResponse {
+    choices: Array<{ message?: { content?: string } }>;
+    usage?: { prompt_tokens: number; completion_tokens: number; total_tokens: number };
+    model: string;
+    error?: { message?: string };
+}
+
+export interface AnthropicRawResponse {
+    content: Array<{ text?: string }>;
+    usage?: { input_tokens: number; output_tokens: number };
+    model: string;
+    error?: { message?: string };
+}

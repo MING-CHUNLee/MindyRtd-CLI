@@ -12,7 +12,7 @@
  * and use-case orchestration.
  */
 
-import { LLMController } from '../../infrastructure/api';
+import { LLMGateway } from '../../domain/interfaces/llm-gateway';
 import { INTENT_CLASSIFIER_SYSTEM_PROMPT } from '../prompts/intent-classifier';
 import { SessionMessage } from '../../shared/types/messages';
 
@@ -22,7 +22,7 @@ type EmitFn = (type: string, data: Record<string, unknown>) => void;
 
 export class IntentRouter {
     constructor(
-        private readonly llm: LLMController,
+        private readonly llm: LLMGateway,
         private readonly emit: EmitFn,
     ) {}
 

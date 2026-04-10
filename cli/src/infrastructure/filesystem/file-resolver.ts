@@ -14,8 +14,10 @@
  */
 
 import { resolve } from 'path';
-import { LLMController } from '../api/llm';
+import { LLMGateway } from '../../domain/interfaces/llm-gateway';
+import { LlmGateway } from '../api/llm/gateway/llm-gateway';
 import { FileFinder } from './file-finder';
+import { FILE_RELEVANCE_SYSTEM_PROMPT } from '../../application/prompts/file-ops';
 
 // ============================================
 // Types
@@ -40,11 +42,11 @@ export interface ResolvedFile {
 // ============================================
 
 export class FileResolver {
-    private llm: LLMController;
+    private llm: LLMGateway;
     private finder: FileFinder;
 
-    constructor(llm?: LLMController, finder?: FileFinder) {
-        this.llm = llm ?? LLMController.fromEnv();
+    constructor(llm?: LLMGateway, finder?: FileFinder) {
+        this.llm = llm ?? LlmGateway.fromEnv();
         this.finder = finder ?? new FileFinder();
     }
 
@@ -64,10 +66,21 @@ export class FileResolver {
         }
 
         // Step 2: Ask LLM which files are relevant
-        const { targets: targetFiles } = await this.llm.resolveFiles(
-            instruction,
-            previews.map(p => ({ path: p.path, content: p.preview })),
-        );
+        const fileList = previews.map(p => `- ${p.path}`).join('\n');
+        const response = await this.llm.sendPrompt({
+            systemPrompt: FILE_RELEVANCE_SYSTEM_PROMPT,
+            userMessage:
+                `Instruction: ${instruction}\n\nFiles:\n${fileList}\n\n` +
+                'Return a JSON array of relevant file paths.',
+        });
+
+        let targetFiles: string[] = [];
+        try {
+            const match = response.content.match(/\[[\s\S]*?\]/);
+            if (match) targetFiles = JSON.parse(match[0]) as string[];
+        } catch {
+            targetFiles = previews.slice(0, 5).map(p => p.path);
+        }
 
         // Step 3: Map back to absolute paths
         return targetFiles.map((relativePath) => ({

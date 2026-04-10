@@ -19,7 +19,7 @@
  */
 
 import { ConversationSession } from '../../domain/entities/conversation-session';
-import { LLMController } from '../../infrastructure/api';
+import { LLMGateway } from '../../domain/interfaces/llm-gateway';
 import { SessionMessage } from '../../shared/types/messages';
 import { SUMMARIZER_SYSTEM_PROMPT } from '../prompts/summarizer';
 
@@ -54,7 +54,7 @@ export class HistorySummarizer {
      */
     async summarize(
         session: ConversationSession,
-        llm: LLMController,
+        llm: LLMGateway,
         keepRecentTurns = this.KEEP_RECENT_TURNS,
     ): Promise<SessionMessage[]> {
         const allHistory = session.getHistory();

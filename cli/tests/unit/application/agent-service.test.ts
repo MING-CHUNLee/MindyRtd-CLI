@@ -12,7 +12,7 @@ import {
     AgentEvent,
     ProposedEdit,
 } from '../../../src/application/controllers/agent-controller';
-import { LLMController } from '../../../src/infrastructure/api/llm-controller';
+import { LLMController } from '../../../src/infrastructure/api';
 import { SessionRepository } from '../../../src/infrastructure/persistence/session-repository';
 import { DiffEngine } from '../../../src/application/services/diff-engine';
 import { PluginLoader } from '../../../src/infrastructure/plugins/plugin-loader';

@@ -1,7 +1,8 @@
 /**
- * Controller: LLM Controller
+ * LlmGateway — Infrastructure implementation of the LLMGateway domain interface.
  *
- * Handles communication with LLM APIs (OpenAI, Anthropic, etc.)
+ * Handles communication with LLM APIs (OpenAI, Anthropic, Azure, Gemini, Ollama).
+ * All provider-specific response mapping is delegated to LlmMapper.
  *
  * Architecture References:
  * - LangChain: Provider abstraction pattern
@@ -15,13 +16,13 @@
  * - Proper error handling and typing
  * - Input validation before API calls
  */
-
-import { GeneratedPrompt } from '../../../shared/types/prompt-context';
-import { LLMRequestPayload, LLMResponse } from '../../../shared/types/llm-types';
-import { LLMConfig, getLLMConfigFromEnv, LLMProvider } from '../../config';
-import { LLM } from '../../config/constants';
-import { SessionLogger } from '../logging/session-logger';
-import { FILE_RELEVANCE_SYSTEM_PROMPT, CODE_EDITOR_SYSTEM_PROMPT } from '../../../application/prompts/file-ops';
+import { LLMRequestPayload, LLMResponse, OpenAIRawResponse, AnthropicRawResponse } from '../../../../shared/types/llm-types';
+import { LLMGateway } from '../../../../domain/interfaces/llm-gateway';
+import { LLMConfig, getLLMConfigFromEnv, LLMProvider } from '../../../config';
+import { LLM } from '../../../config/constants';
+import { SessionLogGateway } from '../../logging/gateway/session-log-gateway';
+import { LogMapper } from '../../logging/mapper/log-mapper';
+import { LlmMapper } from '../mapper/llm-mapper';
 
 // ============================================
 // Error Classes
@@ -54,9 +55,9 @@ export interface LLMMessage {
     content: string;
 }
 
-export type { LLMRequestPayload as LLMRequest, LLMResponse } from '../../../shared/types/llm-types';
+export type { LLMRequestPayload as LLMRequest, LLMResponse } from '../../../../shared/types/llm-types';
 
-export interface LLMControllerOptions {
+export interface LlmGatewayOptions {
     /** Override config from environment */
     config?: Partial<LLMConfig>;
     /** Enable retry on failure */
@@ -67,46 +68,30 @@ export interface LLMControllerOptions {
     sessionId?: string;
 }
 
-// Internal types for API responses
-interface OpenAIResponse {
-    choices: Array<{ message?: { content?: string } }>;
-    usage?: { prompt_tokens: number; completion_tokens: number; total_tokens: number };
-    model: string;
-    error?: { message?: string };
-}
-
-interface AnthropicResponse {
-    content: Array<{ text?: string }>;
-    usage?: { input_tokens: number; output_tokens: number };
-    model: string;
-    error?: { message?: string };
-}
-
 // ============================================
-// LLM Controller
+// LlmGateway
 // ============================================
 
-export class LLMController {
+export class LlmGateway implements LLMGateway {
     private config: LLMConfig;
     private enableRetry: boolean;
     private maxRetries: number;
-    private sessionLogger: SessionLogger;
+    private sessionLogGateway: SessionLogGateway;
     public readonly sessionId: string;
 
     /**
-     * Create an LLM Controller
-     * 
+     * Create an LlmGateway
+     *
      * @example
      * // Use environment configuration (recommended)
-     * const controller = LLMController.fromEnv();
-     * 
+     * const gateway = LlmGateway.fromEnv();
+     *
      * // Or with custom options
-     * const controller = new LLMController({
+     * const gateway = new LlmGateway({
      *     config: { model: 'gpt-3.5-turbo' }
      * });
      */
-    constructor(options: LLMControllerOptions = {}) {
-        // Load config from environment, allow overrides
+    constructor(options: LlmGatewayOptions = {}) {
         const envConfig = getLLMConfigFromEnv();
         this.config = {
             ...envConfig,
@@ -114,15 +99,15 @@ export class LLMController {
         };
         this.enableRetry = options.enableRetry ?? true;
         this.maxRetries = options.maxRetries ?? 3;
-        this.sessionLogger = new SessionLogger();
+        this.sessionLogGateway = new SessionLogGateway();
         this.sessionId = options.sessionId || `session-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
     }
 
     /**
-     * Factory method: Create controller from environment variables
+     * Factory method: Create gateway from environment variables
      */
-    static fromEnv(sessionId?: string): LLMController {
-        return new LLMController({ sessionId });
+    static fromEnv(sessionId?: string): LlmGateway {
+        return new LlmGateway({ sessionId });
     }
 
     /**
@@ -151,14 +136,14 @@ export class LLMController {
         };
 
         // Fire-and-forget analytics logging
-        this.sessionLogger.log({
+        this.sessionLogGateway.postLog(LogMapper.toSessionLogWire({
             sessionId: this.sessionId,
             prompt: request.userMessage,
             response: fullResult.content,
             responseTimeMs: fullResult.responseTimeMs,
             provider: fullResult.provider,
             model: fullResult.model,
-        }).catch(() => { });
+        })).catch(() => { });
 
         return fullResult;
     }
@@ -167,11 +152,7 @@ export class LLMController {
     // Validation
     // ============================================
 
-    /**
-     * Validate request parameters before sending to API
-     */
     private validateRequest(request: LLMRequestPayload): void {
-        // Validate system prompt
         if (!request.systemPrompt?.trim()) {
             throw new LLMValidationError('System prompt is required and cannot be empty');
         }
@@ -182,7 +163,6 @@ export class LLMController {
             );
         }
 
-        // Validate user message
         if (!request.userMessage?.trim()) {
             throw new LLMValidationError('User message is required and cannot be empty');
         }
@@ -193,7 +173,6 @@ export class LLMController {
             );
         }
 
-        // Validate history messages if present
         if (request.history) {
             for (const msg of request.history) {
                 if (!msg.content?.trim()) {
@@ -207,93 +186,13 @@ export class LLMController {
     }
 
     /**
-     * Convenience method: Send with GeneratedPrompt from context-builder
-     */
-    async sendWithContext(
-        generatedPrompt: GeneratedPrompt,
-        userMessage: string,
-        history?: { role: 'user' | 'assistant'; content: string }[]
-    ): Promise<LLMResponse> {
-        return this.sendPrompt({
-            systemPrompt: generatedPrompt.systemPrompt,
-            userMessage,
-            history,
-        });
-    }
-
-    /**
-     * Analyze R code with environment context
-     */
-    async analyzeCode(
-        generatedPrompt: GeneratedPrompt,
-        rCode: string
-    ): Promise<LLMResponse> {
-        const userMessage = `Please analyze the following R code:\n\n\`\`\`r\n${rCode}\n\`\`\``;
-        return this.sendWithContext(generatedPrompt, userMessage);
-    }
-
-    /**
-     * Phase 1 of agent workflow: ask the LLM which files are relevant.
-     * Returns matched file paths + raw usage for token tracking.
-     */
-    async resolveFiles(
-        instruction: string,
-        previews: Array<{ path: string; content: string }>,
-        history?: { role: 'user' | 'assistant'; content: string }[],
-    ): Promise<{ targets: string[]; usage?: LLMResponse['usage'] }> {
-        const fileList = previews.map(p => `- ${p.path}`).join('\n');
-        const response = await this.sendPrompt({
-            systemPrompt: FILE_RELEVANCE_SYSTEM_PROMPT,
-            userMessage:
-                `Instruction: ${instruction}\n\nFiles:\n${fileList}\n\n` +
-                'Return a JSON array of relevant file paths.',
-            history,
-        });
-
-        let targets: string[] = [];
-        try {
-            const match = response.content.match(/\[[\s\S]*?\]/);
-            if (match) targets = JSON.parse(match[0]) as string[];
-        } catch {
-            targets = previews.slice(0, 5).map(p => p.path);
-        }
-        return { targets, usage: response.usage };
-    }
-
-    /**
-     * Phase 2 of agent workflow: ask the LLM to edit target files.
-     * Returns modified file contents + raw usage for token tracking.
-     */
-    async editFiles(
-        instruction: string,
-        fileContexts: Array<{ path: string; content: string }>,
-        history?: { role: 'user' | 'assistant'; content: string }[],
-    ): Promise<{ files: Array<{ path: string; content: string }>; usage?: LLMResponse['usage'] }> {
-        const filesJson = JSON.stringify(fileContexts);
-        const response = await this.sendPrompt({
-            systemPrompt: CODE_EDITOR_SYSTEM_PROMPT,
-            userMessage: `Instruction: ${instruction}\n\nFiles:\n${filesJson}`,
-            history,
-        });
-
-        let files: Array<{ path: string; content: string }> = [];
-        try {
-            const match = response.content.match(/\[[\s\S]*\]/);
-            if (match) files = JSON.parse(match[0]) as Array<{ path: string; content: string }>;
-        } catch {
-            files = [];
-        }
-        return { files, usage: response.usage };
-    }
-
-    /**
      * Get current provider info (safe to log, no secrets)
      */
-    getProviderInfo(): { provider: LLMProvider; model: string; endpoint: string } {
+    getProviderInfo(): { provider: string; model: string; endpoint?: string } {
         return {
             provider: this.config.provider,
             model: this.config.model,
-            endpoint: this.config.endpoint || '',
+            endpoint: this.config.endpoint || undefined,
         };
     }
 
@@ -343,22 +242,12 @@ export class LLMController {
         });
 
         if (!response.ok) {
-            const errorData = await response.json() as OpenAIResponse;
+            const errorData = await response.json() as OpenAIRawResponse;
             throw new Error(`OpenAI API error: ${errorData.error?.message || response.statusText}`);
         }
 
-        const data = await response.json() as OpenAIResponse;
-
-        return {
-            content: data.choices[0]?.message?.content || '',
-            usage: data.usage ? {
-                promptTokens: data.usage.prompt_tokens,
-                completionTokens: data.usage.completion_tokens,
-                totalTokens: data.usage.total_tokens,
-            } : undefined,
-            model: data.model,
-            provider: 'openai',
-        };
+        const data = await response.json() as OpenAIRawResponse;
+        return LlmMapper.fromOpenAI(data);
     }
 
     private async sendToAnthropic(
@@ -386,29 +275,18 @@ export class LLMController {
         });
 
         if (!response.ok) {
-            const errorData = await response.json() as AnthropicResponse;
+            const errorData = await response.json() as AnthropicRawResponse;
             throw new Error(`Anthropic API error: ${errorData.error?.message || response.statusText}`);
         }
 
-        const data = await response.json() as AnthropicResponse;
-
-        return {
-            content: data.content[0]?.text || '',
-            usage: data.usage ? {
-                promptTokens: data.usage.input_tokens,
-                completionTokens: data.usage.output_tokens,
-                totalTokens: data.usage.input_tokens + data.usage.output_tokens,
-            } : undefined,
-            model: data.model,
-            provider: 'anthropic',
-        };
+        const data = await response.json() as AnthropicRawResponse;
+        return LlmMapper.fromAnthropic(data);
     }
 
     private async sendToAzure(
         messages: LLMMessage[],
         model: string
     ): Promise<Omit<LLMResponse, 'responseTimeMs'>> {
-        // Azure OpenAI uses a different endpoint format
         const response = await this.fetchWithTimeout(this.config.endpoint!, {
             method: 'POST',
             headers: {
@@ -422,29 +300,18 @@ export class LLMController {
         });
 
         if (!response.ok) {
-            const errorData = await response.json() as OpenAIResponse;
+            const errorData = await response.json() as OpenAIRawResponse;
             throw new Error(`Azure OpenAI error: ${errorData.error?.message || response.statusText}`);
         }
 
-        const data = await response.json() as OpenAIResponse;
-
-        return {
-            content: data.choices[0]?.message?.content || '',
-            usage: data.usage ? {
-                promptTokens: data.usage.prompt_tokens,
-                completionTokens: data.usage.completion_tokens,
-                totalTokens: data.usage.total_tokens,
-            } : undefined,
-            model: model,
-            provider: 'azure',
-        };
+        const data = await response.json() as OpenAIRawResponse;
+        return LlmMapper.fromAzure(data, model);
     }
 
     private async sendToOllama(
         messages: LLMMessage[],
         model: string
     ): Promise<Omit<LLMResponse, 'responseTimeMs'>> {
-        // Ollama uses a different format
         const response = await this.fetchWithTimeout(this.config.endpoint!, {
             method: 'POST',
             headers: {
@@ -462,12 +329,7 @@ export class LLMController {
         }
 
         const data = await response.json() as { message?: { content?: string } };
-
-        return {
-            content: data.message?.content || '',
-            model,
-            provider: 'ollama',
-        };
+        return LlmMapper.fromOllama(data, model);
     }
 
     private async sendToGoogle(
@@ -476,12 +338,7 @@ export class LLMController {
     ): Promise<Omit<LLMResponse, 'responseTimeMs'>> {
         const url = `${this.config.endpoint}/${model}:generateContent?key=${this.config.apiKey}`;
 
-        let systemPrompt = '';
         const systemMessage = messages.find(m => m.role === 'system');
-        if (systemMessage) {
-            systemPrompt = systemMessage.content;
-        }
-
         const contents = messages
             .filter(m => m.role !== 'system')
             .map(m => ({
@@ -489,17 +346,13 @@ export class LLMController {
                 parts: [{ text: m.content }]
             }));
 
-        const body: any = {
+        const body: Record<string, unknown> = {
             contents,
-            generationConfig: {
-                maxOutputTokens: this.config.maxTokens,
-            }
+            generationConfig: { maxOutputTokens: this.config.maxTokens },
         };
 
-        if (systemPrompt) {
-            body.systemInstruction = {
-                parts: [{ text: systemPrompt }]
-            };
+        if (systemMessage) {
+            body.systemInstruction = { parts: [{ text: systemMessage.content }] };
         }
 
         const response = await this.fetchWithTimeout(url, {
@@ -513,24 +366,8 @@ export class LLMController {
             throw new Error(`Google API error: ${response.statusText} - ${errorText}`);
         }
 
-        const data = await response.json() as any;
-        const outText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-
-        let usage;
-        if (data.usageMetadata) {
-            usage = {
-                promptTokens: data.usageMetadata.promptTokenCount || 0,
-                completionTokens: data.usageMetadata.candidatesTokenCount || 0,
-                totalTokens: data.usageMetadata.totalTokenCount || 0,
-            };
-        }
-
-        return {
-            content: outText,
-            usage,
-            model,
-            provider: 'google',
-        };
+        const data = await response.json() as Parameters<typeof LlmMapper.fromGoogle>[0];
+        return LlmMapper.fromGoogle(data, model);
     }
 
     // ============================================
@@ -566,7 +403,6 @@ export class LLMController {
                 throw error;
             }
 
-            // Exponential backoff
             const delay = Math.min(1000 * Math.pow(2, attempt - 1), 10000);
             await this.sleep(delay);
 
@@ -612,7 +448,6 @@ export class LLMController {
         } else if (this.config.provider === 'anthropic') {
             result = await this.streamFromAnthropic(messages, model, onToken);
         } else {
-            // Unsupported providers: fall back to non-streaming
             result = await this.sendToProvider(messages, model);
             onToken(result.content);
         }
@@ -649,19 +484,20 @@ export class LLMController {
         let completionTokens = 0;
 
         await this.readSSEStream(response, (line) => {
-            if (line === '[DONE]') return;
-            try {
-                const data = JSON.parse(line) as {
-                    choices?: Array<{ delta?: { content?: string }; finish_reason?: string }>;
-                    usage?: { prompt_tokens: number; completion_tokens: number; total_tokens: number };
-                };
-                const token = data.choices?.[0]?.delta?.content ?? '';
-                if (token) { fullContent += token; onToken(token); }
-                if (data.usage) {
-                    promptTokens = data.usage.prompt_tokens;
-                    completionTokens = data.usage.completion_tokens;
-                }
-            } catch { /* skip malformed lines */ }
+            // Try extracting usage from the full line JSON (usage object appears on some responses)
+            if (line !== '[DONE]') {
+                try {
+                    const data = JSON.parse(line) as {
+                        usage?: { prompt_tokens: number; completion_tokens: number };
+                    };
+                    if (data.usage) {
+                        promptTokens = data.usage.prompt_tokens;
+                        completionTokens = data.usage.completion_tokens;
+                    }
+                } catch { /* skip */ }
+            }
+            const token = LlmMapper.extractOpenAIStreamToken(line);
+            if (token) { fullContent += token; onToken(token); }
         });
 
         return {
@@ -710,24 +546,16 @@ export class LLMController {
         let outputTokens = 0;
 
         await this.readSSEStream(response, (line) => {
-            try {
-                const data = JSON.parse(line) as {
-                    type?: string;
-                    delta?: { type?: string; text?: string };
-                    usage?: { input_tokens?: number; output_tokens?: number };
-                    message?: { usage?: { input_tokens: number; output_tokens: number } };
-                };
-                if (data.type === 'content_block_delta' && data.delta?.text) {
-                    fullContent += data.delta.text;
-                    onToken(data.delta.text);
-                }
-                if (data.type === 'message_start' && data.message?.usage) {
-                    inputTokens = data.message.usage.input_tokens;
-                }
-                if (data.type === 'message_delta' && data.usage) {
-                    outputTokens = data.usage.output_tokens ?? 0;
-                }
-            } catch { /* skip malformed lines */ }
+            const event = LlmMapper.extractAnthropicStreamEvent(line);
+            if (!event) return;
+            if (event.type === 'content' && event.text) {
+                fullContent += event.text;
+                onToken(event.text);
+            } else if (event.type === 'message_start' && event.inputTokens !== undefined) {
+                inputTokens = event.inputTokens;
+            } else if (event.type === 'message_delta' && event.outputTokens !== undefined) {
+                outputTokens = event.outputTokens;
+            }
         });
 
         return {
@@ -755,7 +583,7 @@ export class LLMController {
             buffer += decoder.decode(value, { stream: true });
 
             const lines = buffer.split('\n');
-            buffer = lines.pop() ?? '';  // keep incomplete last line
+            buffer = lines.pop() ?? '';
 
             for (const line of lines) {
                 const trimmed = line.trim();
@@ -765,7 +593,6 @@ export class LLMController {
             }
         }
 
-        // Flush remaining buffer
         if (buffer.trim().startsWith('data:')) {
             onData(buffer.trim().slice(5).trim());
         }
@@ -776,11 +603,17 @@ export class LLMController {
 // Factory Functions
 // ============================================
 
-/**
- * Create controller from environment (recommended)
- */
-export function createLLMController(options?: LLMControllerOptions): LLMController {
-    return new LLMController(options);
+export function createLlmGateway(options?: LlmGatewayOptions): LlmGateway {
+    return new LlmGateway(options);
 }
 
-export default LLMController;
+// ── Backward-compat aliases ────────────────────────────────────────────────────
+// Keep old names so existing callers (tests, acceptance helpers) still compile
+// until the cleanup sweep in Step 8.
+export { LlmGateway as LLMController };
+export type { LlmGatewayOptions as LLMControllerOptions };
+
+/** @deprecated Use createLlmGateway */
+export const createLLMController = createLlmGateway;
+
+export default LlmGateway;

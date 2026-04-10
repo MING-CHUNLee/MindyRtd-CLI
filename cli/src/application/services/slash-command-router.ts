@@ -7,7 +7,7 @@
 
 import { ConversationSession } from '../../domain/entities/conversation-session';
 import { SessionRepository } from '../../infrastructure/persistence/session-repository';
-import { LLMController } from '../../infrastructure/api';
+import { LLMGateway } from '../../domain/interfaces/llm-gateway';
 import { WorkflowMode } from '../../infrastructure/config/settings';
 import { ModeManager } from './mode-manager';
 
@@ -15,7 +15,7 @@ export interface SlashCommandContext {
     session: ConversationSession;
     repo: SessionRepository;
     modeManager: ModeManager;
-    llm: LLMController;
+    llm: LLMGateway;
     setSession: (s: ConversationSession) => void;
     setPreviousSummary: (s: string) => void;
 }

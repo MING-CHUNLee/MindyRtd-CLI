@@ -9,7 +9,7 @@
 
 import fs from 'fs';
 import path from 'path';
-import { LLMController } from '../../infrastructure/api';
+import { LLMGateway } from '../../domain/interfaces/llm-gateway';
 import { TurnUsage } from '../../domain/entities/conversation-turn';
 import { ToolRegistry } from '../orchestration/tool-registry';
 import { SessionMessage } from '../../shared/types/messages';
@@ -17,7 +17,7 @@ import { SessionMessage } from '../../shared/types/messages';
 type EmitFn = (type: string, data: Record<string, unknown>) => void;
 
 export interface ExecuteRunDeps {
-    llm: LLMController;
+    llm: LLMGateway;
     registry: ToolRegistry;
     directory: string;
     emit: EmitFn;

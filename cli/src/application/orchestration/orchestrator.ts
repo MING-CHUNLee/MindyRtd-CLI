@@ -19,7 +19,7 @@
  *   those are extracted as edit artifacts. Otherwise the result is a text artifact.
  */
 
-import { LLMController } from '../../infrastructure/api';
+import { LLMGateway } from '../../domain/interfaces/llm-gateway';
 import { LLMRequestPayload } from '../../shared/types/llm-types';
 import { TurnUsage } from '../../domain/entities/conversation-turn';
 import { FileChange } from '../../domain/entities/file-change';
@@ -52,7 +52,7 @@ export class Orchestrator {
     private readonly reactLoop: ReActLoop;
 
     constructor(
-        private readonly llm: LLMController,
+        private readonly llm: LLMGateway,
         private readonly registry: ToolRegistry,
         private readonly tokenBudget = DEFAULT_TOKEN_BUDGET,
         reactLoop?: ReActLoop,

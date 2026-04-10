@@ -19,7 +19,7 @@
  * workingMessages is an ephemeral ReAct scratchpad — never persisted to session.
  */
 
-import { LLMController } from '../../infrastructure/api';
+import { LLMGateway } from '../../domain/interfaces/llm-gateway';
 import { LLMRequestPayload } from '../../shared/types/llm-types';
 import { SessionMessage } from '../../shared/types/messages';
 import { ToolRegistry } from './tool-registry';
@@ -75,7 +75,7 @@ Rules:
 
 export class ReActLoop {
     constructor(
-        private readonly llm: LLMController,
+        private readonly llm: LLMGateway,
         private readonly registry: ToolRegistry,
     ) { }
 

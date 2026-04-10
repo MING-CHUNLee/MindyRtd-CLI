@@ -14,7 +14,8 @@
 
 import path from 'path';
 
-import { LLMController } from '../../infrastructure/api';
+import { LlmGateway } from '../../infrastructure/api/llm/gateway/llm-gateway';
+import { LLMGateway } from '../../domain/interfaces/llm-gateway';
 import { DiffEngine } from '../services/diff-engine';
 import { SessionRepository } from '../../infrastructure/persistence/session-repository';
 import { ConversationSession } from '../../domain/entities/conversation-session';
@@ -94,7 +95,7 @@ export interface AgentControllerOptions {
 
 /** Injectable dependencies — omit any to use the default implementation. */
 export interface AgentControllerDeps {
-    llm: LLMController;
+    llm: LLMGateway;
     repo: SessionRepository;
     diffEngine: DiffEngine;
     /** Optional — defaults to new HistorySummarizer(). */
@@ -124,7 +125,7 @@ export interface AgentControllerDeps {
 export class AgentController {
     private _session?: ConversationSession;
     private previousSessionSummary = '';
-    private readonly llm: LLMController;
+    private readonly llm: LLMGateway;
     private readonly repo: SessionRepository;
     private readonly registry: ToolRegistry;
     private readonly diffEngine: DiffEngine;
@@ -160,7 +161,7 @@ export class AgentController {
         this.directory = path.resolve(options.directory);
         this.viewAdapter = viewAdapter;
         this.approvalGate = approvalGate;
-        this.llm = deps?.llm ?? LLMController.fromEnv();
+        this.llm = deps?.llm ?? LlmGateway.fromEnv();
         this.repo = deps?.repo ?? new SessionRepository();
         this.diffEngine = deps?.diffEngine ?? new DiffEngine();
         this.summarizer = deps?.summarizer ?? new HistorySummarizer();

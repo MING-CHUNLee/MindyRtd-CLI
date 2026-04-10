@@ -8,7 +8,7 @@
  * session turn.
  */
 
-import { LLMController } from '../../infrastructure/api';
+import { LLMGateway } from '../../domain/interfaces/llm-gateway';
 import { IFileSystem } from '../../domain/interfaces/file-system';
 import { LocalFileSystem } from '../../infrastructure/filesystem/local-file-system';
 import { LLMRequestPayload } from '../../shared/types/llm-types';
@@ -27,7 +27,7 @@ import { EditStagingService, StagedEdit } from '../services/edit-staging-service
 type EmitFn = (type: string, data: Record<string, unknown>) => void;
 
 export interface ExecuteInstructionDeps {
-    llm: LLMController;
+    llm: LLMGateway;
     registry: ToolRegistry;
     diffEngine: DiffEngine;
     directory: string;

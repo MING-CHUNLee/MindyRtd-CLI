@@ -13,7 +13,7 @@
  * If invalid, call retryWithCorrection() to get a second chance before giving up.
  */
 
-import { LLMController } from '../../infrastructure/api';
+import { LLMGateway } from '../../domain/interfaces/llm-gateway';
 import { LLMRequestPayload } from '../../shared/types/llm-types';
 import { extractJsonArray } from '../../shared/utils/json-extractor';
 import { JSON_FORMATTER_SYSTEM_PROMPT } from '../prompts/evaluator';
@@ -79,7 +79,7 @@ export class Evaluator {
      * this is a pure format-correction pass, not a new reasoning step.
      */
     async retryWithCorrection(
-        llm: LLMController,
+        llm: LLMGateway,
         originalRequest: LLMRequestPayload,
         invalidOutput: string,
         maxRetries = 2,

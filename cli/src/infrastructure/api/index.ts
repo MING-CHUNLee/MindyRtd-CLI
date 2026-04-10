@@ -3,19 +3,25 @@
  *
  * Two sub-modules:
  *   llm/     — LLM provider gateway (OpenAI, Anthropic, Azure, Gemini, Ollama)
- *   logging/ — Analytics/logging backends (SessionLogger, RubyLogClient)
+ *   logging/ — Analytics/logging backends (gateway + mapper)
  */
 
 export {
-    LLMController,
+    LlmGateway,
+    LlmGatewayOptions,
     LLMMessage,
     LLMRequest,
     LLMResponse,
-    LLMControllerOptions,
     LLMValidationError,
     LLMAPIError,
+    createLlmGateway,
+    LlmMapper,
+    // Backward-compat aliases
+    LLMController,
+    LLMControllerOptions,
     createLLMController,
 } from './llm';
 
-export { SessionLogger, LogPayload } from './logging';
-export { RubyLogClient, LogEvent, SessionSummary } from './logging';
+export { RubyLogGateway, SessionLogGateway } from './logging';
+export { LogMapper } from './logging';
+export type { LogEvent, SessionSummary, LogPayload } from './logging';

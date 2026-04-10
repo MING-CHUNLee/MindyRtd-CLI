@@ -11,7 +11,7 @@ import {
     ExecuteInstructionUseCase,
     ExecuteInstructionDeps,
 } from '../../../src/application/use-cases/execute-instruction-use-case';
-import { LLMController } from '../../../src/infrastructure/api/llm-controller';
+import { LLMController } from '../../../src/infrastructure/api';
 import { ToolRegistry } from '../../../src/application/orchestration/tool-registry';
 import { DiffEngine } from '../../../src/application/services/diff-engine';
 import { EditStagingService, StagedEdit } from '../../../src/application/services/edit-staging-service';

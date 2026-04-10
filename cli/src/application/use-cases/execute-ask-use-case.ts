@@ -9,7 +9,7 @@
  */
 
 import path from 'path';
-import { LLMController } from '../../infrastructure/api';
+import { LLMGateway } from '../../domain/interfaces/llm-gateway';
 import { TurnUsage } from '../../domain/entities/conversation-turn';
 import { ToolRegistry } from '../orchestration/tool-registry';
 import { SessionMessage } from '../../shared/types/messages';
@@ -21,7 +21,7 @@ const MAX_TOTAL_TOKENS = 7_500; // hard ceiling: system + history + user must st
 type EmitFn = (type: string, data: Record<string, unknown>) => void;
 
 export interface ExecuteAskDeps {
-    llm: LLMController;
+    llm: LLMGateway;
     registry: ToolRegistry;
     directory: string;
     emit: EmitFn;

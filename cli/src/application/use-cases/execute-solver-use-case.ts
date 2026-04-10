@@ -10,7 +10,7 @@
  * Returns SolverResult — the caller is responsible for persisting the turn.
  */
 
-import { LLMController } from '../../infrastructure/api';
+import { LLMGateway } from '../../domain/interfaces/llm-gateway';
 import { IFileSystem } from '../../domain/interfaces/file-system';
 import { LocalFileSystem } from '../../infrastructure/filesystem/local-file-system';
 import { TurnUsage } from '../../domain/entities/conversation-turn';
@@ -27,7 +27,7 @@ import { LLMRequestPayload } from '../../shared/types/llm-types';
 type EmitFn = (type: string, data: Record<string, unknown>) => void;
 
 export interface ExecuteSolverDeps {
-    llm: LLMController;
+    llm: LLMGateway;
     registry: ToolRegistry;
     diffEngine: DiffEngine;
     directory: string;

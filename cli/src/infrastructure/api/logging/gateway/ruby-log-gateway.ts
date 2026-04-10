@@ -1,44 +1,40 @@
 /**
- * Gateway: Ruby Log Client
+ * Gateway: RubyLogGateway
  *
- * Sends structured log events to the Ruby analytics backend.
- * The Ruby backend stores and analyzes CLI usage logs.
+ * Pure HTTP transport to the Ruby analytics backend.
+ * Speaks the backend's own wire format — no domain mapping here.
  *
- * Expected Ruby API endpoints:
- *
- *   POST /events
- *   Body: { sessionId, event, data, timestamp }
- *
- *   GET /sessions/:sessionId/summary
- *   Response: { summary, tokenUsage, ... }
+ * Expected endpoints:
+ *   POST /events          — body: LogEventWire
+ *   GET  /sessions/:id/summary — response: SessionSummaryRaw
  */
 
 import axios, { AxiosError } from 'axios';
-import { getEnv } from '../../config';
-import { RUBY_API } from '../../config/constants';
+import { getEnv } from '../../../config';
+import { RUBY_API } from '../../../config/constants';
 
 // ============================================
-// Types
+// Wire Types  (backend's own language)
 // ============================================
 
-export interface LogEvent {
+export interface LogEventWire {
     sessionId: string;
-    event: 'resolve' | 'edit' | 'ask' | 'agent' | 'error';
+    event: string;
     data: Record<string, unknown>;
-    timestamp?: string;
+    timestamp: string;
 }
 
-export interface SessionSummary {
+export interface SessionSummaryRaw {
     sessionId: string;
     totalEvents: number;
     summary: string;
 }
 
 // ============================================
-// Ruby Log Client
+// Gateway
 // ============================================
 
-export class RubyLogClient {
+export class RubyLogGateway {
     private baseUrl: string;
     private timeout: number;
 
@@ -50,30 +46,24 @@ export class RubyLogClient {
     }
 
     /**
-     * Fire-and-forget: log an event to the Ruby analytics backend.
+     * Fire-and-forget: POST a pre-formatted event to the backend.
      * Silently swallows errors so it never disrupts the CLI.
      */
-    async log(event: LogEvent): Promise<void> {
+    async postEvent(wire: LogEventWire): Promise<void> {
         try {
-            await axios.post(
-                `${this.baseUrl}/events`,
-                {
-                    ...event,
-                    timestamp: event.timestamp ?? new Date().toISOString(),
-                },
-                { timeout: this.timeout }
-            );
+            await axios.post(`${this.baseUrl}/events`, wire, { timeout: this.timeout });
         } catch {
             // Fire-and-forget — do not propagate errors
         }
     }
 
     /**
-     * Retrieve a session summary from the Ruby analytics backend.
+     * Fetch raw session summary from the backend.
+     * Returns null on any network or API error.
      */
-    async getSessionSummary(sessionId: string): Promise<SessionSummary | null> {
+    async fetchSessionSummary(sessionId: string): Promise<SessionSummaryRaw | null> {
         try {
-            const response = await axios.get<SessionSummary>(
+            const response = await axios.get<SessionSummaryRaw>(
                 `${this.baseUrl}/sessions/${sessionId}/summary`,
                 { timeout: this.timeout }
             );

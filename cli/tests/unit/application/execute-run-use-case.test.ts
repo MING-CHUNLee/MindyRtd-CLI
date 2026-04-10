@@ -7,7 +7,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ExecuteRunUseCase, ExecuteRunDeps } from '../../../src/application/use-cases/execute-run-use-case';
-import { LLMController } from '../../../src/infrastructure/api/llm-controller';
+import { LLMController } from '../../../src/infrastructure/api';
 import { ToolRegistry } from '../../../src/application/orchestration/tool-registry';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

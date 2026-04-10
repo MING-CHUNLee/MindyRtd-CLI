@@ -1,10 +1,16 @@
 export {
-    LLMController,
+    LlmGateway,
+    LlmGatewayOptions,
     LLMMessage,
     LLMRequest,
     LLMResponse,
-    LLMControllerOptions,
     LLMValidationError,
     LLMAPIError,
+    createLlmGateway,
+    // Backward-compat aliases — kept for test files that import LLMController by name
+    LLMController,
+    LLMControllerOptions,
     createLLMController,
-} from './llm-controller';
+} from './gateway/llm-gateway';
+
+export { LlmMapper } from './mapper/llm-mapper';

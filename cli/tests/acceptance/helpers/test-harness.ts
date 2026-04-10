@@ -13,7 +13,7 @@ import { AgentController as AgentService } from '../../../src/application/contro
 import type { AgentEvent, ApprovalCallback } from '../../../src/application/controllers/agent-controller';
 import { DiffEngine } from '../../../src/application/services/diff-engine';
 import type { SessionRepository } from '../../../src/infrastructure/persistence/session-repository';
-import type { LLMController } from '../../../src/infrastructure/api/llm-controller';
+import type { LLMController } from '../../../src/infrastructure/api';
 import type { RecordReplayLLM } from './record-replay-llm';
 import type { TestWorkspace } from './test-workspace';
 

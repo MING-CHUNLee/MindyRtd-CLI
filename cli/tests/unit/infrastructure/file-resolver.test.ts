@@ -2,7 +2,7 @@
  * Unit Tests: FileResolver
  *
  * Verifies that FileResolver delegates scanning to FileFinder and
- * LLM resolution to LLMController, then maps the result correctly.
+ * LLM resolution via sendPrompt, then maps the result correctly.
  *
  * Both dependencies are injected as mocks — no filesystem or network I/O.
  */
@@ -10,7 +10,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { FileResolver, ResolvedFile } from '../../../src/infrastructure/filesystem/file-resolver';
 import { FileFinder } from '../../../src/infrastructure/filesystem/file-finder';
-import { LLMController } from '../../../src/infrastructure/api/llm';
+import type { LLMGateway } from '../../../src/domain/interfaces/llm-gateway';
 
 // ── helpers ────────────────────────────────────────────────────────────────
 
@@ -18,10 +18,14 @@ function makeFinder(previews: { path: string; preview: string }[]): FileFinder {
     return { scan: vi.fn().mockResolvedValue(previews) } as unknown as FileFinder;
 }
 
-function makeClient(targets: string[]): LLMController {
+/** Build a minimal LLMGateway mock that returns a JSON array of targets from sendPrompt. */
+function makeClient(targets: string[]): LLMGateway {
     return {
-        resolveFiles: vi.fn().mockResolvedValue({ targets }),
-    } as unknown as LLMController;
+        sessionId: 'test-session',
+        sendPrompt: vi.fn().mockResolvedValue({ content: JSON.stringify(targets), model: 'test', provider: 'test' }),
+        streamPrompt: vi.fn(),
+        getProviderInfo: vi.fn().mockReturnValue({ provider: 'test', model: 'test-model' }),
+    } as unknown as LLMGateway;
 }
 
 // ── tests ──────────────────────────────────────────────────────────────────
@@ -49,17 +53,17 @@ describe('FileResolver', () => {
             expect(calledMax).toBe(10);
         });
 
-        it('passes previews and instruction to LLMController.resolveFiles', async () => {
+        it('passes previews and instruction to LLM via sendPrompt', async () => {
             const previews = [{ path: 'a.R', preview: 'x <- 1' }];
             const client = makeClient(['a.R']);
             const resolver = new FileResolver(client, makeFinder(previews));
 
             await resolver.resolve('fix bugs', { workspaceDir: '/proj' });
 
-            expect(client.resolveFiles).toHaveBeenCalledWith(
-                'fix bugs',
-                [{ path: 'a.R', content: 'x <- 1' }],
-            );
+            expect(client.sendPrompt).toHaveBeenCalledOnce();
+            const call = (client.sendPrompt as ReturnType<typeof vi.fn>).mock.calls[0][0];
+            expect(call.userMessage).toContain('fix bugs');
+            expect(call.userMessage).toContain('a.R');
         });
 
         it('maps LLM-returned relative paths to absolute + relative pair', async () => {
@@ -88,13 +92,13 @@ describe('FileResolver', () => {
             expect(result).toHaveLength(2);
         });
 
-        it('does not call LLMController when no files are found', async () => {
+        it('does not call LLM when no files are found', async () => {
             const client = makeClient([]);
             const resolver = new FileResolver(client, makeFinder([]));
 
             await resolver.resolve('instruction');
 
-            expect(client.resolveFiles).not.toHaveBeenCalled();
+            expect(client.sendPrompt).not.toHaveBeenCalled();
         });
 
         it('uses process.cwd() and maxFiles=30 as defaults', async () => {
