@@ -12,7 +12,7 @@
 import path from 'path';
 import { AgentTool, ToolInput, ToolResult, ToolSchema } from '../../domain/interfaces/agent-tool';
 import { EditStagingService } from '../services/edit-staging-service';
-import { isFilenameEditable } from '../../domain/lib/agent-file-filters';
+import { isFilenameEditable } from '../../domain/policies/agent-file-policy';
 
 // Re-export so callers that imported StagedEdit from this module still compile.
 export type { StagedEdit } from '../services/edit-staging-service';

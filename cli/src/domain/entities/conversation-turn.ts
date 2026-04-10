@@ -7,8 +7,16 @@
  */
 
 import { FileChange, FileChangeJSON } from './file-change';
-import { LLMOutput, LLMOutputJSON } from './llm-output';
-import { ArtifactJSON } from './artifact';
+import { LLMOutput, LLMOutputJSON } from '../values/llm-output';
+
+/** @deprecated Present only in sessions written before the FileChange/LLMOutput split. */
+interface ArtifactJSON {
+    id: string;
+    type: 'edit' | 'diff' | 'code' | 'analysis' | 'report';
+    path?: string;
+    content: string;
+    createdAt: string;
+}
 
 export interface TurnUsage {
     inputTokens: number;

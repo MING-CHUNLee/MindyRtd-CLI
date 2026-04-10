@@ -12,7 +12,7 @@ import path from 'path';
 import { PDFParse } from 'pdf-parse';
 import { AgentTool, ToolInput, ToolResult, ToolSchema } from '../../domain/interfaces/agent-tool';
 import { IFileSystem } from '../../domain/interfaces/file-system';
-import { MAX_FILE_CONTENT_CHARS } from '../../domain/lib/agent-file-filters';
+import { MAX_FILE_CONTENT_CHARS } from '../../domain/policies/agent-file-policy';
 
 export class PdfReadTool implements AgentTool {
     readonly name = 'pdf_read';

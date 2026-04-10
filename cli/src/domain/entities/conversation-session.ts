@@ -11,7 +11,7 @@
 
 import { ConversationTurn, TurnUsage, TurnJSON } from './conversation-turn';
 import { FileChange, FileChangeType } from './file-change';
-import { LLMOutput, LLMOutputType } from './llm-output';
+import { LLMOutput, LLMOutputType } from '../values/llm-output';
 import { TokenBudget, TokenUsageSnapshot } from '../values/token-budget';
 import { CacheStatus } from '../values/cache-status';
 

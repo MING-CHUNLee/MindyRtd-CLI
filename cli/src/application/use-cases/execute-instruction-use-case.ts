@@ -17,7 +17,7 @@ import { ToolRegistry } from '../orchestration/tool-registry';
 import { DiffEngine } from '../services/diff-engine';
 import { SessionMessage } from '../../shared/types/messages';
 import { Orchestrator, OrchestratorResult } from '../orchestration/orchestrator';
-import { LLMOutput } from '../../domain/entities/llm-output';
+import { LLMOutput } from '../../domain/values/llm-output';
 import { Evaluator } from '../services/evaluator';
 import { buildInstructionAgentPrompt } from '../prompts/instruction-agent';
 import { KnowledgeBase } from '../services/knowledge-base';

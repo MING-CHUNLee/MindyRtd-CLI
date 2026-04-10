@@ -1,8 +1,9 @@
 /**
- * Domain lib: Agent File Filters
+ * Domain Policy: Agent File Policy
  *
- * Domain knowledge about which files an agent should and should not edit.
- * Read-only rules — no business logic, just data.
+ * Business rules that govern which files an agent is allowed to read or edit.
+ * These are domain expert rules ("lock files must never be edited",
+ * "dist/ is generated output") — not configuration or infrastructure concerns.
  *
  * Applied in two phases:
  *   Phase 0 — filename/extension filter (before LLM sees any file)

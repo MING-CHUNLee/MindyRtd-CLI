@@ -7,7 +7,7 @@
 
 import path from 'path';
 import { IFileSystem } from '../../domain/interfaces/file-system';
-import { isContentEditable } from '../../domain/lib/agent-file-filters';
+import { isContentEditable } from '../../domain/policies/agent-file-policy';
 
 export type FileReadResult =
     | { content: string; absPath: string }

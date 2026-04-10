@@ -23,7 +23,7 @@ import { LLMGateway } from '../../domain/interfaces/llm-gateway';
 import { LLMRequestPayload } from '../../shared/types/llm-types';
 import { TurnUsage } from '../../domain/entities/conversation-turn';
 import { FileChange } from '../../domain/entities/file-change';
-import { LLMOutput } from '../../domain/entities/llm-output';
+import { LLMOutput } from '../../domain/values/llm-output';
 import { ToolRegistry } from './tool-registry';
 import { ReActLoop, ReActResult, ReActStep } from './react-loop';
 import { extractJsonArray } from '../../shared/utils/json-extractor';

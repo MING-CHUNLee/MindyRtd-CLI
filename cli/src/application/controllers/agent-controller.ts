@@ -41,7 +41,7 @@ import { ModeManager } from '../services/mode-manager';
 import { SlashCommandRouter } from '../services/slash-command-router';
 
 import { FileChange } from '../../domain/entities/file-change';
-import { PluginLoader } from '../../infrastructure/plugins/plugin-loader';
+import { PluginLoader } from '../../infrastructure/filesystem/plugin-loader';
 import { SessionMessage } from '../../shared/types/messages';
 
 import { ExecuteAskUseCase } from '../use-cases/execute-ask-use-case';
