@@ -6,7 +6,7 @@
  * by calling execRscriptCode directly.
  */
 
-import { AgentTool, ToolInput, ToolResult, ToolSchema } from '../../domain/interfaces/agent-tool';
+import { AgentTool, ToolInput, ToolResult, ToolSchema } from '../../domain/types/agent-tool';
 import { execRscriptCode } from '../../infrastructure/r-adapter/r-script-runner';
 
 // Only allow safe CRAN package name characters

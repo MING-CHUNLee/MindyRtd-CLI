@@ -8,7 +8,7 @@
 
 import fs from 'fs';
 import path from 'path';
-import { IFileSystem, FileStats } from '../../domain/interfaces/file-system';
+import { IFileSystem, FileStats } from '../../domain/types/file-system';
 
 export class LocalFileSystem implements IFileSystem {
     exists(filePath: string): boolean {

@@ -6,7 +6,7 @@
  */
 
 import path from 'path';
-import { AgentTool, ToolInput, ToolResult, ToolSchema } from '../../domain/interfaces/agent-tool';
+import { AgentTool, ToolInput, ToolResult, ToolSchema } from '../../domain/types/agent-tool';
 import { FileReadService } from '../services/file-read-service';
 
 export class FileReadTool implements AgentTool {

@@ -7,9 +7,9 @@
  */
 
 import path from 'path';
-import { AgentTool, ToolInput, ToolResult, ToolSchema } from '../../domain/interfaces/agent-tool';
-import { IFileSystem } from '../../domain/interfaces/file-system';
-import { IRScriptRunner } from '../../domain/interfaces/r-script-runner';
+import { AgentTool, ToolInput, ToolResult, ToolSchema } from '../../domain/types/agent-tool';
+import { IFileSystem } from '../../domain/types/file-system';
+import { IRScriptRunner } from '../../domain/types/r-script-runner';
 
 const VALID_FORMATS = new Set(['html_document', 'pdf_document', 'word_document', 'github_document']);
 

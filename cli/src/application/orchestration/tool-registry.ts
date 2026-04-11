@@ -6,7 +6,7 @@
  * so the ReAct loop always receives an observation, never a thrown exception.
  */
 
-import { AgentTool, ToolInput, ToolResult, ToolSchema } from '../../domain/interfaces/agent-tool';
+import { AgentTool, ToolInput, ToolResult, ToolSchema } from '../../domain/types/agent-tool';
 
 export class ToolRegistry {
     private readonly _tools = new Map<string, AgentTool>();

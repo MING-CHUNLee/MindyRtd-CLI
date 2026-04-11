@@ -14,7 +14,7 @@
  */
 
 import { resolve } from 'path';
-import { LLMGateway } from '../../domain/interfaces/llm-gateway';
+import { LLMGateway } from '../../domain/types/llm-gateway';
 import { LlmGateway } from '../api/llm/gateway/llm-gateway';
 import { FileFinder } from './file-finder';
 import { FILE_RELEVANCE_SYSTEM_PROMPT } from '../../application/prompts/file-ops';

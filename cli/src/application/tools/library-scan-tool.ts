@@ -5,7 +5,7 @@
  * Wraps the existing library-scanner infrastructure service.
  */
 
-import { AgentTool, ToolInput, ToolResult, ToolSchema } from '../../domain/interfaces/agent-tool';
+import { AgentTool, ToolInput, ToolResult, ToolSchema } from '../../domain/types/agent-tool';
 import { scanLibraries } from '../../infrastructure/r-adapter/library-scanner';
 
 export class LibraryScanTool implements AgentTool {

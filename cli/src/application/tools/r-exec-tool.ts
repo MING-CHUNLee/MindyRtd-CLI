@@ -6,8 +6,8 @@
  * writing files, saving data, or invoking system commands.
  */
 
-import { AgentTool, ToolInput, ToolResult, ToolSchema } from '../../domain/interfaces/agent-tool';
-import { IRScriptRunner } from '../../domain/interfaces/r-script-runner';
+import { AgentTool, ToolInput, ToolResult, ToolSchema } from '../../domain/types/agent-tool';
+import { IRScriptRunner } from '../../domain/types/r-script-runner';
 
 // Patterns that indicate potentially unsafe R code (write side-effects)
 const UNSAFE_PATTERNS = /write|sink|file\.create|saveRDS|save\(|system\(/i;

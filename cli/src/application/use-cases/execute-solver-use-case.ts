@@ -10,8 +10,8 @@
  * Returns SolverResult — the caller is responsible for persisting the turn.
  */
 
-import { LLMGateway } from '../../domain/interfaces/llm-gateway';
-import { IFileSystem } from '../../domain/interfaces/file-system';
+import { LLMGateway } from '../../domain/types/llm-gateway';
+import { IFileSystem } from '../../domain/types/file-system';
 import { LocalFileSystem } from '../../infrastructure/filesystem/local-file-system';
 import { TurnUsage } from '../../domain/entities/conversation-turn';
 import { ToolRegistry } from '../orchestration/tool-registry';

@@ -1,4 +1,4 @@
-import { IDirectoryScanner } from '../../domain/interfaces/directory-scanner';
+import { IDirectoryScanner } from '../../domain/types/directory-scanner';
 import { ScanOptions, ScanResult } from '../../shared/types';
 import { scanDirectory } from './file-scanner';
 

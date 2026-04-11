@@ -1,11 +1,11 @@
 /**
  * Type definitions for Context Builder
- * 
+ *
  * Defines the data structures for environment context and prompt generation.
  */
 
-import { LibraryScanResult } from './library-info';
-import { ScanResult } from './scan-result';
+// EnvironmentContext is a domain value object — re-export from domain/values
+export { EnvironmentContext } from '../../domain/values/environment-context';
 
 /**
  * Options for context building and prompt generation
@@ -25,20 +25,6 @@ export interface ContextBuilderOptions {
     customInstructions?: string;
     /** Language for the prompt (default: 'en') */
     language?: 'en' | 'zh-TW';
-}
-
-/**
- * Complete environment context combining R environment and file information
- */
-export interface EnvironmentContext {
-    /** R environment information */
-    rEnvironment: LibraryScanResult;
-    /** File scan results */
-    fileContext: ScanResult;
-    /** Current working directory */
-    workingDirectory: string;
-    /** Timestamp of context generation */
-    generatedAt: Date;
 }
 
 /**

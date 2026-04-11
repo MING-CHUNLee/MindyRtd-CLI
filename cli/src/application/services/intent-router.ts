@@ -12,7 +12,7 @@
  * and use-case orchestration.
  */
 
-import { LLMGateway } from '../../domain/interfaces/llm-gateway';
+import { LLMGateway } from '../../domain/types/llm-gateway';
 import { INTENT_CLASSIFIER_SYSTEM_PROMPT } from '../prompts/intent-classifier';
 import { SessionMessage } from '../../shared/types/messages';
 

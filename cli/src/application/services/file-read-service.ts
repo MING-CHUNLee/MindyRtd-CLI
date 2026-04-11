@@ -6,7 +6,7 @@
  */
 
 import path from 'path';
-import { IFileSystem } from '../../domain/interfaces/file-system';
+import { IFileSystem } from '../../domain/types/file-system';
 import { isContentEditable } from '../../domain/policies/agent-file-policy';
 
 export type FileReadResult =

@@ -15,7 +15,7 @@
 import path from 'path';
 
 import { LlmGateway } from '../../infrastructure/api/llm/gateway/llm-gateway';
-import { LLMGateway } from '../../domain/interfaces/llm-gateway';
+import { LLMGateway } from '../../domain/types/llm-gateway';
 import { DiffEngine } from '../services/diff-engine';
 import { SessionRepository } from '../../infrastructure/persistence/session-repository';
 import { ConversationSession } from '../../domain/entities/conversation-session';

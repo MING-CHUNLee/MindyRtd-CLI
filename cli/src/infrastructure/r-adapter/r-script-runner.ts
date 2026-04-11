@@ -9,7 +9,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import { findRscriptPath, execAsync } from './r-path-finder';
-import { IRScriptRunner } from '../../domain/interfaces/r-script-runner';
+import { IRScriptRunner } from '../../domain/types/r-script-runner';
 
 const TEMP_SCRIPT_PREFIX = 'mindy_r_script_';
 const TEMP_SCRIPT_EXTENSION = '.R';

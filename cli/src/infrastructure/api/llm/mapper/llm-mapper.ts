@@ -8,11 +8,8 @@
  * while response normalization is independently testable.
  */
 
-import {
-    LLMResponse,
-    OpenAIRawResponse,
-    AnthropicRawResponse,
-} from '../../../../shared/types/llm-types';
+import { LLMResponse } from '../../../../shared/types/llm-types';
+import { OpenAIRawResponse, AnthropicRawResponse } from '../gateway/llm-gateway';
 
 type ResponseBody = Omit<LLMResponse, 'responseTimeMs'>;
 

@@ -10,8 +10,8 @@
 
 import path from 'path';
 import { PDFParse } from 'pdf-parse';
-import { AgentTool, ToolInput, ToolResult, ToolSchema } from '../../domain/interfaces/agent-tool';
-import { IFileSystem } from '../../domain/interfaces/file-system';
+import { AgentTool, ToolInput, ToolResult, ToolSchema } from '../../domain/types/agent-tool';
+import { IFileSystem } from '../../domain/types/file-system';
 import { MAX_FILE_CONTENT_CHARS } from '../../domain/policies/agent-file-policy';
 
 export class PdfReadTool implements AgentTool {

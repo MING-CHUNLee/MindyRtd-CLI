@@ -11,7 +11,7 @@
  */
 
 import path from 'path';
-import { IFileSystem } from '../../domain/interfaces/file-system';
+import { IFileSystem } from '../../domain/types/file-system';
 import { DiffEngine } from './diff-engine';
 
 /** Type guard: true when e is a Node.js system error with a `.code` property. */

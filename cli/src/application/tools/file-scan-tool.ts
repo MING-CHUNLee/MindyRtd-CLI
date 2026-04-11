@@ -6,8 +6,8 @@
  */
 
 import path from 'path';
-import { AgentTool, ToolInput, ToolResult, ToolSchema } from '../../domain/interfaces/agent-tool';
-import { IDirectoryScanner } from '../../domain/interfaces/directory-scanner';
+import { AgentTool, ToolInput, ToolResult, ToolSchema } from '../../domain/types/agent-tool';
+import { IDirectoryScanner } from '../../domain/types/directory-scanner';
 
 export class FileScanTool implements AgentTool {
     readonly name = 'file_scan';

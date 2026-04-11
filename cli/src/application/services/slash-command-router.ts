@@ -7,7 +7,7 @@
 
 import { ConversationSession } from '../../domain/entities/conversation-session';
 import { SessionRepository } from '../../infrastructure/persistence/session-repository';
-import { LLMGateway } from '../../domain/interfaces/llm-gateway';
+import { LLMGateway } from '../../domain/types/llm-gateway';
 import { WorkflowMode } from '../../infrastructure/config/settings';
 import { ModeManager } from './mode-manager';
 

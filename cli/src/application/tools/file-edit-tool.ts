@@ -10,7 +10,7 @@
  */
 
 import path from 'path';
-import { AgentTool, ToolInput, ToolResult, ToolSchema } from '../../domain/interfaces/agent-tool';
+import { AgentTool, ToolInput, ToolResult, ToolSchema } from '../../domain/types/agent-tool';
 import { EditStagingService } from '../services/edit-staging-service';
 import { isFilenameEditable } from '../../domain/policies/agent-file-policy';
 

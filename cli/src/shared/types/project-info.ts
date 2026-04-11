@@ -1,13 +1,2 @@
-/**
- * Project metadata type
- */
-
-export interface ProjectInfo {
-    name: string;
-    path: string;
-    type: 'rproj' | 'inferred';
-}
-
-export function createProjectInfo(props: ProjectInfo): ProjectInfo {
-    return Object.freeze({ ...props });
-}
+// Re-export from domain/values — ProjectInfo is a domain value object
+export { ProjectInfo, createProjectInfo } from '../../domain/values/project-info';

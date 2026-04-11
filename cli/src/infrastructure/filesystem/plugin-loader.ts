@@ -22,7 +22,7 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { AgentTool } from '../../domain/interfaces/agent-tool';
+import { AgentTool } from '../../domain/types/agent-tool';
 import { ToolRegistry } from '../../application/orchestration/tool-registry';
 
 // ── Types ─────────────────────────────────────────────────────────────────────

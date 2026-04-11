@@ -1,6 +1,13 @@
 {
     "categories": [
         {
+            "id": "ddd-domain-layer",
+            "keyword": ["ddd", "domain", "entity", "value object", "policy", "belongingness", "clean architecture", "refactor", "deprecated", "serialization"],
+            "title": "DDD Domain Layer Conventions",
+            "file": "ddd-domain-layer.md",
+            "description": "Entity vs Value Object 判斷準則（Belongingness Test）、Domain Policy vs Lib 拆分規則、deprecated serialization type 處理方式、多 issue refactor 執行順序"
+        },
+        {
             "id": "git-commit-generation",
             "keyword": ["git", "commit", "diff", "大量變更", "semantic", "提交", "生成"],
             "title": "Git Commit Generation",

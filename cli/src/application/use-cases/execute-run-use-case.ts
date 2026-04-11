@@ -9,7 +9,7 @@
 
 import fs from 'fs';
 import path from 'path';
-import { LLMGateway } from '../../domain/interfaces/llm-gateway';
+import { LLMGateway } from '../../domain/types/llm-gateway';
 import { TurnUsage } from '../../domain/entities/conversation-turn';
 import { ToolRegistry } from '../orchestration/tool-registry';
 import { SessionMessage } from '../../shared/types/messages';

@@ -16,8 +16,8 @@
  * - Proper error handling and typing
  * - Input validation before API calls
  */
-import { LLMRequestPayload, LLMResponse, OpenAIRawResponse, AnthropicRawResponse } from '../../../../shared/types/llm-types';
-import { LLMGateway } from '../../../../domain/interfaces/llm-gateway';
+import { LLMRequestPayload, LLMResponse } from '../../../../shared/types/llm-types';
+import { LLMGateway } from '../../../../domain/types/llm-gateway';
 import { LLMConfig, getLLMConfigFromEnv, LLMProvider } from '../../../config';
 import { LLM } from '../../../config/constants';
 import { SessionLogGateway } from '../../logging/gateway/session-log-gateway';
@@ -44,6 +44,26 @@ export class LLMAPIError extends Error {
         super(message);
         this.name = 'LLMAPIError';
     }
+}
+
+// ============================================
+// Native API Wire Types
+// ============================================
+
+/** OpenAI API raw response shape */
+export interface OpenAIRawResponse {
+    choices: Array<{ message?: { content?: string } }>;
+    usage?: { prompt_tokens: number; completion_tokens: number; total_tokens: number };
+    model: string;
+    error?: { message?: string };
+}
+
+/** Anthropic API raw response shape */
+export interface AnthropicRawResponse {
+    content: Array<{ text?: string }>;
+    usage?: { input_tokens: number; output_tokens: number };
+    model: string;
+    error?: { message?: string };
 }
 
 // ============================================
