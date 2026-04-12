@@ -12,7 +12,7 @@
 import { LibraryScanResult, LibraryInfo } from '../../shared/types/library-info';
 import { ScanResult } from '../../shared/types/scan-result';
 import { CapabilityGroup } from '../../shared/types/prompt-context';
-import { LocaleData, t } from '../../presentation/i18n';
+import { LocaleData, t } from '../../shared/i18n';
 import {
     PACKAGE_CAPABILITIES,
     KEY_PACKAGE_GROUPS,

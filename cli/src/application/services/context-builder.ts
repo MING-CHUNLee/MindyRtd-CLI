@@ -24,7 +24,7 @@ import { LLMRequestPayload } from '../../shared/types/llm-types';
 import { ToolSchema } from '../../domain/types/agent-tool';
 import { SessionMessage } from '../../domain/entities/conversation-session';
 import { KnowledgeEntry } from '../../domain/entities/knowledge-entry';
-import { loadLocale } from '../../presentation/i18n';
+import { loadLocale } from '../../shared/i18n';
 import {
     buildRoleSection,
     buildEnvironmentSection,
