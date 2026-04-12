@@ -104,12 +104,16 @@ const App: React.FC<AppProps> = ({ config }) => {
 
     useEffect(() => {
         const initAgent = async () => {
-            const mod = await import('../../application/controllers/agent-controller.js');
+            const [mod, factoryMod] = await Promise.all([
+                import('../../application/controllers/agent-controller.js'),
+                import('../../infrastructure/bootstrap/agent-factory.js'),
+            ]);
             const AgentServiceClass = mod.AgentController;
             const service = new AgentServiceClass(
                 { directory: config?.directory ?? process.cwd() },
                 handleAgentEvent,
                 onApproval,
+                factoryMod.buildAgentDeps(),
             );
             await service.initialize({
                 sessionId: config?.sessionId,

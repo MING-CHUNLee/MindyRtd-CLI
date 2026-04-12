@@ -6,14 +6,14 @@
  */
 
 import { ConversationSession } from '../../domain/entities/conversation-session';
-import { SessionRepository } from '../../infrastructure/persistence/session-repository';
+import { SessionStore } from '../../domain/repositories/session-store';
 import { LLMGateway } from '../../domain/types/llm-gateway';
 import { WorkflowMode } from '../../infrastructure/config/settings';
 import { ModeManager } from './mode-manager';
 
 export interface SlashCommandContext {
     session: ConversationSession;
-    repo: SessionRepository;
+    repo: SessionStore;
     modeManager: ModeManager;
     llm: LLMGateway;
     setSession: (s: ConversationSession) => void;
@@ -45,7 +45,8 @@ export class SlashCommandRouter {
                 } catch (error) {
                     return `Rollback failed: ${error instanceof Error ? error.message : String(error)}`;
                 }
-            }
+            }  
+            // switch fall-through
             case 'solver':
             case 'tutor-socratic':
             case 'tutor-guide':

@@ -12,6 +12,7 @@
 import { AgentController as AgentService } from '../../../src/application/controllers/agent-controller';
 import type { AgentEvent, ApprovalCallback } from '../../../src/application/controllers/agent-controller';
 import { DiffEngine } from '../../../src/application/services/diff-engine';
+import { ToolRegistry } from '../../../src/application/orchestration/tool-registry';
 import type { SessionRepository } from '../../../src/infrastructure/persistence/session-repository';
 import type { LLMController } from '../../../src/infrastructure/api';
 import type { RecordReplayLLM } from './record-replay-llm';
@@ -57,6 +58,7 @@ export function createHarness(opts: HarnessOpts): Harness {
             llm: opts.llm as unknown as LLMController,
             repo: noopRepo,
             diffEngine: new DiffEngine(),
+            registry: new ToolRegistry(),
         },
     );
 

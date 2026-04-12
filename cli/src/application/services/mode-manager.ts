@@ -7,6 +7,8 @@
 
 import { WorkflowMode, getSettings, saveSettings } from '../../infrastructure/config/settings';
 
+export type { WorkflowMode };
+
 export class ModeManager {
     private activeMode: WorkflowMode;
 

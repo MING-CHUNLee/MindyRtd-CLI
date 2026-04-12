@@ -17,6 +17,7 @@ import ora, { Ora } from 'ora';
 import readline from 'readline';
 
 import { AgentController, AgentEvent, ProposedEdit } from '../../application/controllers/agent-controller';
+import { buildAgentDeps } from '../../infrastructure/bootstrap/agent-factory';
 import { displayStatusBar } from '../views/context-status-bar';
 import { getSettings } from '../../infrastructure/config/settings';
 
@@ -150,6 +151,7 @@ async function executeAgentCommand(
         { directory: options.directory },
         viewAdapter,
         approvalGate,
+        buildAgentDeps(),
     );
     controllerRef = controller;
 

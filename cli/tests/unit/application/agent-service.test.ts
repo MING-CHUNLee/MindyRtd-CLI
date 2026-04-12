@@ -13,9 +13,8 @@ import {
     ProposedEdit,
 } from '../../../src/application/controllers/agent-controller';
 import { LLMController } from '../../../src/infrastructure/api';
-import { SessionRepository } from '../../../src/infrastructure/persistence/session-repository';
 import { DiffEngine } from '../../../src/application/services/diff-engine';
-import { PluginLoader } from '../../../src/infrastructure/plugins/plugin-loader';
+import { ToolRegistry } from '../../../src/application/orchestration/tool-registry';
 import { ConversationSession } from '../../../src/domain/entities/conversation-session';
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
@@ -24,36 +23,6 @@ import { ConversationSession } from '../../../src/domain/entities/conversation-s
 vi.mock('../../../src/infrastructure/config/settings', () => ({
     getSettings: vi.fn().mockReturnValue({ statusBar: { items: [] }, workflowMode: 'default' }),
     saveSettings: vi.fn(),
-}));
-
-vi.mock('../../../src/application/tools/file-scan-tool', () => ({
-    FileScanTool: vi.fn(function() {
-        return {
-            name: 'file_scan',
-            schema: { name: 'file_scan', description: 'scan', parameters: {} },
-            execute: vi.fn().mockResolvedValue({ content: '', isError: false, data: { files: {} } }),
-        };
-    }),
-}));
-
-vi.mock('../../../src/application/tools/file-read-tool', () => ({
-    FileReadTool: vi.fn(function() {
-        return {
-            name: 'file_read',
-            schema: { name: 'file_read', description: 'read', parameters: {} },
-            execute: vi.fn().mockResolvedValue({ content: '', isError: false }),
-        };
-    }),
-}));
-
-vi.mock('../../../src/application/tools/r-exec-tool', () => ({
-    RExecTool: vi.fn(function() {
-        return {
-            name: 'r_exec',
-            schema: { name: 'r_exec', description: 'exec', parameters: {} },
-            execute: vi.fn().mockResolvedValue({ content: '', isError: false }),
-        };
-    }),
 }));
 
 vi.mock('../../../src/infrastructure/persistence/knowledge-repository', () => ({
@@ -81,14 +50,14 @@ function makeMockLLM(intentResponse = 'ask', streamContent = 'Test answer'): LLM
     } as unknown as LLMController;
 }
 
-function makeMockRepo(session?: ConversationSession): SessionRepository {
-    const s = session ?? makeMockSession();
+function makeMockRepo() {
     return {
         load: vi.fn().mockResolvedValue(null),
         loadLast: vi.fn().mockResolvedValue(null),
         save: vi.fn().mockResolvedValue(undefined),
         list: vi.fn().mockResolvedValue([]),
-    } as unknown as SessionRepository;
+        delete: vi.fn().mockResolvedValue(undefined),
+    };
 }
 
 function makeMockDiffEngine(): DiffEngine {
@@ -104,7 +73,7 @@ function makeService(
     service: AgentService;
     events: AgentEvent[];
     llm: LLMController;
-    repo: SessionRepository;
+    repo: ReturnType<typeof makeMockRepo>;
     diffEngine: DiffEngine;
 } {
     const events: AgentEvent[] = [];
@@ -112,8 +81,13 @@ function makeService(
     const repo = makeMockRepo();
     const diffEngine = makeMockDiffEngine();
 
-    const pluginLoader = { loadAll: vi.fn().mockResolvedValue([]) } as unknown as PluginLoader;
-    const deps: AgentServiceDeps = { llm, repo, diffEngine, pluginLoader };
+    const deps: AgentServiceDeps = {
+        llm,
+        repo,
+        diffEngine,
+        registry: new ToolRegistry(),
+        pluginLoader: { loadAll: async () => [] },
+    };
 
     const service = new AgentService(
         { directory: '/fake/project' },

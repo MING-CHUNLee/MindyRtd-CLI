@@ -14,34 +14,19 @@
 
 import path from 'path';
 
-import { LlmGateway } from '../../infrastructure/api/llm/gateway/llm-gateway';
 import { LLMGateway } from '../../domain/types/llm-gateway';
+import { SessionStore } from '../../domain/repositories/session-store';
 import { DiffEngine } from '../services/diff-engine';
-import { SessionRepository } from '../../infrastructure/persistence/session-repository';
 import { ConversationSession } from '../../domain/entities/conversation-session';
 import { TurnUsage } from '../../domain/entities/conversation-turn';
 
 import { ToolRegistry } from '../orchestration/tool-registry';
-import { FileScanTool } from '../tools/file-scan-tool';
-import { DirectoryScanner } from '../../infrastructure/filesystem/directory-scanner';
-import { FileReadTool } from '../tools/file-read-tool';
-import { FileEditTool } from '../tools/file-edit-tool';
-import { EditStagingService } from '../services/edit-staging-service';
-import { FileReadService } from '../services/file-read-service';
-import { LocalFileSystem } from '../../infrastructure/filesystem/local-file-system';
-import { PdfReadTool } from '../tools/pdf-read-tool';
-import { RExecTool } from '../tools/r-exec-tool';
-import { RInstallTool } from '../tools/r-install-tool';
-import { RRenderTool } from '../tools/r-render-tool';
-import { LibraryScanTool } from '../tools/library-scan-tool';
-import { RScriptRunner } from '../../infrastructure/r-adapter/r-script-runner';
 import { HistorySummarizer } from '../services/history-summarizer';
 import { IntentRouter, Intent } from '../services/intent-router';
-import { ModeManager } from '../services/mode-manager';
+import { ModeManager, WorkflowMode } from '../services/mode-manager';
 import { SlashCommandRouter } from '../services/slash-command-router';
 
 import { FileChange } from '../../domain/entities/file-change';
-import { PluginLoader } from '../../infrastructure/filesystem/plugin-loader';
 import { SessionMessage } from '../../shared/types/messages';
 
 import { ExecuteAskUseCase } from '../use-cases/execute-ask-use-case';
@@ -50,7 +35,6 @@ import { ExecuteRunUseCase } from '../use-cases/execute-run-use-case';
 import { ExecuteSolverUseCase } from '../use-cases/execute-solver-use-case';
 import { ExecuteTutorUseCase } from '../use-cases/execute-tutor-use-case';
 import { ExecuteInstallUseCase } from '../use-cases/execute-install-use-case';
-import { WorkflowMode } from '../../infrastructure/config/settings';
 
 // ── Event Types (discriminated union) ────────────────────────────────────────
 
@@ -93,15 +77,27 @@ export interface AgentControllerOptions {
     forceNew?: boolean;
 }
 
-/** Injectable dependencies — omit any to use the default implementation. */
+/** Application-layer abstraction for plugin loading. */
+export interface IPluginLoader {
+    loadAll(registry: ToolRegistry): Promise<Array<{ name: string; loaded: boolean }>>;
+}
+
+/** Injectable dependencies — all required; use agent-factory to build defaults. */
 export interface AgentControllerDeps {
     llm: LLMGateway;
-    repo: SessionRepository;
+    repo: SessionStore;
     diffEngine: DiffEngine;
+    registry: ToolRegistry;
     /** Optional — defaults to new HistorySummarizer(). */
     summarizer?: HistorySummarizer;
-    /** Optional — defaults to new PluginLoader(). */
-    pluginLoader?: PluginLoader;
+    /** Optional — defaults to no-op. */
+    pluginLoader?: IPluginLoader;
+    /**
+     * Shared staging service instance — must be the same one passed to FileEditTool
+     * in the registry so that tool-staged edits are visible to the use cases.
+     * If omitted, each use case creates its own (fine for tests).
+     */
+    stagingService?: import('../services/edit-staging-service').EditStagingService;
     /** Optional — for testability. */
     askUseCase?: ExecuteAskUseCase;
     /** Optional — for testability. */
@@ -126,7 +122,7 @@ export class AgentController {
     private _session?: ConversationSession;
     private previousSessionSummary = '';
     private readonly llm: LLMGateway;
-    private readonly repo: SessionRepository;
+    private readonly repo: SessionStore;
     private readonly registry: ToolRegistry;
     private readonly diffEngine: DiffEngine;
     private readonly viewAdapter: EventCallback;
@@ -134,7 +130,7 @@ export class AgentController {
     private readonly directory: string;
 
     private readonly summarizer: HistorySummarizer;
-    private readonly pluginLoader: PluginLoader;
+    private readonly pluginLoader: IPluginLoader;
     private readonly intentRouter: IntentRouter;
     private readonly askUseCase: ExecuteAskUseCase;
     private readonly instructionUseCase: ExecuteInstructionUseCase;
@@ -156,17 +152,17 @@ export class AgentController {
         options: AgentControllerOptions,
         viewAdapter: EventCallback,
         approvalGate: ApprovalCallback,
-        deps?: Partial<AgentControllerDeps>,
+        deps: AgentControllerDeps,
     ) {
         this.directory = path.resolve(options.directory);
         this.viewAdapter = viewAdapter;
         this.approvalGate = approvalGate;
-        this.llm = deps?.llm ?? LlmGateway.fromEnv();
-        this.repo = deps?.repo ?? new SessionRepository();
-        this.diffEngine = deps?.diffEngine ?? new DiffEngine();
-        this.summarizer = deps?.summarizer ?? new HistorySummarizer();
-        this.pluginLoader = deps?.pluginLoader ?? new PluginLoader();
-        this.registry = new ToolRegistry();
+        this.llm = deps.llm;
+        this.repo = deps.repo;
+        this.diffEngine = deps.diffEngine;
+        this.registry = deps.registry;
+        this.summarizer = deps.summarizer ?? new HistorySummarizer();
+        this.pluginLoader = deps.pluginLoader ?? { loadAll: async () => [] };
 
         // Sub-services (IntentRouter, use cases) use a broad (type: string, data: Record) emit
         // signature. Create a real bridge function rather than a cast so events are correctly
@@ -176,73 +172,56 @@ export class AgentController {
         };
         this.intentRouter = new IntentRouter(this.llm, emit);
 
-        // Register built-in tools
-        const fs = new LocalFileSystem();
-        const stagingService = new EditStagingService(fs, this.diffEngine);
-        const fileEditTool = new FileEditTool(stagingService);
-        const fileReadService = new FileReadService(fs);
-        this.registry.register(new FileScanTool(new DirectoryScanner()));
-        this.registry.register(new FileReadTool(fileReadService));
-        this.registry.register(fileEditTool);
-        const rRunner = new RScriptRunner();
-        this.registry.register(new PdfReadTool(fs));
-        this.registry.register(new RExecTool(rRunner));
-        this.registry.register(new RInstallTool());
-        this.registry.register(new RRenderTool(fs, rRunner));
-        this.registry.register(new LibraryScanTool());
-
-        // Cast to the wider string type expected by use cases (safe: use cases only
-        // call emit with valid AgentEventType literals at runtime).
-        this.askUseCase = deps?.askUseCase ?? new ExecuteAskUseCase({
+        this.askUseCase = deps.askUseCase ?? new ExecuteAskUseCase({
             llm: this.llm,
             registry: this.registry,
             directory: this.directory,
             emit,
         });
 
-        this.instructionUseCase = deps?.instructionUseCase ?? new ExecuteInstructionUseCase({
+        this.instructionUseCase = deps.instructionUseCase ?? new ExecuteInstructionUseCase({
             llm: this.llm,
             registry: this.registry,
             diffEngine: this.diffEngine,
             directory: this.directory,
             onApproval: this.approvalGate,
-            stagingService,
+            stagingService: deps.stagingService,
             emit,
         });
 
-        this.runUseCase = deps?.runUseCase ?? new ExecuteRunUseCase({
+        this.runUseCase = deps.runUseCase ?? new ExecuteRunUseCase({
             llm: this.llm,
             registry: this.registry,
             directory: this.directory,
             emit,
         });
 
-        this.solverUseCase = deps?.solverUseCase ?? new ExecuteSolverUseCase({
+        this.solverUseCase = deps.solverUseCase ?? new ExecuteSolverUseCase({
             llm: this.llm,
             registry: this.registry,
             diffEngine: this.diffEngine,
             directory: this.directory,
             onApproval: this.approvalGate,
-            stagingService,
+            stagingService: deps.stagingService,
             emit,
         });
 
-        this.tutorSocraticUseCase = deps?.tutorSocraticUseCase ?? new ExecuteTutorUseCase(
+        this.tutorSocraticUseCase = deps.tutorSocraticUseCase ?? new ExecuteTutorUseCase(
             { llm: this.llm, registry: this.registry, directory: this.directory, emit },
             'socratic',
         );
 
-        this.tutorGuideUseCase = deps?.tutorGuideUseCase ?? new ExecuteTutorUseCase(
+        this.tutorGuideUseCase = deps.tutorGuideUseCase ?? new ExecuteTutorUseCase(
             { llm: this.llm, registry: this.registry, directory: this.directory, emit },
             'guide',
         );
 
-        this.installUseCase = deps?.installUseCase ?? new ExecuteInstallUseCase({
+        this.installUseCase = deps.installUseCase ?? new ExecuteInstallUseCase({
             registry: this.registry,
             emit,
         });
 
-        this.modeManager = deps?.modeManager ?? new ModeManager();
+        this.modeManager = deps.modeManager ?? new ModeManager();
 
         // The context object uses a getter for `session` so the router always
         // sees the current session (which changes on /new).
