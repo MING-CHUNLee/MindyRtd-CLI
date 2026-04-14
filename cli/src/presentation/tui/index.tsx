@@ -1,6 +1,6 @@
 import React from 'react';
 import { render } from 'ink';
-import App from './App.js';
+import App from './AppController.js';
 import { TUIConfig } from './types.js';
 
 export const startTUI = (config?: TUIConfig) => {
