@@ -4,12 +4,12 @@
  * Execute R code in the RStudio session.
  *
  * Usage:
- *   mindy run                             # Run current file in RStudio
- *   mindy run "1 + 1"                     # Execute inline code
- *   mindy run script.R                    # Execute R file
- *   mindy run report.Rmd                  # Render Rmd file
- *   mindy run --yes                       # Skip confirmation
- *   mindy run --timeout 60000             # Custom timeout
+ *   mindy r run                             # Run current file in RStudio
+ *   mindy r run "1 + 1"                     # Execute inline code
+ *   mindy r run script.R                    # Execute R file
+ *   mindy r run report.Rmd                  # Render Rmd file
+ *   mindy r run --yes                       # Skip confirmation
+ *   mindy r run --timeout 60000             # Custom timeout
  */
 
 import { Command } from 'commander';

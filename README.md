@@ -120,41 +120,23 @@ Streams the answer in real time. Uses the same session memory as agent mode.
 
 ---
 
-### Scan — list R project files
+### R utilities — run, install, inspect
 
 ```bash
-mindy-cli scan
-mindy-cli scan --directory ./project
+# Execute R scripts (via RStudio listener)
+mindy-cli r run script.R
+mindy-cli r run "1 + 1"
+
+# Install packages
+mindy-cli r install ggplot2 dplyr
+mindy-cli r install tidyverse --method bioc   # Bioconductor
+
+# Preview generated system prompt (debug)
+mindy-cli r context
+mindy-cli r context --minimal --tokens
 ```
 
-Detects `.R`, `.Rmd`, `.RData`, and `.Rproj` files and prints a structured summary.
-
----
-
-### Run — execute R scripts
-
-```bash
-mindy-cli run script.R
-mindy-cli run analysis.R --args "--input data.csv"
-```
-
----
-
-### Install — install R packages
-
-```bash
-mindy-cli install ggplot2 dplyr
-mindy-cli install tidyverse --method bioc   # Bioconductor
-```
-
----
-
-### Library — inspect installed packages
-
-```bash
-mindy-cli library
-mindy-cli library ggplot2
-```
+Scan and library inspection are available as agent tools: `mindy-cli ask "scan this project"`.
 
 ---
 
@@ -171,8 +153,8 @@ Opens an interactive diff review for a pending edit.
 ### Rollback — revert to an earlier turn
 
 ```bash
-mindy-cli rollback         # revert last turn
-mindy-cli rollback 3       # revert to turn 3
+mindy-cli agent rollback         # revert last turn (interactive)
+mindy-cli agent rollback 3       # revert to turn 3
 ```
 
 ---
@@ -203,18 +185,19 @@ Entries are stored at `.mindy/knowledge.json` and injected into agent context au
 ### Plugins — extend the agent
 
 ```bash
-mindy-cli plugins list    # show loaded plugins
-mindy-cli plugins dir     # show plugin directory path
+mindy-cli config plugins list    # show loaded plugins
+mindy-cli config plugins dir     # show plugin directory path
 ```
 
 To add a plugin, place a `.js` file in `~/.mindy/plugins/` that exports an object implementing the `ITool` interface (`name`, `description`, `schema`, `execute`).
 
 ---
 
-### Context — show current session status
+### Context — preview generated system prompt
 
 ```bash
-mindy-cli context
+mindy-cli r context
+mindy-cli r context --summary --tokens
 ```
 
 Prints the active session ID, turn count, token usage, and cost.

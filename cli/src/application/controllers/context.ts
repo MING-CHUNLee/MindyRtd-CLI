@@ -5,10 +5,10 @@
  * Useful for testing and debugging the context-builder output.
  *
  * Usage:
- *   mindy context              # Preview prompt
- *   mindy context --json       # Output as JSON
- *   mindy context --save       # Save to file
- *   mindy context --lang zh-TW # Chinese prompt
+ *   mindy r context              # Preview prompt
+ *   mindy r context --json       # Output as JSON
+ *   mindy r context --save       # Save to file
+ *   mindy r context --lang zh-TW # Chinese prompt
  */
 
 import { Command } from 'commander';

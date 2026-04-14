@@ -12,8 +12,8 @@
  *   };
  *
  * Sub-commands:
- *   mindy plugins list       list all discovered plugins with load status
- *   mindy plugins dir        print the plugin directory path
+ *   mindy config plugins list       list all discovered plugins with load status
+ *   mindy config plugins dir        print the plugin directory path
  */
 
 import { Command } from 'commander';

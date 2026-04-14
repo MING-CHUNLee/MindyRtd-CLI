@@ -20,6 +20,7 @@ import { AgentController, AgentEvent, ProposedEdit } from '../../application/con
 import { buildAgentDeps } from '../../infrastructure/bootstrap/agent-factory';
 import { displayStatusBar } from '../views/context-status-bar';
 import { getSettings } from '../../infrastructure/config/settings';
+import { rollbackCommand } from '../../application/controllers/rollback';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -52,7 +53,8 @@ Examples:
     `)
     .action(async (instruction: string, options: AgentOptions) => {
         await executeAgentCommand(instruction, options);
-    });
+    })
+    .addCommand(rollbackCommand);
 
 // ── Main Execution ────────────────────────────────────────────────────────────
 

@@ -4,11 +4,11 @@
  * Install R packages in RStudio session.
  *
  * Usage:
- *   mindy install dplyr                       # Install single package
- *   mindy install dplyr ggplot2               # Install multiple packages
- *   mindy install dplyr --yes                 # Skip confirmation
- *   mindy install dplyr --repos <url>         # Custom CRAN mirror
- *   mindy install tidyverse/dplyr --source github  # Install from GitHub
+ *   mindy r install dplyr                       # Install single package
+ *   mindy r install dplyr ggplot2               # Install multiple packages
+ *   mindy r install dplyr --yes                 # Skip confirmation
+ *   mindy r install dplyr --repos <url>         # Custom CRAN mirror
+ *   mindy r install tidyverse/dplyr --source github  # Install from GitHub
  */
 
 import { Command } from 'commander';

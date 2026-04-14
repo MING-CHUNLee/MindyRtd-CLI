@@ -5,10 +5,10 @@
  * previous turn, discarding everything that came after it.
  *
  * Usage:
- *   mindy rollback                     # interactive: pick turn from list
- *   mindy rollback 3                   # roll back to after turn 3
- *   mindy rollback 0                   # clear all turns (empty session)
- *   mindy rollback --session <id>      # target a specific session
+ *   mindy agent rollback                     # interactive: pick turn from list
+ *   mindy agent rollback 3                   # roll back to after turn 3
+ *   mindy agent rollback 0                   # clear all turns (empty session)
+ *   mindy agent rollback --session <id>      # target a specific session
  */
 
 import { Command } from 'commander';
@@ -24,10 +24,10 @@ export const rollbackCommand = new Command('rollback')
     .option('--list', 'Only list turns without rolling back')
     .addHelpText('after', `
 Examples:
-  $ mindy rollback             # interactive mode — choose from list
-  $ mindy rollback 2           # keep only the first 2 turns
-  $ mindy rollback 0           # clear all turns from session
-  $ mindy rollback --list      # show turn history only
+  $ mindy agent rollback             # interactive mode — choose from list
+  $ mindy agent rollback 2           # keep only the first 2 turns
+  $ mindy agent rollback 0           # clear all turns from session
+  $ mindy agent rollback --list      # show turn history only
     `)
     .action(async (turn: number | undefined, options: { session?: string; list?: boolean }) => {
         await executeRollbackCommand(turn, options);

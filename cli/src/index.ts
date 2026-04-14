@@ -10,7 +10,9 @@
  *   mindy-cli              → Interactive TUI REPL (default)
  *   mindy-cli agent "..."  → Agent mode (one-shot instruction)
  *   mindy-cli ask "..."    → Ask mode (conversational Q&A)
- *   mindy-cli <command>    → Direct utility commands (scan, run, install, …)
+ *   mindy-cli r <command>         → R utilities (run, install, context)
+ *   mindy-cli agent rollback [n]  → Roll back agent session to turn n
+ *   mindy-cli config plugins ...  → Plugin diagnostics
  *
  * Clean Architecture (dependency flows inward):
  *
@@ -29,14 +31,9 @@
 import { Command } from 'commander';
 import { agentCommand } from './presentation/cli/agent-cli-adapter';
 import { askCommand } from './application/controllers/ask';
-import { scanCommand } from './application/controllers/scan';
-import { libraryCommand } from './application/controllers/library';
-import { contextCommand } from './application/controllers/context';
-import { runCommand } from './application/controllers/run';
-import { installCommand } from './application/controllers/install';
-import { rollbackCommand } from './application/controllers/rollback';
+import { rCommand } from './presentation/cli/r-cli-adapter';
+import { configCommand } from './presentation/cli/config-cli-adapter';
 import { knowledgeCommand } from './application/controllers/knowledge';
-import { pluginsCommand } from './application/controllers/plugins';
 import { displayBanner } from './presentation/views/banner';
 import fs from 'fs';
 import path from 'path';
@@ -79,15 +76,14 @@ program
 program.addCommand(agentCommand);
 program.addCommand(askCommand);
 
-// ── Utility commands (also available as agent tools) ──────────────────────────
-program.addCommand(scanCommand);
-program.addCommand(libraryCommand);
-program.addCommand(contextCommand);
-program.addCommand(runCommand);
-program.addCommand(installCommand);
-program.addCommand(rollbackCommand);
+// ── R utilities ───────────────────────────────────────────────────────────────
+program.addCommand(rCommand);
+
+// ── Session / knowledge management ───────────────────────────────────────────
 program.addCommand(knowledgeCommand);
-program.addCommand(pluginsCommand);
+
+// ── Diagnostics / config ──────────────────────────────────────────────────────
+program.addCommand(configCommand);
 
 // ── Default action: Launch interactive TUI REPL ──────────────────────────────
 program.action(async () => {
