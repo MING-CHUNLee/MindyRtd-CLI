@@ -43,6 +43,16 @@ cli/src/
 
 The `agent` command supports **multi-step mode** (triggered by keywords `then`, `also`, `first`, `each` in the instruction) which runs sequential Orchestrator steps.
 
+## Slash commands (TUI)
+
+The interactive TUI supports quick slash commands:
+
+- `/run` — run the current file in RStudio immediately (no LLM)
+- `/rollback list` — list turns in the current session
+- `/rollback <n>` — rollback current session to after turn `n`
+- `/rollback session list` — list recent saved sessions
+- `/rollback session <id> <n>` — rollback a saved session to after turn `n`
+
 ### Key files
 
 - `src/index.ts` — CLI entry point, registers all Commander commands

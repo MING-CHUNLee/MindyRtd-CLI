@@ -10,9 +10,7 @@
  *   mindy-cli              → Interactive TUI REPL (default)
  *   mindy-cli agent "..."  → Agent mode (one-shot instruction)
  *   mindy-cli ask "..."    → Ask mode (conversational Q&A)
- *   mindy-cli r <command>         → R utilities (run, install, context)
  *   mindy-cli agent rollback [n]  → Roll back agent session to turn n
- *   mindy-cli config plugins ...  → Plugin diagnostics
  *
  * Clean Architecture (dependency flows inward):
  *
@@ -29,14 +27,14 @@
  */
 
 import { Command } from 'commander';
-import { agentCommand } from './presentation/cli/agent-cli-adapter';
-import { askCommand } from './application/controllers/ask';
-import { rCommand } from './presentation/cli/r-cli-adapter';
-import { configCommand } from './presentation/cli/config-cli-adapter';
-import { knowledgeCommand } from './application/controllers/knowledge';
+import { createAgentCommand } from './presentation/cli/agent-cli-adapter';
+import { createAskCommand } from './presentation/cli/ask-cli-adapter';
+import { knowledgeCommand } from './presentation/cli/knowledge-cli-adapter';
 import { displayBanner } from './presentation/views/banner';
 import fs from 'fs';
 import path from 'path';
+import { getSettings } from './infrastructure/config/settings';
+import { createAgentController } from './composition/create-agent-controller';
 
 // Read version from package.json
 const packageJsonPath = path.join(__dirname, '../package.json');
@@ -73,17 +71,33 @@ program
     });
 
 // ── Primary: Agent ────────────────────────────────────────────────────────────
+const settings = getSettings();
+const agentCommand = createAgentCommand({
+    statusBarItems: settings.statusBar.items,
+    createController: ({ directory, viewAdapter, approvalGate, installApprovalGate }) =>
+        createAgentController({
+            directory,
+            viewAdapter,
+            approvalGate,
+            installApprovalGate,
+        }),
+});
+
+const askCommand = createAskCommand({
+    statusBarItems: settings.statusBar.items,
+    createController: ({ directory, viewAdapter }) =>
+        createAgentController({
+            directory,
+            viewAdapter,
+            approvalGate: async () => true,
+        }),
+});
+
 program.addCommand(agentCommand);
 program.addCommand(askCommand);
 
-// ── R utilities ───────────────────────────────────────────────────────────────
-program.addCommand(rCommand);
-
 // ── Session / knowledge management ───────────────────────────────────────────
 program.addCommand(knowledgeCommand);
-
-// ── Diagnostics / config ──────────────────────────────────────────────────────
-program.addCommand(configCommand);
 
 // ── Default action: Launch interactive TUI REPL ──────────────────────────────
 program.action(async () => {

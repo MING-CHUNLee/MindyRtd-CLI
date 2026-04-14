@@ -1,19 +1,12 @@
 /**
- * Controller: rollback
+ * Presentation: RollbackCliAdapter
  *
- * Allows the user to roll back the current (or specified) session to any
- * previous turn, discarding everything that came after it.
- *
- * Usage:
- *   mindy agent rollback                     # interactive: pick turn from list
- *   mindy agent rollback 3                   # roll back to after turn 3
- *   mindy agent rollback 0                   # clear all turns (empty session)
- *   mindy agent rollback --session <id>      # target a specific session
+ * CLI adapter for `mindy-cli agent rollback ...`.
  */
 
 import { Command } from 'commander';
 import chalk from 'chalk';
-import readline from 'readline';
+
 import { SessionRepository } from '../../infrastructure/persistence/session-repository';
 import { ConversationSession } from '../../domain/entities/conversation-session';
 
@@ -24,7 +17,6 @@ export const rollbackCommand = new Command('rollback')
     .option('--list', 'Only list turns without rolling back')
     .addHelpText('after', `
 Examples:
-  $ mindy agent rollback             # interactive mode — choose from list
   $ mindy agent rollback 2           # keep only the first 2 turns
   $ mindy agent rollback 0           # clear all turns from session
   $ mindy agent rollback --list      # show turn history only
@@ -77,13 +69,13 @@ async function executeRollbackCommand(
 
     if (options.list) return;
 
-    // Determine target
-    let chosenTurn: number;
-    if (targetTurn !== undefined) {
-        chosenTurn = targetTurn;
-    } else {
-        chosenTurn = await promptTurnNumber(turns.length);
+    if (targetTurn === undefined || Number.isNaN(targetTurn)) {
+        console.error(chalk.red('Missing turn number. Use: mindy agent rollback <n> (or --list)'));
+        process.exit(1);
     }
+
+    // Determine target (non-interactive)
+    const chosenTurn = targetTurn;
 
     // Validate
     if (chosenTurn < 0 || chosenTurn > turns.length) {
@@ -96,16 +88,6 @@ async function executeRollbackCommand(
         return;
     }
 
-    // Confirm
-    const action = chosenTurn === 0
-        ? 'clear the entire session'
-        : `roll back to after turn ${chosenTurn} (dropping ${turns.length - chosenTurn} turn(s))`;
-    const confirmed = await confirm(`Roll back: ${action}? [y/N] `);
-    if (!confirmed) {
-        console.log(chalk.yellow('  Cancelled.'));
-        return;
-    }
-
     // Execute rollback
     session.rollbackTo(chosenTurn);
     await repo.save(session);
@@ -115,24 +97,4 @@ async function executeRollbackCommand(
     if (remaining === 0) {
         console.log(chalk.dim('  Session is empty. Use "mindy agent" to start a new conversation.'));
     }
-}
-
-function promptTurnNumber(max: number): Promise<number> {
-    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-    return new Promise(resolve => {
-        rl.question(chalk.yellow(`Roll back to turn (0–${max}): `), answer => {
-            rl.close();
-            resolve(parseInt(answer.trim(), 10));
-        });
-    });
-}
-
-function confirm(question: string): Promise<boolean> {
-    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-    return new Promise(resolve => {
-        rl.question(chalk.yellow(question), answer => {
-            rl.close();
-            resolve(answer.trim().toLowerCase() === 'y');
-        });
-    });
 }

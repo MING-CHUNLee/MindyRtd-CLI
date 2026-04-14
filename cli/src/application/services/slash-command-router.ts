@@ -9,11 +9,14 @@ import { ConversationSession } from '../../domain/entities/conversation-session'
 import { SessionStore } from '../../domain/repositories/session-store';
 import { WorkflowMode } from '../../infrastructure/config/settings';
 import { ModeManager } from './mode-manager';
+import type { RBridgePort } from '../ports/r-bridge-port';
 
 export interface SlashCommandContext {
     session: ConversationSession;
     repo: SessionStore;
     modeManager: ModeManager;
+    /** Optional RStudio listener bridge for /run. */
+    rBridge?: RBridgePort;
     /** Plain model name — replaces llm.getProviderInfo().model used by /new. */
     initialModel: string;
     setSession: (s: ConversationSession) => void;
@@ -29,6 +32,17 @@ export class SlashCommandRouter {
         switch (cmd) {
             case 'status':
                 return this.getStatusText();
+            case 'run': {
+                const bridge = this.ctx.rBridge;
+                if (!bridge || !bridge.isListenerRunning()) {
+                    return '請先在 RStudio 執行 mindy::start()';
+                }
+                const result = await bridge.runCurrentFile();
+                if (result.status === 'error') {
+                    return `Run failed: ${result.error ?? '(unknown error)'}`;
+                }
+                return (result.output ?? '').trim() || '(no output)';
+            }
             case 'new': {
                 this.ctx.setPreviousSummary(SlashCommandRouter.formatSessionSummary(this.ctx.session));
                 const model = this.ctx.initialModel;
@@ -37,6 +51,40 @@ export class SlashCommandRouter {
                 return `New session created: ${newSession.id.slice(-6)}`;
             }
             case 'rollback': {
+                // /rollback list
+                if (args[0] === 'list') {
+                    return this.formatTurnList(this.ctx.session);
+                }
+
+                // /rollback session list
+                if (args[0] === 'session' && args[1] === 'list') {
+                    const sessions = await this.ctx.repo.list();
+                    if (sessions.length === 0) return 'No saved sessions found.';
+                    return sessions
+                        .slice(0, 20)
+                        .map(s => {
+                            const date = s.startedAt.toISOString().slice(0, 10);
+                            return `${s.id}  (${s.turnCount} turns, ${date}, model: ${s.model})`;
+                        })
+                        .join('\n');
+                }
+
+                // /rollback session <id> <n>
+                if (args[0] === 'session' && args[1] && args[2]) {
+                    const sessionId = args[1];
+                    const target = parseInt(args[2], 10);
+                    const session = await this.ctx.repo.load(sessionId);
+                    if (!session) return `Session not found: ${sessionId}`;
+                    try {
+                        session.rollbackTo(target);
+                        await this.ctx.repo.save(session);
+                        return `Rolled back session ${sessionId} to turn ${target}. Session now has ${session.turnCount} turn(s).`;
+                    } catch (error) {
+                        return `Rollback failed: ${error instanceof Error ? error.message : String(error)}`;
+                    }
+                }
+
+                // /rollback <n> (default: last turn)
                 const target = parseInt(args[0] ?? String(this.ctx.session.turnCount - 1), 10);
                 try {
                     this.ctx.session.rollbackTo(target);
@@ -61,8 +109,12 @@ export class SlashCommandRouter {
                 return [
                     'Available commands:',
                     '  /status          — Show session info',
+                    '  /run             — Run the current RStudio file (no LLM)',
                     '  /new             — Start a new session',
                     '  /rollback [n]    — Roll back to turn n',
+                    '  /rollback list   — List turns in current session',
+                    '  /rollback session list        — List recent saved sessions',
+                    '  /rollback session <id> <n>    — Roll back a saved session to turn n',
                     '  /solver          — Switch to solver mode (generates solution files)',
                     '  /tutor-socratic  — Switch to Socratic tutor mode (guides with questions)',
                     '  /tutor-guide     — Switch to guided tutor mode (step-by-step hints)',
@@ -91,6 +143,18 @@ export class SlashCommandRouter {
     }
 
     private static readonly MAX_SNIPPET_LENGTH = 300;
+
+    private formatTurnList(session: ConversationSession): string {
+        const turns = session.turns;
+        if (turns.length === 0) return 'No turns yet.';
+        return turns
+            .map(t => {
+                const ts = t.timestamp.toISOString();
+                const preview = t.userMessage.length > 80 ? t.userMessage.slice(0, 80) + '…' : t.userMessage;
+                return `${t.turnNumber}. ${ts}  ${preview}`;
+            })
+            .join('\n');
+    }
 
     /** Build a compact summary of the last few turns for cross-session context. */
     static formatSessionSummary(session: ConversationSession): string {

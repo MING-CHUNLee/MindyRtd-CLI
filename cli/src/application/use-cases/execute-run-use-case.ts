@@ -13,6 +13,7 @@ import { LLMGateway } from '../../domain/types/llm-gateway';
 import { TurnUsage } from '../../domain/entities/conversation-turn';
 import { ToolRegistry } from '../orchestration/tool-registry';
 import { SessionMessage } from '../../shared/types/messages';
+import type { RBridgePort } from '../ports/r-bridge-port';
 
 type EmitFn = (type: string, data: Record<string, unknown>) => void;
 
@@ -21,6 +22,8 @@ export interface ExecuteRunDeps {
     registry: ToolRegistry;
     directory: string;
     emit: EmitFn;
+    /** Optional RStudio listener bridge (infrastructure provided). */
+    rBridge?: RBridgePort;
 }
 
 export interface RunResult {
@@ -50,9 +53,10 @@ export class ExecuteRunUseCase {
     async execute(instruction: string, history: SessionMessage[]): Promise<RunResult> {
         const usage: TurnUsage = { inputTokens: 0, outputTokens: 0, cacheCreationTokens: 0, cacheReadTokens: 0 };
 
-        // 1. Scan workspace and find the target script
-        this.deps.emit('phase_start', { phase: 'scan', description: 'Scanning workspace for R scripts' });
-        const scriptPath = await this.findScript(instruction);
+        // 1. Resolve execution path (RBridge-aware) and target script
+        this.deps.emit('phase_start', { phase: 'scan', description: 'Resolving run target' });
+        const plan = await this.resolveExecutionPath(instruction);
+        const scriptPath = plan.scriptPath;
         this.deps.emit('phase_end', { phase: 'scan', success: true });
 
         // 2. If no script found, report immediately — do NOT call the LLM
@@ -73,7 +77,7 @@ export class ExecuteRunUseCase {
 
         // 4. Execute
         this.deps.emit('phase_start', { phase: 'run', description: `Executing ${path.basename(scriptPath)}` });
-        const execOutput = await this.runScript(scriptPath);
+        const execOutput = await this.runScript({ ...plan, scriptPath });
         this.deps.emit('phase_end', { phase: 'run', success: true });
 
         // 5. Stream LLM analysis with full context
@@ -132,12 +136,81 @@ export class ExecuteRunUseCase {
         return null;
     }
 
+    private static extractMention(instruction: string): string | null {
+        // Absolute paths (Windows + POSIX)
+        // NOTE: Rmd/rmd must come before R in the alternation to avoid .R matching first
+        const absMatch = instruction.match(/[A-Za-z]:[\\/][^\s"']+\.(?:Rmd|rmd|R)\b/i)
+            ?? instruction.match(/\/[^\s"']+\.(?:Rmd|rmd|R)\b/i);
+        if (absMatch) return absMatch[0];
+
+        // Filename only
+        const nameMatch = instruction.match(/\b[^\s"'\\/]+\.(?:Rmd|rmd|R)\b/);
+        return nameMatch ? nameMatch[0] : null;
+    }
+
+    private static mentionMatchesActiveFile(mention: string, activeFilePath: string): boolean {
+        const m = mention.replace(/\\/g, '/').toLowerCase();
+        const a = activeFilePath.replace(/\\/g, '/').toLowerCase();
+
+        // If mention looks like a path, compare normalized absolute paths.
+        if (m.includes('/') || /^[a-z]:\//i.test(m)) {
+            try {
+                return path.resolve(m) === path.resolve(a);
+            } catch {
+                return false;
+            }
+        }
+
+        // Otherwise compare basenames.
+        return path.basename(m) === path.basename(a);
+    }
+
+    private async resolveExecutionPath(instruction: string): Promise<{
+        mode: 'bridge_current' | 'rscript';
+        scriptPath: string | null;
+    }> {
+        const bridge = this.deps.rBridge;
+
+        if (bridge?.isListenerRunning()) {
+            const activeFilePath = await bridge.getCurrentFile();
+            const mention = ExecuteRunUseCase.extractMention(instruction);
+
+            // Generic run instruction → run the file the user is actively editing.
+            if (activeFilePath && !mention) {
+                return { mode: 'bridge_current', scriptPath: activeFilePath };
+            }
+
+            // If the instruction mentions a file and it matches the active file, use the fast path.
+            if (activeFilePath && mention && ExecuteRunUseCase.mentionMatchesActiveFile(mention, activeFilePath)) {
+                return { mode: 'bridge_current', scriptPath: activeFilePath };
+            }
+        }
+
+        const scriptPath = await this.findScript(instruction);
+        return { mode: 'rscript', scriptPath };
+    }
+
     /**
      * Execute the script.
      * - .R files: source("path", chdir=TRUE)
      * - .Rmd files: rmarkdown::render("path") via r_render tool (bypasses safety guard)
      */
-    private async runScript(scriptPath: string): Promise<string> {
+    private async runScript(plan: { mode: 'bridge_current' | 'rscript'; scriptPath: string }): Promise<string> {
+        if (plan.mode === 'bridge_current') {
+            const bridge = this.deps.rBridge;
+            if (!bridge) return '(RBridge not available)';
+            try {
+                const result = await bridge.runCurrentFile();
+                if (result.status === 'error') {
+                    return result.error ?? '(RBridge error)';
+                }
+                return result.output ?? '';
+            } catch (error) {
+                return `RBridge failed: ${error instanceof Error ? error.message : String(error)}`;
+            }
+        }
+
+        const scriptPath = plan.scriptPath;
         const ext = path.extname(scriptPath).toLowerCase();
 
         if (ext === '.rmd') {

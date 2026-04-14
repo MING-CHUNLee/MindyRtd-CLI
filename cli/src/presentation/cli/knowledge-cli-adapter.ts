@@ -1,21 +1,13 @@
 /**
- * Controller: knowledge
+ * Presentation: KnowledgeCliAdapter
  *
- * Manage the agent's local knowledge base — add facts, project notes,
- * preferences, or any text the agent should remember across sessions.
- *
- * Stored at: <cwd>/.mindy/knowledge.json
- *
- * Sub-commands:
- *   mindy knowledge add <title> <content>   add a new entry
- *   mindy knowledge list                    list all entries
- *   mindy knowledge search <query>          keyword search
- *   mindy knowledge remove <id>             delete an entry
+ * CLI adapter for knowledge base management.
  */
 
 import { Command } from 'commander';
 import chalk from 'chalk';
 import readline from 'readline';
+
 import { KnowledgeRepository } from '../../infrastructure/persistence/knowledge-repository';
 import { KnowledgeBase } from '../../application/services/knowledge-base';
 import { KnowledgeEntry } from '../../domain/entities/knowledge-entry';

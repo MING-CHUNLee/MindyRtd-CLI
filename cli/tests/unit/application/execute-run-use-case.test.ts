@@ -9,6 +9,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ExecuteRunUseCase, ExecuteRunDeps } from '../../../src/application/use-cases/execute-run-use-case';
 import { LLMController } from '../../../src/infrastructure/api';
 import { ToolRegistry } from '../../../src/application/orchestration/tool-registry';
+import type { RBridgePort } from '../../../src/application/ports/r-bridge-port';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -50,6 +51,16 @@ function makeMockRegistry(tools: Record<string, { name: string; execute: ReturnT
         register: vi.fn(),
         getSchemas: vi.fn().mockReturnValue([]),
     } as unknown as ToolRegistry;
+}
+
+function makeMockBridge(overrides: Partial<RBridgePort> & { activeFile?: string | null } = {}): RBridgePort {
+    const activeFile = overrides.activeFile ?? '/project/active.R';
+    return {
+        isListenerRunning: vi.fn().mockReturnValue(true),
+        getCurrentFile: vi.fn().mockResolvedValue(activeFile),
+        runCurrentFile: vi.fn().mockResolvedValue({ id: '1', status: 'completed', output: 'bridge output' }),
+        ...overrides,
+    } as unknown as RBridgePort;
 }
 
 function makeDeps(overrides: Partial<ExecuteRunDeps> = {}) {
@@ -159,6 +170,73 @@ describe('ExecuteRunUseCase', () => {
 
             expect(renderTool.execute).toHaveBeenCalledOnce();
             expect(result.execOutput).toBe('Rmd output');
+        });
+    });
+
+    describe('execute() — RBridge-aware routing', () => {
+        it('uses RBridge.runCurrentFile for generic run when listener is running and active file is available', async () => {
+            const bridge = makeMockBridge({ activeFile: '/project/active.R' });
+            const registry = makeMockRegistry({
+                file_scan: makeScanTool({ rScripts: [{ name: 'hw11.R', path: '/project/hw11.R' }] }),
+                r_exec: makeExecTool('[1] 42'),
+            });
+            const { deps } = makeDeps({ rBridge: bridge, registry });
+            const useCase = new ExecuteRunUseCase(deps);
+
+            const result = await useCase.execute('run', []);
+
+            expect(bridge.getCurrentFile).toHaveBeenCalledOnce();
+            expect(bridge.runCurrentFile).toHaveBeenCalledOnce();
+            expect((registry.get as unknown as ReturnType<typeof vi.fn>)).not.toHaveBeenCalledWith('r_exec');
+            expect(result.scriptPath).toBe('/project/active.R');
+            expect(result.execOutput).toBe('bridge output');
+        });
+
+        it('falls back to r_exec when the instruction names a different file than the active RStudio file', async () => {
+            const bridge = makeMockBridge({ activeFile: '/project/active.R' });
+            const execTool = makeExecTool('[1] 42');
+            const scanTool = makeScanTool({ rScripts: [{ name: 'hw11.R', path: '/project/hw11.R' }] });
+            const registry = makeMockRegistry({ file_scan: scanTool, r_exec: execTool });
+            const { deps } = makeDeps({ rBridge: bridge, registry });
+            const useCase = new ExecuteRunUseCase(deps);
+
+            const result = await useCase.execute('run hw11.R', []);
+
+            expect(bridge.getCurrentFile).toHaveBeenCalledOnce();
+            expect(bridge.runCurrentFile).not.toHaveBeenCalled();
+            expect(execTool.execute).toHaveBeenCalledOnce();
+            expect(result.scriptPath).toBe('/project/hw11.R');
+        });
+
+        it('uses RBridge.runCurrentFile when the instruction names the active file', async () => {
+            const bridge = makeMockBridge({ activeFile: '/project/active.R' });
+            const registry = makeMockRegistry({
+                file_scan: makeScanTool({ rScripts: [{ name: 'active.R', path: '/project/active.R' }] }),
+                r_exec: makeExecTool('[1] 42'),
+            });
+            const { deps } = makeDeps({ rBridge: bridge, registry });
+            const useCase = new ExecuteRunUseCase(deps);
+
+            const result = await useCase.execute('run active.R', []);
+
+            expect(bridge.runCurrentFile).toHaveBeenCalledOnce();
+            expect(result.scriptPath).toBe('/project/active.R');
+        });
+
+        it('falls back to scan when listener is running but no active file is available', async () => {
+            const bridge = makeMockBridge({ activeFile: null });
+            const execTool = makeExecTool('[1] 42');
+            const scanTool = makeScanTool({ rScripts: [{ name: 'hw11.R', path: '/project/hw11.R' }] });
+            const registry = makeMockRegistry({ file_scan: scanTool, r_exec: execTool });
+            const { deps } = makeDeps({ rBridge: bridge, registry });
+            const useCase = new ExecuteRunUseCase(deps);
+
+            const result = await useCase.execute('run hw11.R', []);
+
+            expect(bridge.getCurrentFile).toHaveBeenCalledOnce();
+            expect(bridge.runCurrentFile).not.toHaveBeenCalled();
+            expect(execTool.execute).toHaveBeenCalledOnce();
+            expect(result.scriptPath).toBe('/project/hw11.R');
         });
     });
 

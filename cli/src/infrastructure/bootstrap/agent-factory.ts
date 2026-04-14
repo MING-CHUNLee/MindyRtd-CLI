@@ -19,6 +19,7 @@ import { SessionRepository } from '../persistence/session-repository';
 import { LocalFileSystem } from '../filesystem/local-file-system';
 import { DirectoryScanner } from '../filesystem/directory-scanner';
 import { RScriptRunner } from '../r-adapter/r-script-runner';
+import { getRBridge } from '../r-adapter/r-bridge';
 import { PluginLoader } from '../filesystem/plugin-loader';
 
 import { DiffEngine } from '../../application/services/diff-engine';
@@ -65,6 +66,7 @@ export function buildAgentDeps(
     const diffEngine   = new DiffEngine();
     const fs           = new LocalFileSystem();
     const registry     = new ToolRegistry();
+    const rBridge       = getRBridge();
 
     // stagingService is shared between FileEditTool (queues edits during ReAct)
     // and the instruction/solver use cases (drain the queue after the loop).
@@ -122,7 +124,7 @@ export function buildAgentDeps(
     });
 
     const runUseCase = new ExecuteRunUseCase({
-        llm, registry, directory, emit,
+        llm, registry, directory, emit, rBridge,
     });
 
     const solverUseCase = new ExecuteSolverUseCase({
@@ -165,6 +167,7 @@ export function buildAgentDeps(
         pluginLoader,
         modeManager,
         repo,
+        rBridge,
         initialModel: llm.getProviderInfo().model,
         eventBus,
     };

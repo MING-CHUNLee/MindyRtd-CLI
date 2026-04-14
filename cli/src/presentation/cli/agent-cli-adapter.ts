@@ -17,10 +17,25 @@ import ora, { Ora } from 'ora';
 import readline from 'readline';
 
 import { AgentController, AgentEvent, ProposedEdit, ProposedInstall } from '../../application/controllers/agent-controller';
-import { buildAgentDeps } from '../../infrastructure/bootstrap/agent-factory';
 import { displayStatusBar } from '../views/context-status-bar';
-import { getSettings } from '../../infrastructure/config/settings';
-import { rollbackCommand } from '../../application/controllers/rollback';
+import { rollbackCommand } from './rollback-cli-adapter';
+import { StatusBarItemKey } from '../view-models';
+
+export interface AgentCliAdapterDeps {
+    /**
+     * Composition root: build a fully wired controller (including injected deps).
+     * This keeps infrastructure imports out of the presentation layer.
+     */
+    createController: (args: {
+        directory: string;
+        viewAdapter: (event: AgentEvent) => void;
+        approvalGate: (edit: ProposedEdit) => Promise<boolean>;
+        installApprovalGate: (plan: ProposedInstall) => Promise<boolean>;
+    }) => AgentController;
+
+    /** Status bar item order (typically loaded from user settings). */
+    statusBarItems: StatusBarItemKey[];
+}
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -33,14 +48,15 @@ interface AgentOptions {
 
 // ── Command Definition ────────────────────────────────────────────────────────
 
-export const agentCommand = new Command('agent')
-    .description('Run Agent to edit files based on natural language instruction')
-    .argument('<instruction>', 'What the agent should do')
-    .option('-d, --directory <path>', 'Workspace directory to scan', '.')
-    .option('--resume', 'Resume the last saved session', false)
-    .option('--session <id>', 'Resume a specific session by ID')
-    .option('--new', 'Force a new session (ignore last)', false)
-    .addHelpText('after', `
+export function createAgentCommand(deps: AgentCliAdapterDeps): Command {
+    return new Command('agent')
+        .description('Run Agent to edit files based on natural language instruction')
+        .argument('<instruction>', 'What the agent should do')
+        .option('-d, --directory <path>', 'Workspace directory to scan', '.')
+        .option('--resume', 'Resume the last saved session', false)
+        .option('--session <id>', 'Resume a specific session by ID')
+        .option('--new', 'Force a new session (ignore last)', false)
+        .addHelpText('after', `
 Examples:
   # New session
   $ mindy-cli agent "Add error handling to the scanner"
@@ -51,14 +67,16 @@ Examples:
   # Resume a specific session
   $ mindy-cli agent "Continue the refactor" --session abc123
     `)
-    .action(async (instruction: string, options: AgentOptions) => {
-        await executeAgentCommand(instruction, options);
-    })
-    .addCommand(rollbackCommand);
+        .action(async (instruction: string, options: AgentOptions) => {
+            await executeAgentCommand(deps, instruction, options);
+        })
+        .addCommand(rollbackCommand);
+}
 
 // ── Main Execution ────────────────────────────────────────────────────────────
 
 async function executeAgentCommand(
+    deps: AgentCliAdapterDeps,
     instruction: string,
     options: AgentOptions,
 ): Promise<void> {
@@ -171,11 +189,12 @@ async function executeAgentCommand(
         return promptConfirm(`Install ${chalk.cyan(summary)}? [Y/n] `);
     };
 
-    const controller = new AgentController(
-        { directory: options.directory },
+    const controller = deps.createController({
+        directory: options.directory,
         viewAdapter,
-        buildAgentDeps(options.directory, approvalGate, installApprovalGate),
-    );
+        approvalGate,
+        installApprovalGate,
+    });
     controllerRef = controller;
 
     await controller.initialize({
@@ -189,8 +208,6 @@ async function executeAgentCommand(
     // This adapter owns the mapping: domain → StatusBarVM (Clean Architecture).
     const session  = controller.getSession();
     const mode     = controller.getMode();
-    const settings = getSettings();
-
     displayStatusBar(
         {
             model:              session.model,
@@ -204,7 +221,7 @@ async function executeAgentCommand(
             elapsedMs:          session.elapsedMs,
         },
         {
-            items:        settings.statusBar.items,
+            items:        deps.statusBarItems,
             workflowMode: mode,
         },
     );

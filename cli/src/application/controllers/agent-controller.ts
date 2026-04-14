@@ -21,6 +21,7 @@ import { HistorySummarizer } from '../services/history-summarizer';
 import { IntentRouter, Intent } from '../services/intent-router';
 import { ModeManager, WorkflowMode } from '../services/mode-manager';
 import { SlashCommandRouter } from '../services/slash-command-router';
+import type { RBridgePort } from '../ports/r-bridge-port';
 import { EventBus } from '../services/event-bus';
 
 import { FileChange } from '../../domain/entities/file-change';
@@ -119,6 +120,8 @@ export interface AgentControllerDeps {
     repo: SessionStore;
     /** Plain model name — replaces the former llm.getProviderInfo() call. */
     initialModel: string;
+    /** Optional RStudio listener bridge (used by slash commands and run routing). */
+    rBridge?: RBridgePort;
     // ── Late-binding event bus ────────────────────────────────────────────────
     /** Bound to the viewAdapter in the constructor. */
     eventBus: EventBus;
@@ -189,6 +192,7 @@ export class AgentController {
             get session() { return self.session; },
             repo: this.repo,
             modeManager: this.modeManager,
+            rBridge: deps.rBridge,
             initialModel: this.initialModel,
             setSession: (s) => { this._session = s; },
             setPreviousSummary: (s) => { this.previousSessionSummary = s; },

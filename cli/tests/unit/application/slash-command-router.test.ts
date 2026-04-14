@@ -7,6 +7,7 @@ import { SlashCommandRouter, SlashCommandContext } from '../../../src/applicatio
 import { ModeManager } from '../../../src/application/services/mode-manager';
 import { ConversationSession } from '../../../src/domain/entities/conversation-session';
 import { SessionRepository } from '../../../src/infrastructure/persistence/session-repository';
+import type { RBridgePort } from '../../../src/application/ports/r-bridge-port';
 
 vi.mock('../../../src/infrastructure/config/settings', () => ({
     getSettings: vi.fn().mockReturnValue({ statusBar: { items: [] }, workflowMode: 'default' }),
@@ -19,6 +20,10 @@ function makeContext(overrides?: Partial<SlashCommandContext>): SlashCommandCont
         session,
         repo: {
             save: vi.fn().mockResolvedValue(undefined),
+            load: vi.fn().mockResolvedValue(null),
+            loadLast: vi.fn().mockResolvedValue(null),
+            list: vi.fn().mockResolvedValue([]),
+            delete: vi.fn().mockResolvedValue(undefined),
         } as unknown as SessionRepository,
         modeManager: new ModeManager(),
         initialModel: 'test-model',
@@ -26,6 +31,15 @@ function makeContext(overrides?: Partial<SlashCommandContext>): SlashCommandCont
         setPreviousSummary: vi.fn(),
         ...overrides,
     };
+}
+
+function makeBridge(overrides: Partial<RBridgePort> = {}): RBridgePort {
+    return {
+        isListenerRunning: vi.fn().mockReturnValue(true),
+        getCurrentFile: vi.fn().mockResolvedValue('/project/active.R'),
+        runCurrentFile: vi.fn().mockResolvedValue({ id: '1', status: 'completed', output: 'ok' }),
+        ...overrides,
+    } as unknown as RBridgePort;
 }
 
 describe('SlashCommandRouter', () => {
@@ -36,6 +50,26 @@ describe('SlashCommandRouter', () => {
             const result = await router.handle('/status');
             expect(result).toContain('Session:');
             expect(result).toContain('Context:');
+        });
+    });
+
+    describe('/run', () => {
+        it('prompts to start listener when RBridge is missing', async () => {
+            const ctx = makeContext({ rBridge: undefined });
+            const router = new SlashCommandRouter(ctx);
+            const result = await router.handle('/run');
+            expect(result).toContain('mindy::start');
+        });
+
+        it('runs current file via RBridge and prints raw output', async () => {
+            const bridge = makeBridge({
+                runCurrentFile: vi.fn().mockResolvedValue({ id: '1', status: 'completed', output: 'hello' }),
+            });
+            const ctx = makeContext({ rBridge: bridge });
+            const router = new SlashCommandRouter(ctx);
+            const result = await router.handle('/run');
+            expect(bridge.runCurrentFile).toHaveBeenCalledOnce();
+            expect(result).toBe('hello');
         });
     });
 
@@ -69,6 +103,49 @@ describe('SlashCommandRouter', () => {
             expect(result).toContain('Rolled back to turn 1');
             expect(result).toContain('1 turn(s)');
             expect(ctx.repo.save).toHaveBeenCalledWith(session);
+        });
+
+        it('/rollback list prints a numbered turn list', async () => {
+            const session = ConversationSession.create('test-model');
+            const usage = { inputTokens: 0, outputTokens: 0, cacheCreationTokens: 0, cacheReadTokens: 0 };
+            session.addTurn('q1', 'a1', usage);
+            session.addTurn('q2', 'a2', usage);
+            const ctx = makeContext({ session });
+            const router = new SlashCommandRouter(ctx);
+            const result = await router.handle('/rollback list');
+            expect(result).toContain('1.');
+            expect(result).toContain('q1');
+            expect(result).toContain('2.');
+            expect(result).toContain('q2');
+        });
+
+        it('/rollback session list formats recent sessions', async () => {
+            const ctx = makeContext();
+            (ctx.repo.list as unknown as ReturnType<typeof vi.fn>).mockResolvedValue([
+                { id: 'session-1', model: 'm1', startedAt: new Date('2026-04-14T00:00:00Z'), turnCount: 3 },
+                { id: 'session-2', model: 'm2', startedAt: new Date('2026-04-13T00:00:00Z'), turnCount: 1 },
+            ]);
+            const router = new SlashCommandRouter(ctx);
+            const result = await router.handle('/rollback session list');
+            expect(result).toContain('session-1');
+            expect(result).toContain('3 turns');
+        });
+
+        it('/rollback session <id> <n> rolls back a saved session and saves it', async () => {
+            const loaded = ConversationSession.create('test-model');
+            const usage = { inputTokens: 0, outputTokens: 0, cacheCreationTokens: 0, cacheReadTokens: 0 };
+            loaded.addTurn('q1', 'a1', usage);
+            loaded.addTurn('q2', 'a2', usage);
+
+            const ctx = makeContext();
+            (ctx.repo.load as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(loaded);
+
+            const router = new SlashCommandRouter(ctx);
+            const result = await router.handle('/rollback session session-xyz 1');
+
+            expect(ctx.repo.save).toHaveBeenCalledWith(loaded);
+            expect(result).toContain('session-xyz');
+            expect(loaded.turnCount).toBe(1);
         });
     });
 
@@ -121,6 +198,7 @@ describe('SlashCommandRouter', () => {
             const router = new SlashCommandRouter(ctx);
             const result = await router.handle('/help');
             expect(result).toContain('/status');
+            expect(result).toContain('/run');
             expect(result).toContain('/rollback');
             expect(result).toContain('/exit');
             expect(result).toContain('/solver');
