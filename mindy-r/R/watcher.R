@@ -154,6 +154,8 @@ process_command <- function(pending_file) {
     if (!is.null(action)) {
         if (action == "run_current") {
             execute_current_file(cmd)
+        } else if (action == "get_current_file") {
+            get_current_file_handler(cmd)
         } else if (action == "run_code") {
             execute_code_in_console(cmd$code, cmd$id)
         } else if (action == "run_file") {
@@ -172,6 +174,35 @@ process_command <- function(pending_file) {
     } else {
         write_error_result("Unknown command format")
     }
+}
+
+# Internal: Return the currently active file path in RStudio (or empty string)
+get_current_file_handler <- function(cmd) {
+    # Guard: this listener can run outside RStudio
+    if (!rstudioapi::isAvailable()) {
+        write_current_file_result(cmd$id, "")
+        return(invisible(NULL))
+    }
+
+    context <- rstudioapi::getSourceEditorContext()
+    if (is.null(context) || is.null(context$path) || context$path == "") {
+        write_current_file_result(cmd$id, "")
+        return(invisible(NULL))
+    }
+
+    write_current_file_result(cmd$id, context$path)
+}
+
+# Internal: Write get_current_file success result
+write_current_file_result <- function(id, file_path) {
+    result <- list(
+        id = id,
+        status = "completed",
+        filePath = file_path,
+        timestamp = format(Sys.time(), "%Y-%m-%dT%H:%M:%S%z")
+    )
+
+    jsonlite::write_json(result, get_result_file(), auto_unbox = TRUE, pretty = TRUE)
 }
 
 # Internal: Execute the currently active file in RStudio

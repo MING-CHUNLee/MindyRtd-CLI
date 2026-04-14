@@ -45,7 +45,7 @@ function getLockFile(): string {
 
 interface Command {
     id: string;
-    action?: 'run_current' | 'run_code' | 'run_file' | 'render_rmd' | 'install_packages';
+    action?: 'run_current' | 'get_current_file' | 'run_code' | 'run_file' | 'render_rmd' | 'install_packages';
     code?: string;
     file?: string;
     packages?: string[];
@@ -104,6 +104,46 @@ export class RBridge {
         };
 
         return this.sendCommandAndWait(command);
+    }
+
+    /**
+     * Get the currently active file in RStudio.
+     *
+     * Returns null when:
+     * - the listener isn't running
+     * - RStudio reports no active file (unsaved buffer)
+     * - the listener returns an error
+     */
+    async getCurrentFile(): Promise<string | null> {
+        if (!this.isListenerRunning()) {
+            return null;
+        }
+
+        const id = this.generateId();
+        const command: Command = {
+            id,
+            action: 'get_current_file',
+            timestamp: new Date().toISOString(),
+        };
+
+        try {
+            const result = (await this.sendCommandAndWait(command)) as ExecutionResponse & {
+                filePath?: unknown;
+                file?: unknown;
+                status?: unknown;
+            };
+
+            if (result.status !== 'completed') return null;
+
+            const raw =
+                typeof result.filePath === 'string' ? result.filePath :
+                typeof result.file === 'string' ? result.file :
+                '';
+            const filePath = raw.trim();
+            return filePath.length > 0 ? filePath : null;
+        } catch {
+            return null;
+        }
     }
 
     /**
