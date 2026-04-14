@@ -18,31 +18,6 @@ export {
 } from './scan-result';
 
 export {
-    formatEnvironmentSummary,
-    formatRHealthCheck,
-    formatCapabilities,
-    formatCompactSummary,
-} from './environment-result';
-
-export {
-    formatContextAsText,
-    formatContextAsJson,
-    formatContextHeader,
-    formatContextEnvironmentSummary,
-    formatContextPromptStatistics,
-    formatContextFullPrompt,
-    formatContextTips,
-    highlightPrompt,
-    outputAsJson,
-    outputAsText,
-    displayContextHeader,
-    displayContextEnvironmentSummary,
-    displayContextPromptStatistics,
-    displayContextFullPrompt,
-    displayContextTips,
-} from './context-result';
-
-export {
     formatStatusBar,
     formatHealthWarning,
     displayStatusBar,

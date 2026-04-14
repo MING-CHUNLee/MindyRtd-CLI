@@ -38,39 +38,6 @@ export interface ScanResultVM {
     maxFilesDisplay: number;
 }
 
-// ─── Environment / Context ─────────────────────────────────────────────────
-
-export interface EnvironmentSummaryVM {
-    rVersion: string;
-    projectName: string;
-    totalPackages: number;
-    totalFiles: number;
-    keyPackages: string[];
-    fileTypes: {
-        rScripts: number;
-        rMarkdown: number;
-        rData: number;
-    };
-}
-
-export interface ContextPromptVM {
-    estimatedTokens: number;
-    charCount: number;
-    systemPrompt: string;
-}
-
-export interface ContextDisplayVM {
-    summary: EnvironmentSummaryVM;
-    prompt: ContextPromptVM;
-    warnings: string[];
-    options: {
-        showSummaryOnly: boolean;
-        showTokenStats: boolean;
-        lang: string;
-        minimal: boolean;
-    };
-}
-
 // ─── Library ───────────────────────────────────────────────────────────────
 
 export interface LibraryInfoVM {

@@ -2,6 +2,7 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import ora, { Ora } from 'ora';
 
+import { buildAgentDeps } from '../../infrastructure/bootstrap/agent-factory';
 import { getSettings } from '../../infrastructure/config/settings';
 import { displayStatusBar } from '../../presentation/views/context-status-bar';
 import { AgentController, AgentEvent } from './agent-controller';
@@ -34,6 +35,7 @@ export async function executeAskCommand(
         { directory: options.directory },
         (event: AgentEvent) => { handleEvent(event, spinner, s => { spinner = s; }); },
         async () => true, // ask never triggers approval gate
+        buildAgentDeps(),
     );
 
     await controller.initialize({

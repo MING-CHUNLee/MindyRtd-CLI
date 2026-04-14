@@ -3,13 +3,11 @@ import { Box, Text } from 'ink';
 import { TUIMessage, ToolResultRenderer, ToolResultVM } from '../types.js';
 import ScanResultCard     from './ScanResultCard.js';
 import LibraryResultCard  from './LibraryResultCard.js';
-import ContextResultCard  from './ContextResultCard.js';
 import RExecResultCard    from './RExecResultCard.js';
 import RInstallResultCard from './RInstallResultCard.js';
 import {
     ScanResultVM,
     LibraryScanResultVM,
-    ContextDisplayVM,
     RExecResultVM,
     RInstallResultVM,
 } from '../../view-models/index.js';
@@ -22,7 +20,6 @@ function renderToolResult(renderer: ToolResultRenderer, vm: ToolResultVM): React
     switch (renderer) {
         case 'scan':       return <ScanResultCard     vm={vm as ScanResultVM} />;
         case 'library':    return <LibraryResultCard  vm={vm as LibraryScanResultVM} />;
-        case 'context':    return <ContextResultCard  vm={vm as ContextDisplayVM} />;
         case 'r_exec':     return <RExecResultCard    vm={vm as RExecResultVM} />;
         case 'r_install':  return <RInstallResultCard vm={vm as RInstallResultVM} />;
     }

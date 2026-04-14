@@ -34,7 +34,6 @@ export type ToolResultRenderer = 'scan' | 'library' | 'context' | 'r_exec' | 'r_
 export type ToolResultVM =
     | ScanResultVM
     | LibraryScanResultVM
-    | ContextDisplayVM
     | RExecResultVM
     | RInstallResultVM;
 
