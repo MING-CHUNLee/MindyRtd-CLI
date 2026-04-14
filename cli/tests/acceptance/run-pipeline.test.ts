@@ -43,7 +43,7 @@ import { ToolRegistry } from '../../src/application/orchestration/tool-registry'
 import { FileScanTool } from '../../src/application/tools/file-scan-tool';
 import { DirectoryScanner } from '../../src/infrastructure/filesystem/directory-scanner';
 import { LLMController } from '../../src/infrastructure/api/llm';
-import type { AgentTool, ToolResult } from '../../src/domain/interfaces/agent-tool';
+import type { AgentTool, ToolResult } from '../../src/domain/types/agent-tool';
 
 // ── Record / replay mode setup ────────────────────────────────────────────────
 

@@ -4,11 +4,11 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { ToolRegistry } from '../../../src/application/orchestration/tool-registry';
-import { ITool, ToolInput, ToolResult, ToolSchema } from '../../../src/domain/interfaces/i-tool';
+import { AgentTool, ToolInput, ToolResult, ToolSchema } from '../../../src/domain/types/agent-tool';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function makeTool(name: string, result: ToolResult): ITool {
+function makeTool(name: string, result: ToolResult): AgentTool {
     const schema: ToolSchema = {
         name,
         description: `Test tool: ${name}`,
@@ -21,7 +21,7 @@ function makeTool(name: string, result: ToolResult): ITool {
     };
 }
 
-function makeThrowingTool(name: string, errorMessage: string): ITool {
+function makeThrowingTool(name: string, errorMessage: string): AgentTool {
     const schema: ToolSchema = {
         name,
         description: `Throwing tool: ${name}`,
@@ -131,7 +131,7 @@ describe('ToolRegistry', () => {
     });
 
     describe('schema pre-validation', () => {
-        function makeToolWithRequired(name: string): ITool {
+        function makeToolWithRequired(name: string): AgentTool {
             return {
                 name,
                 schema: {
@@ -160,7 +160,7 @@ describe('ToolRegistry', () => {
 
         it('returns error listing all missing required parameters', async () => {
             const registry = new ToolRegistry();
-            const tool: ITool = {
+            const tool: AgentTool = {
                 name: 'multi',
                 schema: {
                     name: 'multi',

@@ -10,7 +10,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { FileResolver, ResolvedFile } from '../../../src/infrastructure/filesystem/file-resolver';
 import { FileFinder } from '../../../src/infrastructure/filesystem/file-finder';
-import type { LLMGateway } from '../../../src/domain/interfaces/llm-gateway';
+import type { LLMGateway } from '../../../src/domain/types/llm-gateway';
 
 // ── helpers ────────────────────────────────────────────────────────────────
 

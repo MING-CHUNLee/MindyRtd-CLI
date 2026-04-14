@@ -6,7 +6,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { EditStagingService, StagedEdit } from '../../../src/application/services/edit-staging-service';
-import { IFileSystem } from '../../../src/domain/interfaces/file-system';
+import { IFileSystem } from '../../../src/domain/types/file-system';
 import { DiffEngine } from '../../../src/application/services/diff-engine';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

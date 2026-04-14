@@ -18,7 +18,7 @@ import { EditStagingService, StagedEdit } from '../../../src/application/service
 import { Orchestrator, OrchestratorResult } from '../../../src/application/orchestration/orchestrator';
 import { Evaluator } from '../../../src/application/services/evaluator';
 import { KnowledgeBase } from '../../../src/application/services/knowledge-base';
-import { IFileSystem } from '../../../src/domain/interfaces/file-system';
+import { IFileSystem } from '../../../src/domain/types/file-system';
 
 // ── Module-level mocks (prevent real infra being imported) ─────────────────────
 
