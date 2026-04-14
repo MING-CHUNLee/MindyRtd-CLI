@@ -14,7 +14,7 @@
  * without rendering any React components.
  */
 
-import { TUIMessage, AppState } from './types';
+import { TUIMessage, AppState, PendingInstall } from './types';
 import {
     StatusBarVM, ContextHealthVM,
     ScanResultVM, LibraryScanResultVM, RExecResultVM, RInstallResultVM,
@@ -31,6 +31,7 @@ export type { AgentEvent, ProposedEdit };
  */
 export interface EventSideEffect {
     pendingReview?: ProposedEdit;
+    pendingInstall?: PendingInstall;
     nextAppState?: AppState;
     streamingToken?: string;
     finalizeStream?: boolean;
@@ -211,6 +212,21 @@ export function mapAgentEventToMessage(event: AgentEvent): MappedEvent {
         case 'tool_result_r_install': {
             const vm = event.data.data as RInstallResultVM;
             return { message: { ...makeMessage('tool_result', ''), renderer: 'r_install', vm } };
+        }
+
+        case 'install_proposed': {
+            const d = event.data as unknown as PendingInstall;
+            return {
+                sideEffect: {
+                    pendingInstall: {
+                        toInstall:        d.toInstall,
+                        alreadyInstalled: d.alreadyInstalled,
+                        blocked:          d.blocked,
+                        warnings:         d.warnings,
+                    },
+                    nextAppState: 'reviewing',
+                },
+            };
         }
 
         case 'error':

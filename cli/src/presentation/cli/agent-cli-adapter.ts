@@ -16,7 +16,7 @@ import chalk from 'chalk';
 import ora, { Ora } from 'ora';
 import readline from 'readline';
 
-import { AgentController, AgentEvent, ProposedEdit } from '../../application/controllers/agent-controller';
+import { AgentController, AgentEvent, ProposedEdit, ProposedInstall } from '../../application/controllers/agent-controller';
 import { buildAgentDeps } from '../../infrastructure/bootstrap/agent-factory';
 import { displayStatusBar } from '../views/context-status-bar';
 import { getSettings } from '../../infrastructure/config/settings';
@@ -138,6 +138,21 @@ async function executeAgentCommand(
                     console.log(chalk.dim(`  Knowledge: ${(event.data.knowledge as string[]).join(', ')}`));
                 }
                 break;
+            case 'install_proposed': {
+                const d = event.data as unknown as ProposedInstall;
+                console.log(chalk.bold.cyan('\n📦 Package Installation Plan'));
+                console.log(chalk.dim('─'.repeat(48)));
+                if (d.toInstall.length > 0) {
+                    console.log(chalk.green(`To install: ${d.toInstall.join(', ')}`));
+                }
+                if (d.alreadyInstalled.length > 0) {
+                    console.log(chalk.gray(`Already installed: ${d.alreadyInstalled.join(', ')}`));
+                }
+                d.warnings.forEach(w => console.log(chalk.yellow(`  ⚠  ${w.name}: ${w.message}`)));
+                d.blocked.forEach(b => console.log(chalk.red(`  ✗  ${b.name}: ${b.reason}`)));
+                console.log(chalk.dim('─'.repeat(48)));
+                break;
+            }
             case 'error':
                 console.error(chalk.red(`Error [${event.data.phase}]: ${event.data.message}`));
                 break;
@@ -149,11 +164,17 @@ async function executeAgentCommand(
         return promptConfirm(`Apply changes to ${chalk.cyan(edit.path)}? [Y/n] `);
     };
 
+    const installApprovalGate = async (plan: ProposedInstall): Promise<boolean> => {
+        const summary = plan.toInstall.length > 0
+            ? `${plan.toInstall.join(', ')}`
+            : 'no new packages';
+        return promptConfirm(`Install ${chalk.cyan(summary)}? [Y/n] `);
+    };
+
     const controller = new AgentController(
         { directory: options.directory },
         viewAdapter,
-        approvalGate,
-        buildAgentDeps(),
+        buildAgentDeps(options.directory, approvalGate, installApprovalGate),
     );
     controllerRef = controller;
 

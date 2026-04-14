@@ -7,7 +7,6 @@
 
 import { ConversationSession } from '../../domain/entities/conversation-session';
 import { SessionStore } from '../../domain/repositories/session-store';
-import { LLMGateway } from '../../domain/types/llm-gateway';
 import { WorkflowMode } from '../../infrastructure/config/settings';
 import { ModeManager } from './mode-manager';
 
@@ -15,7 +14,8 @@ export interface SlashCommandContext {
     session: ConversationSession;
     repo: SessionStore;
     modeManager: ModeManager;
-    llm: LLMGateway;
+    /** Plain model name — replaces llm.getProviderInfo().model used by /new. */
+    initialModel: string;
     setSession: (s: ConversationSession) => void;
     setPreviousSummary: (s: string) => void;
 }
@@ -31,7 +31,7 @@ export class SlashCommandRouter {
                 return this.getStatusText();
             case 'new': {
                 this.ctx.setPreviousSummary(SlashCommandRouter.formatSessionSummary(this.ctx.session));
-                const model = this.ctx.llm.getProviderInfo().model;
+                const model = this.ctx.initialModel;
                 const newSession = ConversationSession.create(model);
                 this.ctx.setSession(newSession);
                 return `New session created: ${newSession.id.slice(-6)}`;

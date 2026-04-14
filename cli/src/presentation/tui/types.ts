@@ -65,6 +65,13 @@ export interface PendingEdit {
     proposed: string;
 }
 
+export interface PendingInstall {
+    toInstall: string[];
+    alreadyInstalled: string[];
+    blocked: Array<{ name: string; reason: string }>;
+    warnings: Array<{ name: string; message: string }>;
+}
+
 export interface TUIConfig {
     directory: string;
     sessionId?: string;

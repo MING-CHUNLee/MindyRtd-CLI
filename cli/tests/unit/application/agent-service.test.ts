@@ -1,8 +1,8 @@
 /**
- * Unit Tests: AgentService
+ * Unit Tests: AgentController (alias AgentService)
  *
- * Uses dependency injection (AgentServiceDeps) to isolate the service
- * from real LLM calls, filesystem I/O, and session persistence.
+ * Uses fully assembled mock deps (pre-built use cases + buses) to isolate the
+ * controller from real LLM calls, filesystem I/O, and session persistence.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -10,15 +10,12 @@ import {
     AgentController as AgentService,
     AgentControllerDeps as AgentServiceDeps,
     AgentEvent,
-    ProposedEdit,
 } from '../../../src/application/controllers/agent-controller';
-import { LLMController } from '../../../src/infrastructure/api';
-import { DiffEngine } from '../../../src/application/services/diff-engine';
-import { ToolRegistry } from '../../../src/application/orchestration/tool-registry';
+import { EventBus } from '../../../src/application/services/event-bus';
+import { ModeManager } from '../../../src/application/services/mode-manager';
 import { ConversationSession } from '../../../src/domain/entities/conversation-session';
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
-
 
 vi.mock('../../../src/infrastructure/config/settings', () => ({
     getSettings: vi.fn().mockReturnValue({ statusBar: { items: [] }, workflowMode: 'default' }),
@@ -31,24 +28,13 @@ vi.mock('../../../src/infrastructure/persistence/knowledge-repository', () => ({
     }),
 }));
 
+// ── Shared zero-usage sentinel ────────────────────────────────────────────────
+
+const ZERO_USAGE = {
+    inputTokens: 0, outputTokens: 0, cacheCreationTokens: 0, cacheReadTokens: 0,
+};
+
 // ── Factories ─────────────────────────────────────────────────────────────────
-
-function makeMockSession(turnCount = 0): ConversationSession {
-    const session = ConversationSession.create('claude-test');
-    // Simulate existing turns via the public interface if needed
-    return session;
-}
-
-function makeMockLLM(intentResponse = 'ask', streamContent = 'Test answer'): LLMController {
-    return {
-        sendPrompt: vi.fn().mockResolvedValue({ content: intentResponse }),
-        streamPrompt: vi.fn().mockResolvedValue({
-            content: streamContent,
-            usage: { promptTokens: 10, completionTokens: 20 },
-        }),
-        getProviderInfo: vi.fn().mockReturnValue({ model: 'claude-test', provider: 'anthropic' }),
-    } as unknown as LLMController;
-}
 
 function makeMockRepo() {
     return {
@@ -60,43 +46,93 @@ function makeMockRepo() {
     };
 }
 
-function makeMockDiffEngine(): DiffEngine {
-    return {
-        generateColoredDiff: vi.fn().mockReturnValue('+ new line\n- old line\n'),
-    } as unknown as DiffEngine;
-}
-
+/**
+ * Build a minimal AgentServiceDeps with mock use cases.
+ *
+ * @param intentResult   - what the mock IntentRouter.classify() resolves to
+ * @param askContent     - content returned by the mock ask use case
+ */
 function makeService(
-    llmOverrides?: Partial<ReturnType<typeof makeMockLLM>>,
-    approvalResult = true,
+    intentResult: 'ask' | 'edit' | 'run' | 'install' = 'ask',
+    askContent = 'Test answer',
 ): {
     service: AgentService;
     events: AgentEvent[];
-    llm: LLMController;
+    eventBus: EventBus;
     repo: ReturnType<typeof makeMockRepo>;
-    diffEngine: DiffEngine;
+    mockAskUseCase: { execute: ReturnType<typeof vi.fn> };
+    mockIntentRouter: { classify: ReturnType<typeof vi.fn> };
 } {
     const events: AgentEvent[] = [];
-    const llm = { ...makeMockLLM(), ...llmOverrides } as unknown as LLMController;
+    const eventBus = new EventBus();
     const repo = makeMockRepo();
-    const diffEngine = makeMockDiffEngine();
+
+    const mockAskUseCase = {
+        execute: vi.fn().mockResolvedValue({ content: askContent, usage: ZERO_USAGE }),
+    };
+
+    const mockIntentRouter = {
+        classify: vi.fn().mockResolvedValue(intentResult),
+    };
+
+    const mockInstructionUseCase = {
+        execute: vi.fn().mockResolvedValue({
+            appliedFiles: [],
+            outputs: [],
+            validatedEdits: [],
+            usage: ZERO_USAGE,
+            analysisSummary: 'edit result',
+        }),
+    };
+
+    const mockRunUseCase = {
+        execute: vi.fn().mockResolvedValue({
+            scriptPath: null,
+            execOutput: '',
+            analysis: 'run result',
+            usage: ZERO_USAGE,
+        }),
+    };
+
+    const mockInstallUseCase = {
+        execute: vi.fn().mockResolvedValue({ content: 'installed', usage: ZERO_USAGE }),
+    };
+
+    const mockSolverUseCase = {
+        execute: vi.fn().mockResolvedValue({ solutionPath: '', appliedFiles: [], outputs: [], usage: ZERO_USAGE }),
+    };
+
+    const mockTutorUseCase = {
+        execute: vi.fn().mockResolvedValue({ content: 'tutor response', usage: ZERO_USAGE }),
+    };
 
     const deps: AgentServiceDeps = {
-        llm,
-        repo,
-        diffEngine,
-        registry: new ToolRegistry(),
+        askUseCase:          mockAskUseCase as never,
+        instructionUseCase:  mockInstructionUseCase as never,
+        runUseCase:          mockRunUseCase as never,
+        solverUseCase:       mockSolverUseCase as never,
+        tutorSocraticUseCase: mockTutorUseCase as never,
+        tutorGuideUseCase:   mockTutorUseCase as never,
+        installUseCase:      mockInstallUseCase as never,
+        intentRouter:        mockIntentRouter as never,
+        summarizer: {
+            shouldSummarize: vi.fn().mockReturnValue(false),
+            summarize: vi.fn().mockResolvedValue([]),
+        } as never,
         pluginLoader: { loadAll: async () => [] },
+        modeManager: new ModeManager(),
+        repo,
+        initialModel: 'claude-test',
+        eventBus,
     };
 
     const service = new AgentService(
         { directory: '/fake/project' },
         (event) => events.push(event),
-        async (_edit: ProposedEdit) => approvalResult,
         deps,
     );
 
-    return { service, events, llm, repo, diffEngine };
+    return { service, events, eventBus, repo, mockAskUseCase, mockIntentRouter };
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -112,7 +148,7 @@ describe('AgentService', () => {
             expect(loaded!.data.turnCount).toBe(0);
         });
 
-        it('uses injected LLM provider info for model name', async () => {
+        it('uses initialModel from deps for session model name', async () => {
             const { service, events } = makeService();
             await service.initialize();
 
@@ -136,53 +172,51 @@ describe('AgentService', () => {
     });
 
     describe('executeInstruction() — ask mode', () => {
-        it('emits intent_classified with intent=ask when LLM returns "ask"', async () => {
-            const { service, events, llm } = makeService();
-            (llm.sendPrompt as ReturnType<typeof vi.fn>).mockResolvedValue({ content: 'ask' });
+        it('routes to askUseCase when IntentRouter returns "ask"', async () => {
+            const { service, mockAskUseCase } = makeService('ask');
             await service.initialize();
 
             await service.executeInstruction('What does this function do?');
 
-            const intentEvent = events.find(e => e.type === 'intent_classified');
-            expect(intentEvent?.data.intent).toBe('ask');
+            // The real IntentRouter emits intent_classified; the mock doesn't.
+            // Controller-level assertion: correct use case was invoked.
+            expect(mockAskUseCase.execute).toHaveBeenCalledWith(
+                'What does this function do?',
+                expect.any(Array),
+                expect.any(String),
+            );
         });
 
-        it('emits stream_token events during ask mode', async () => {
-            const { service, events, llm } = makeService();
-            (llm.sendPrompt as ReturnType<typeof vi.fn>).mockResolvedValue({ content: 'ask' });
-            (llm.streamPrompt as ReturnType<typeof vi.fn>).mockImplementation(
-                async (_req: unknown, onToken: (t: string) => void) => {
-                    onToken('Hello');
-                    onToken(' world');
-                    return { content: 'Hello world', usage: { promptTokens: 5, completionTokens: 5 } };
-                },
-            );
+        it('calls askUseCase.execute and emits turn_saved', async () => {
+            const { service, events, mockAskUseCase } = makeService('ask');
             await service.initialize();
 
             await service.executeInstruction('explain this code');
 
-            const tokenEvents = events.filter(e => e.type === 'stream_token');
-            expect(tokenEvents.length).toBeGreaterThan(0);
+            expect(mockAskUseCase.execute).toHaveBeenCalled();
+            const saved = events.find(e => e.type === 'turn_saved');
+            expect(saved).toBeDefined();
         });
 
-        it('emits text_output with the LLM response content', async () => {
-            const { service, events, llm } = makeService();
-            (llm.sendPrompt as ReturnType<typeof vi.fn>).mockResolvedValue({ content: 'ask' });
-            (llm.streamPrompt as ReturnType<typeof vi.fn>).mockResolvedValue({
-                content: 'The answer is 42.',
-                usage: { promptTokens: 10, completionTokens: 10 },
+        it('emits stream_token events when askUseCase emits them via EventBus', async () => {
+            const { service, events, eventBus, mockAskUseCase } = makeService('ask');
+
+            // Mock use case emits tokens through the shared EventBus
+            mockAskUseCase.execute.mockImplementation(async () => {
+                eventBus.emit('stream_token', { token: 'Hello' });
+                eventBus.emit('stream_token', { token: ' world' });
+                return { content: 'Hello world', usage: ZERO_USAGE };
             });
+
             await service.initialize();
+            await service.executeInstruction('explain this code');
 
-            await service.executeInstruction('What is the meaning of life?');
-
-            const textEvent = events.find(e => e.type === 'text_output');
-            expect(textEvent?.data.content).toBe('The answer is 42.');
+            const tokenEvents = events.filter(e => e.type === 'stream_token');
+            expect(tokenEvents.length).toBe(2);
         });
 
         it('emits turn_saved after successful ask', async () => {
-            const { service, events, llm } = makeService();
-            (llm.sendPrompt as ReturnType<typeof vi.fn>).mockResolvedValue({ content: 'ask' });
+            const { service, events } = makeService('ask');
             await service.initialize();
 
             await service.executeInstruction('simple question?');
@@ -191,34 +225,30 @@ describe('AgentService', () => {
             expect(saved).toBeDefined();
         });
 
-        it('emits error event when streamPrompt throws', async () => {
-            const { service, events, llm } = makeService();
-            (llm.sendPrompt as ReturnType<typeof vi.fn>).mockResolvedValue({ content: 'ask' });
-            (llm.streamPrompt as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('API down'));
-            await service.initialize();
+        it('emits error event when askUseCase throws', async () => {
+            const { service, events, mockAskUseCase } = makeService('ask');
+            mockAskUseCase.execute.mockRejectedValue(new Error('API down'));
 
+            await service.initialize();
             await service.executeInstruction('explain something');
 
             const errorEvent = events.find(e => e.type === 'error');
             expect(errorEvent?.data.message).toContain('API down');
-            expect(errorEvent?.data.phase).toBe('ask');
         });
     });
 
     describe('executeInstruction() — intent classification fallback', () => {
         it('emits status_update warning when intent classification fails', async () => {
-            const { service, events, llm } = makeService();
-            // First call (intent) throws; orchestrator call also returns something
-            (llm.sendPrompt as ReturnType<typeof vi.fn>)
-                .mockRejectedValueOnce(new Error('timeout'))
-                .mockResolvedValue({ content: 'edit result' });
-            (llm.streamPrompt as ReturnType<typeof vi.fn>).mockResolvedValue({
-                content: '',
-                usage: { promptTokens: 0, completionTokens: 0 },
+            // The real IntentRouter catches LLM errors, emits a warning via the
+            // EventBus, and falls back to 'edit'.  Simulate that same contract here
+            // so the controller unit test remains independent of IntentRouter internals.
+            const { service, events, eventBus, mockIntentRouter } = makeService();
+            mockIntentRouter.classify.mockImplementation(async () => {
+                eventBus.emit('status_update', { warning: 'Intent classification failed: timeout' });
+                return 'edit';
             });
-            await service.initialize();
 
-            // Should default to 'edit' mode without crashing
+            await service.initialize();
             await service.executeInstruction('fix the bug');
 
             const warning = events.find(
@@ -273,7 +303,6 @@ describe('AgentService', () => {
             const { service } = makeService();
             await service.initialize();
 
-            // Rollback to turn 99 on a fresh session with 0 turns should fail gracefully
             const result = await service.handleSlashCommand('/rollback 99');
 
             expect(result).toContain('Rollback failed');

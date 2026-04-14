@@ -7,7 +7,6 @@ import { SlashCommandRouter, SlashCommandContext } from '../../../src/applicatio
 import { ModeManager } from '../../../src/application/services/mode-manager';
 import { ConversationSession } from '../../../src/domain/entities/conversation-session';
 import { SessionRepository } from '../../../src/infrastructure/persistence/session-repository';
-import { LLMController } from '../../../src/infrastructure/api';
 
 vi.mock('../../../src/infrastructure/config/settings', () => ({
     getSettings: vi.fn().mockReturnValue({ statusBar: { items: [] }, workflowMode: 'default' }),
@@ -22,9 +21,7 @@ function makeContext(overrides?: Partial<SlashCommandContext>): SlashCommandCont
             save: vi.fn().mockResolvedValue(undefined),
         } as unknown as SessionRepository,
         modeManager: new ModeManager(),
-        llm: {
-            getProviderInfo: vi.fn().mockReturnValue({ model: 'test-model', provider: 'test' }),
-        } as unknown as LLMController,
+        initialModel: 'test-model',
         setSession: vi.fn(),
         setPreviousSummary: vi.fn(),
         ...overrides,

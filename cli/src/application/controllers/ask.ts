@@ -34,8 +34,7 @@ export async function executeAskCommand(
     const controller = new AgentController(
         { directory: options.directory },
         (event: AgentEvent) => { handleEvent(event, spinner, s => { spinner = s; }); },
-        async () => true, // ask never triggers approval gate
-        buildAgentDeps(),
+        buildAgentDeps(options.directory, async () => true),
     );
 
     await controller.initialize({

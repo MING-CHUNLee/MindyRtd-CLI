@@ -4,10 +4,11 @@ import Header from './components/Header.js';
 import Footer from './components/Footer.js';
 import ChatHistory from './components/ChatHistory.js';
 import DiffReview from './components/DiffReview.js';
+import InstallReview from './components/InstallReview.js';
 import StatusBar from './components/StatusBar.js';
 import ThinkingIndicator from './components/ThinkingIndicator.js';
 import StreamingMessage from './components/StreamingMessage.js';
-import { TUIMessage, AppState, PendingEdit, TUIConfig } from './types.js';
+import { TUIMessage, AppState, PendingEdit, PendingInstall, TUIConfig } from './types.js';
 import { mapAgentEventToMessage, AgentEvent, ProposedEdit, nextId } from './event-mapper.js';
 import { StatusBarVM, StatusBarDisplayConfig } from '../view-models/index.js';
 
@@ -35,8 +36,9 @@ const App: React.FC<AppProps> = ({ config }) => {
         makeStatusMessage('Welcome to Mindy CLI! Type your instruction and press Enter. /help for commands.'),
     ]);
     const [input, setInput]           = useState('');
-    const [appState, setAppState]     = useState<AppState>('idle');
-    const [pendingReview, setPendingReview] = useState<PendingEdit | null>(null);
+    const [appState, setAppState]       = useState<AppState>('idle');
+    const [pendingReview, setPendingReview]   = useState<PendingEdit | null>(null);
+    const [pendingInstall, setPendingInstall] = useState<PendingInstall | null>(null);
     const [streamingContent, setStreamingContent] = useState('');
     const [isStreaming, setIsStreaming] = useState(false);
     const [statusData, setStatusData] = useState<StatusBarVM | null>(null);
@@ -76,6 +78,10 @@ const App: React.FC<AppProps> = ({ config }) => {
                 setPendingReview(sideEffect.pendingReview);
                 setAppState('reviewing');
             }
+            if (sideEffect.pendingInstall) {
+                setPendingInstall(sideEffect.pendingInstall);
+                setAppState('reviewing');
+            }
             if (sideEffect.nextAppState && sideEffect.nextAppState !== 'reviewing') {
                 setAppState(sideEffect.nextAppState);
             }
@@ -93,10 +99,17 @@ const App: React.FC<AppProps> = ({ config }) => {
         });
     }, []);
 
+    const onInstallApproval = useCallback(async (_plan: PendingInstall): Promise<boolean> => {
+        return new Promise<boolean>(resolve => {
+            approvalResolverRef.current = resolve;
+        });
+    }, []);
+
     const handleReviewDecision = useCallback((approved: boolean) => {
         approvalResolverRef.current?.(approved);
         approvalResolverRef.current = null;
         setPendingReview(null);
+        setPendingInstall(null);
         setAppState('processing');
     }, []);
 
@@ -109,11 +122,11 @@ const App: React.FC<AppProps> = ({ config }) => {
                 import('../../infrastructure/bootstrap/agent-factory.js'),
             ]);
             const AgentServiceClass = mod.AgentController;
+            const dir = config?.directory ?? process.cwd();
             const service = new AgentServiceClass(
-                { directory: config?.directory ?? process.cwd() },
+                { directory: dir },
                 handleAgentEvent,
-                onApproval,
-                factoryMod.buildAgentDeps(),
+                factoryMod.buildAgentDeps(dir, onApproval, onInstallApproval),
             );
             await service.initialize({
                 sessionId: config?.sessionId,
@@ -201,6 +214,13 @@ const App: React.FC<AppProps> = ({ config }) => {
                 {appState === 'reviewing' && pendingReview && (
                     <DiffReview
                         edit={pendingReview}
+                        onDecision={handleReviewDecision}
+                    />
+                )}
+
+                {appState === 'reviewing' && pendingInstall && !pendingReview && (
+                    <InstallReview
+                        plan={pendingInstall}
                         onDecision={handleReviewDecision}
                     />
                 )}

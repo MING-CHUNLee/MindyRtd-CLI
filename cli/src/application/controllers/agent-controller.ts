@@ -8,23 +8,20 @@
  * The CLI adapter (or any other UI) subscribes to events and provides an
  * approval callback for the human-in-the-loop safety gate.
  *
- * Dependencies (LLMController, SessionRepository, DiffEngine) are injected
- * via AgentControllerDeps for testability. If not provided, defaults are created.
+ * All use cases, services, and infrastructure objects are injected fully
+ * assembled via AgentControllerDeps (built by agent-factory.ts).
+ * The controller's only reason to change: the CLI command/route signature.
  */
 
-import path from 'path';
-
-import { LLMGateway } from '../../domain/types/llm-gateway';
 import { SessionStore } from '../../domain/repositories/session-store';
-import { DiffEngine } from '../services/diff-engine';
 import { ConversationSession } from '../../domain/entities/conversation-session';
 import { TurnUsage } from '../../domain/entities/conversation-turn';
 
-import { ToolRegistry } from '../orchestration/tool-registry';
 import { HistorySummarizer } from '../services/history-summarizer';
 import { IntentRouter, Intent } from '../services/intent-router';
 import { ModeManager, WorkflowMode } from '../services/mode-manager';
 import { SlashCommandRouter } from '../services/slash-command-router';
+import { EventBus } from '../services/event-bus';
 
 import { FileChange } from '../../domain/entities/file-change';
 import { SessionMessage } from '../../shared/types/messages';
@@ -56,7 +53,13 @@ export type AgentEvent =
     | { type: 'tool_result_scan';     data: { data: unknown } }
     | { type: 'tool_result_library';  data: { data: unknown } }
     | { type: 'tool_result_r_exec';   data: { data: unknown } }
-    | { type: 'tool_result_r_install'; data: { data: unknown } };
+    | { type: 'tool_result_r_install'; data: { data: unknown } }
+    | { type: 'install_proposed'; data: {
+        toInstall: string[];
+        alreadyInstalled: string[];
+        blocked: Array<{ name: string; reason: string }>;
+        warnings: Array<{ name: string; message: string }>;
+    } };
 
 /** Convenience alias for the union of all valid event type strings. */
 export type AgentEventType = AgentEvent['type'];
@@ -68,52 +71,57 @@ export interface ProposedEdit {
     proposed: string;
 }
 
+export interface ProposedInstall {
+    toInstall: string[];
+    alreadyInstalled: string[];
+    blocked: Array<{ name: string; reason: string }>;
+    warnings: Array<{ name: string; message: string }>;
+}
+
 export type ApprovalCallback = (edit: ProposedEdit) => Promise<boolean>;
+export type InstallApprovalCallback = (plan: ProposedInstall) => Promise<boolean>;
 export type EventCallback = (event: AgentEvent) => void;
 
 export interface AgentControllerOptions {
-    directory: string;
+    directory?: string;
     sessionId?: string;
     forceNew?: boolean;
 }
 
 /** Application-layer abstraction for plugin loading. */
 export interface IPluginLoader {
-    loadAll(registry: ToolRegistry): Promise<Array<{ name: string; loaded: boolean }>>;
+    loadAll(): Promise<Array<{ name: string; loaded: boolean }>>;
 }
 
-/** Injectable dependencies — all required; use agent-factory to build defaults. */
+/**
+ * Injectable dependencies — all required; use agent-factory.ts to build defaults.
+ *
+ * Contains only application-layer types (use cases, services, value objects).
+ * Raw infrastructure types (LLMGateway, DiffEngine, ToolRegistry) are absent:
+ * they are wired inside agent-factory.ts and never leak into this layer.
+ */
 export interface AgentControllerDeps {
-    llm: LLMGateway;
+    // ── Assembled use cases ───────────────────────────────────────────────────
+    askUseCase: ExecuteAskUseCase;
+    instructionUseCase: ExecuteInstructionUseCase;
+    runUseCase: ExecuteRunUseCase;
+    solverUseCase: ExecuteSolverUseCase;
+    tutorSocraticUseCase: ExecuteTutorUseCase;
+    tutorGuideUseCase: ExecuteTutorUseCase;
+    installUseCase: ExecuteInstallUseCase;
+    // ── Application services ──────────────────────────────────────────────────
+    intentRouter: IntentRouter;
+    summarizer: HistorySummarizer;
+    pluginLoader: IPluginLoader;
+    modeManager: ModeManager;
+    // ── Session / identity ────────────────────────────────────────────────────
+    /** Still needed: initialize() loads/saves sessions. */
     repo: SessionStore;
-    diffEngine: DiffEngine;
-    registry: ToolRegistry;
-    /** Optional — defaults to new HistorySummarizer(). */
-    summarizer?: HistorySummarizer;
-    /** Optional — defaults to no-op. */
-    pluginLoader?: IPluginLoader;
-    /**
-     * Shared staging service instance — must be the same one passed to FileEditTool
-     * in the registry so that tool-staged edits are visible to the use cases.
-     * If omitted, each use case creates its own (fine for tests).
-     */
-    stagingService?: import('../services/edit-staging-service').EditStagingService;
-    /** Optional — for testability. */
-    askUseCase?: ExecuteAskUseCase;
-    /** Optional — for testability. */
-    instructionUseCase?: ExecuteInstructionUseCase;
-    /** Optional — for testability. */
-    runUseCase?: ExecuteRunUseCase;
-    /** Optional — for testability. */
-    solverUseCase?: ExecuteSolverUseCase;
-    /** Optional — for testability. */
-    tutorSocraticUseCase?: ExecuteTutorUseCase;
-    /** Optional — for testability. */
-    tutorGuideUseCase?: ExecuteTutorUseCase;
-    /** Optional — for testability. */
-    installUseCase?: ExecuteInstallUseCase;
-    /** Optional — for testability. */
-    modeManager?: ModeManager;
+    /** Plain model name — replaces the former llm.getProviderInfo() call. */
+    initialModel: string;
+    // ── Late-binding event bus ────────────────────────────────────────────────
+    /** Bound to the viewAdapter in the constructor. */
+    eventBus: EventBus;
 }
 
 // ── AgentController ───────────────────────────────────────────────────────────
@@ -121,13 +129,9 @@ export interface AgentControllerDeps {
 export class AgentController {
     private _session?: ConversationSession;
     private previousSessionSummary = '';
-    private readonly llm: LLMGateway;
     private readonly repo: SessionStore;
-    private readonly registry: ToolRegistry;
-    private readonly diffEngine: DiffEngine;
+    private readonly initialModel: string;
     private readonly viewAdapter: EventCallback;
-    private readonly approvalGate: ApprovalCallback;
-    private readonly directory: string;
 
     private readonly summarizer: HistorySummarizer;
     private readonly pluginLoader: IPluginLoader;
@@ -149,88 +153,43 @@ export class AgentController {
     }
 
     constructor(
-        options: AgentControllerOptions,
+        _options: AgentControllerOptions,
         viewAdapter: EventCallback,
-        approvalGate: ApprovalCallback,
         deps: AgentControllerDeps,
     ) {
-        this.directory = path.resolve(options.directory);
-        this.viewAdapter = viewAdapter;
-        this.approvalGate = approvalGate;
-        this.llm = deps.llm;
-        this.repo = deps.repo;
-        this.diffEngine = deps.diffEngine;
-        this.registry = deps.registry;
-        this.summarizer = deps.summarizer ?? new HistorySummarizer();
-        this.pluginLoader = deps.pluginLoader ?? { loadAll: async () => [] };
+        this.viewAdapter  = viewAdapter;
+        this.repo         = deps.repo;
+        this.initialModel = deps.initialModel;
 
-        // Sub-services (IntentRouter, use cases) use a broad (type: string, data: Record) emit
-        // signature. Create a real bridge function rather than a cast so events are correctly
-        // forwarded as AgentEvent objects to viewAdapter.
-        const emit = (type: string, data: Record<string, unknown>): void => {
+        // Bind the EventBus to the view adapter so all use-case emit() calls
+        // flow to the presentation layer without the controller holding raw infra.
+        deps.eventBus.bind((type, data) => {
             this.viewAdapter({ type, data } as AgentEvent);
-        };
-        this.intentRouter = new IntentRouter(this.llm, emit);
-
-        this.askUseCase = deps.askUseCase ?? new ExecuteAskUseCase({
-            llm: this.llm,
-            registry: this.registry,
-            directory: this.directory,
-            emit,
         });
 
-        this.instructionUseCase = deps.instructionUseCase ?? new ExecuteInstructionUseCase({
-            llm: this.llm,
-            registry: this.registry,
-            diffEngine: this.diffEngine,
-            directory: this.directory,
-            onApproval: this.approvalGate,
-            stagingService: deps.stagingService,
-            emit,
-        });
+        this.summarizer   = deps.summarizer;
+        this.pluginLoader = deps.pluginLoader;
+        this.intentRouter = deps.intentRouter;
 
-        this.runUseCase = deps.runUseCase ?? new ExecuteRunUseCase({
-            llm: this.llm,
-            registry: this.registry,
-            directory: this.directory,
-            emit,
-        });
+        this.askUseCase          = deps.askUseCase;
+        this.instructionUseCase  = deps.instructionUseCase;
+        this.runUseCase          = deps.runUseCase;
+        this.solverUseCase       = deps.solverUseCase;
+        this.tutorSocraticUseCase = deps.tutorSocraticUseCase;
+        this.tutorGuideUseCase   = deps.tutorGuideUseCase;
+        this.installUseCase      = deps.installUseCase;
 
-        this.solverUseCase = deps.solverUseCase ?? new ExecuteSolverUseCase({
-            llm: this.llm,
-            registry: this.registry,
-            diffEngine: this.diffEngine,
-            directory: this.directory,
-            onApproval: this.approvalGate,
-            stagingService: deps.stagingService,
-            emit,
-        });
+        this.modeManager = deps.modeManager;
 
-        this.tutorSocraticUseCase = deps.tutorSocraticUseCase ?? new ExecuteTutorUseCase(
-            { llm: this.llm, registry: this.registry, directory: this.directory, emit },
-            'socratic',
-        );
-
-        this.tutorGuideUseCase = deps.tutorGuideUseCase ?? new ExecuteTutorUseCase(
-            { llm: this.llm, registry: this.registry, directory: this.directory, emit },
-            'guide',
-        );
-
-        this.installUseCase = deps.installUseCase ?? new ExecuteInstallUseCase({
-            registry: this.registry,
-            emit,
-        });
-
-        this.modeManager = deps.modeManager ?? new ModeManager();
-
-        // The context object uses a getter for `session` so the router always
-        // sees the current session (which changes on /new).
+        // SlashCommandRouter is constructed here because its context captures
+        // the controller's session-management callbacks (setSession, etc.).
+        // It is an application service (not a use case), so this is acceptable.
         const self = this;
         this.slashRouter = new SlashCommandRouter({
             get session() { return self.session; },
             repo: this.repo,
             modeManager: this.modeManager,
-            llm: this.llm,
+            initialModel: this.initialModel,
             setSession: (s) => { this._session = s; },
             setPreviousSummary: (s) => { this.previousSessionSummary = s; },
         });
@@ -238,7 +197,7 @@ export class AgentController {
 
     /** Initialize: load/create session, load plugins */
     async initialize(options?: { sessionId?: string; forceNew?: boolean }): Promise<void> {
-        const model = this.llm.getProviderInfo().model;
+        const model = this.initialModel;
 
         if (options?.sessionId) {
             this._session = (await this.repo.load(options.sessionId)) ?? ConversationSession.create(model);
@@ -252,8 +211,6 @@ export class AgentController {
             this._session = ConversationSession.create(model);
         }
 
-        // ModeManager reads settings in its constructor; no extra init needed.
-
         this.emit({ type: 'session_loaded', data: {
             sessionId: this.session.id,
             turnCount: this.session.turnCount,
@@ -261,7 +218,7 @@ export class AgentController {
         } });
 
         try {
-            const pluginMetas = await this.pluginLoader.loadAll(this.registry);
+            const pluginMetas = await this.pluginLoader.loadAll();
             const loadedPlugins = pluginMetas.filter(meta => meta.loaded).map(meta => meta.name);
             if (loadedPlugins.length > 0) {
                 this.emit({ type: 'status_update', data: { plugins: loadedPlugins } });
@@ -413,7 +370,7 @@ export class AgentController {
 
     private async prepareHistory(): Promise<SessionMessage[]> {
         return this.summarizer.shouldSummarize(this.session)
-            ? await this.summarizer.summarize(this.session, this.llm)
+            ? await this.summarizer.summarize(this.session)
             : this.session.getHistory().map(msg => ({ role: msg.role as 'user' | 'assistant', content: msg.content }));
     }
 

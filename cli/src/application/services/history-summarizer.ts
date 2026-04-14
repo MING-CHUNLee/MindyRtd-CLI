@@ -32,6 +32,12 @@ export class HistorySummarizer {
     private readonly KEEP_RECENT_TURNS = 3;
 
     /**
+     * @param llm - LLM gateway used by summarize(). Optional: if omitted,
+     *   summarize() falls back to returning raw history without compression.
+     */
+    constructor(private readonly llm?: LLMGateway) {}
+
+    /**
      * Returns true when context health warrants summarizing old history.
      */
     shouldSummarize(session: ConversationSession): boolean {
@@ -54,10 +60,13 @@ export class HistorySummarizer {
      */
     async summarize(
         session: ConversationSession,
-        llm: LLMGateway,
         keepRecentTurns = this.KEEP_RECENT_TURNS,
     ): Promise<SessionMessage[]> {
         const allHistory = session.getHistory();
+
+        // If no LLM was injected at construction time, return raw history.
+        if (!this.llm) return allHistory;
+
         const splitAt = Math.max(0, allHistory.length - keepRecentTurns * 2);
 
         // Nothing old enough to summarize — return as-is
@@ -72,7 +81,7 @@ export class HistorySummarizer {
 
         let summary: string;
         try {
-            const response = await llm.sendPrompt({
+            const response = await this.llm.sendPrompt({
                 systemPrompt: SUMMARIZER_SYSTEM_PROMPT,
                 userMessage: conversation,
             });
