@@ -29,7 +29,9 @@
 import { Command } from 'commander';
 import { createAgentCommand } from './presentation/cli/agent-cli-adapter';
 import { createAskCommand } from './presentation/cli/ask-cli-adapter';
-import { knowledgeCommand } from './presentation/cli/knowledge-cli-adapter';
+import { createKnowledgeCommand } from './presentation/cli/knowledge-cli-adapter';
+import { KnowledgeService } from './application/services/knowledge-service';
+import { KnowledgeRepository } from './infrastructure/persistence/knowledge-repository';
 import { displayBanner } from './presentation/views/banner';
 import fs from 'fs';
 import path from 'path';
@@ -97,7 +99,7 @@ program.addCommand(agentCommand);
 program.addCommand(askCommand);
 
 // ── Session / knowledge management ───────────────────────────────────────────
-program.addCommand(knowledgeCommand);
+program.addCommand(createKnowledgeCommand({ service: new KnowledgeService(new KnowledgeRepository()) }));
 
 // ── Default action: Launch interactive TUI REPL ──────────────────────────────
 program.action(async () => {

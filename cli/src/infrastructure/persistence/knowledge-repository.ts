@@ -7,9 +7,10 @@
 
 import fs from 'fs';
 import { KnowledgeEntry, KnowledgeEntryJSON } from '../../domain/entities/knowledge-entry';
+import { IKnowledgeRepository } from '../../domain/interfaces/i-knowledge-repository';
 import { getProjectBase, getKnowledgeFile } from '../config/paths';
 
-export class KnowledgeRepository {
+export class KnowledgeRepository implements IKnowledgeRepository {
     private readonly filePath: string;
 
     constructor() {

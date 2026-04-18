@@ -21,7 +21,7 @@ import { LLMOutput } from '../../domain/values/llm-output';
 import { Evaluator } from '../services/evaluator';
 import { buildInstructionAgentPrompt } from '../prompts/instruction-agent';
 import { KnowledgeBase } from '../services/knowledge-base';
-import { KnowledgeRepository } from '../../infrastructure/persistence/knowledge-repository';
+import { IKnowledgeRepository } from '../../domain/interfaces/i-knowledge-repository';
 import { EditStagingService, StagedEdit } from '../services/edit-staging-service';
 
 type EmitFn = (type: string, data: Record<string, unknown>) => void;
@@ -34,7 +34,9 @@ export interface ExecuteInstructionDeps {
     /** Human-in-the-loop callback: returns true to apply the edit, false to skip. */
     onApproval: (edit: { path: string; diff: string; original: string; proposed: string }) => Promise<boolean>;
     emit: EmitFn;
-    /** Optional — defaults to a KnowledgeBase loaded from KnowledgeRepository. */
+    /** Injected repository used to load the knowledge base at startup. */
+    knowledgeRepo?: IKnowledgeRepository;
+    /** Pre-built KnowledgeBase — takes priority over knowledgeRepo (for tests). */
     knowledgeBase?: KnowledgeBase;
     /** Optional — defaults to new Evaluator(). */
     evaluator?: Evaluator;
@@ -67,9 +69,8 @@ export class ExecuteInstructionUseCase {
         if (deps.knowledgeBase) {
             this.knowledgeBase = deps.knowledgeBase;
         } else {
-            const kbRepo = new KnowledgeRepository();
             this.knowledgeBase = new KnowledgeBase();
-            this.knowledgeBase.load(kbRepo.load());
+            if (deps.knowledgeRepo) this.knowledgeBase.load(deps.knowledgeRepo.load());
         }
         this.evaluator = deps.evaluator ?? new Evaluator();
         this.orchestrator = deps.orchestrator ?? new Orchestrator(deps.llm, deps.registry);

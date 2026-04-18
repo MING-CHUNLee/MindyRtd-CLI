@@ -21,6 +21,7 @@ import { DirectoryScanner } from '../filesystem/directory-scanner';
 import { RScriptRunner } from '../r-adapter/r-script-runner';
 import { getRBridge } from '../r-adapter/r-bridge';
 import { PluginLoader } from '../filesystem/plugin-loader';
+import { KnowledgeRepository } from '../persistence/knowledge-repository';
 
 import { DiffEngine } from '../../application/services/diff-engine';
 import { ToolRegistry } from '../../application/orchestration/tool-registry';
@@ -121,6 +122,7 @@ export function buildAgentDeps(
         onApproval: approvalBus.approve.bind(approvalBus),
         stagingService,
         emit,
+        knowledgeRepo: new KnowledgeRepository(),
     });
 
     const runUseCase = new ExecuteRunUseCase({
