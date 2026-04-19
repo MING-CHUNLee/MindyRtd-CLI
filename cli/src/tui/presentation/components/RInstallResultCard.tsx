@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Text } from 'ink';
-import { RInstallResultVM } from '../../view-models/index.js';
+import { RInstallResultVM } from '../view-models/index.js';
 
 interface RInstallResultCardProps {
     vm: RInstallResultVM;

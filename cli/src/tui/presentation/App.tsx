@@ -9,7 +9,7 @@ import StatusBar from './components/StatusBar.js';
 import ThinkingIndicator from './components/ThinkingIndicator.js';
 import StreamingMessage from './components/StreamingMessage.js';
 import { TUIMessage, AppState, PendingEdit, PendingInstall } from './types.js';
-import { StatusBarVM, StatusBarDisplayConfig } from '../view-models/index.js';
+import { StatusBarVM, StatusBarDisplayConfig } from '../../shared/view-models/index.js';
 
 export interface AppViewProps {
     messages: TUIMessage[];

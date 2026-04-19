@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useInput, useApp } from 'ink';
 
-import AppView from './App.js';
-import { TUIMessage, AppState, PendingEdit, PendingInstall, TUIConfig } from './types.js';
-import { mapAgentEventToMessage, AgentEvent, ProposedEdit, nextId } from './event-mapper.js';
-import { StatusBarVM } from '../view-models/index.js';
+import AppView from '../presentation/App.js';
+import { TUIMessage, AppState, PendingEdit, PendingInstall, TUIConfig } from '../presentation/types.js';
+import { mapAgentEventToMessage, AgentEvent, ProposedEdit, nextId } from '../presentation/event-mapper.js';
+import { StatusBarVM } from '../../shared/view-models/index.js';
 import type { ProposedInstall } from '../../application/controllers/agent-controller.js';
 
 interface AppControllerProps {

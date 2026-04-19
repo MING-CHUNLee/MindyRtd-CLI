@@ -13,8 +13,8 @@ import chalk from 'chalk';
 import ora, { Ora } from 'ora';
 
 import type { AgentController, AgentEvent } from '../../application/controllers/agent-controller';
-import { displayStatusBar } from '../views/context-status-bar';
-import type { StatusBarItemKey } from '../view-models';
+import { displayStatusBar } from './views/context-status-bar';
+import type { StatusBarItemKey } from '../../shared/view-models';
 
 export interface AskCliAdapterDeps {
     /** Composition root: build a fully wired AgentController. */

@@ -6,7 +6,7 @@
 
 import React from 'react';
 import { Box, Text } from 'ink';
-import { StatusBarVM, StatusBarDisplayConfig, ContextHealthVM } from '../../view-models/index.js';
+import { StatusBarVM, StatusBarDisplayConfig, ContextHealthVM } from '../../../shared/view-models/index.js';
 import { formatDuration } from '../../../shared/utils/format.js';
 
 interface StatusBarProps {

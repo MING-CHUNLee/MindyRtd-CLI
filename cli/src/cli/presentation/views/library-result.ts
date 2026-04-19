@@ -11,7 +11,7 @@
  */
 
 import chalk from 'chalk';
-import { LibraryScanResultVM, LibraryInfoVM } from '../view-models';
+import { LibraryScanResultVM, LibraryInfoVM } from '../../../shared/view-models';
 
 const MAX_LIBRARIES_DISPLAY = 20;
 

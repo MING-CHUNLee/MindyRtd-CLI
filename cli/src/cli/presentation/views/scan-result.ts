@@ -11,8 +11,8 @@
  */
 
 import chalk from 'chalk';
-import { ScanResultVM } from '../view-models';
-import { formatFileSize, formatRelativePath } from '../../shared/utils/format';
+import { ScanResultVM } from '../../../shared/view-models';
+import { formatFileSize, formatRelativePath } from '../../../shared/utils/format';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 

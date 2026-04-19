@@ -17,8 +17,9 @@
 import { TUIMessage, AppState, PendingInstall } from './types';
 import {
     StatusBarVM, ContextHealthVM,
-    ScanResultVM, LibraryScanResultVM, RExecResultVM, RInstallResultVM,
-} from '../view-models/index.js';
+    ScanResultVM, LibraryScanResultVM,
+} from '../../shared/view-models/index.js';
+import { RExecResultVM, RInstallResultVM } from './view-models/index.js';
 
 // Import the canonical types from the application layer for local use,
 // and re-export them so App.tsx can continue importing from this module.

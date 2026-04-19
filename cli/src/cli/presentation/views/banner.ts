@@ -1,6 +1,6 @@
 /**
  * Views: Banner
- * 
+ *
  * CLI banner display.
  */
 

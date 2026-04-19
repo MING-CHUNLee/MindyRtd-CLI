@@ -13,8 +13,8 @@
  */
 
 import chalk from 'chalk';
-import { StatusBarVM, StatusBarDisplayConfig, StatusBarItemKey, ContextHealthVM } from '../view-models';
-import { formatDuration } from '../../shared/utils/format';
+import { StatusBarVM, StatusBarDisplayConfig, StatusBarItemKey, ContextHealthVM } from '../../../shared/view-models';
+import { formatDuration } from '../../../shared/utils/format';
 
 const BAR_WIDTH = 20;
 

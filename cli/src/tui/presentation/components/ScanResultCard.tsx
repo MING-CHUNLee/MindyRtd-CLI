@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Text } from 'ink';
-import { ScanResultVM, ScannedFileVM } from '../../view-models/index.js';
+import { ScanResultVM, ScannedFileVM } from '../../../shared/view-models/index.js';
 
 interface ScanResultCardProps {
     vm: ScanResultVM;

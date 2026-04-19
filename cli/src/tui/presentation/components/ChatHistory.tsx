@@ -10,7 +10,7 @@ import {
     LibraryScanResultVM,
     RExecResultVM,
     RInstallResultVM,
-} from '../../view-models/index.js';
+} from '../../../shared/view-models/index.js';
 
 interface ChatHistoryProps {
     messages: TUIMessage[];

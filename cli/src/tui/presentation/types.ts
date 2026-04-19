@@ -7,10 +7,8 @@
 import {
     ScanResultVM,
     LibraryScanResultVM,
-    ContextDisplayVM,
-    RExecResultVM,
-    RInstallResultVM,
-} from '../view-models/index.js';
+} from '../../shared/view-models/index.js';
+import { RExecResultVM, RInstallResultVM } from './view-models/index.js';
 
 export type MessageType =
     | 'user'

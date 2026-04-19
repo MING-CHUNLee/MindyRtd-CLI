@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Text } from 'ink';
-import { RExecResultVM } from '../../view-models/index.js';
+import { RExecResultVM } from '../view-models/index.js';
 
 interface RExecResultCardProps {
     vm: RExecResultVM;
