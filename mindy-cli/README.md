@@ -11,7 +11,7 @@ Please refer to the [Root Documentation](../README.md) for full details.
 ## Development
 
 ```bash
-cd cli
+cd mindy-cli
 bun install
 bun run dev
 ```

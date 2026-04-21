@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Commands
 
-All commands run from the `cli/` directory (`cd cli` first):
+All commands run from the `mindy-cli/` directory (`cd mindy-cli` first):
 
 > **This project uses [Bun](https://bun.sh/) instead of npm.** Use `bun` for all package management and script execution.
 
@@ -26,7 +26,7 @@ node dist/index.js agent "instruction"
 The codebase follows **Clean Architecture** with four layers. Dependencies only point inward (presentation/infrastructure → application → domain).
 
 ```
-cli/src/
+mindy-cli/src/
 ├── domain/          # No external deps — entities, interfaces, value objects
 ├── application/     # Business logic — use-cases, services, tools, prompts
 ├── infrastructure/  # External I/O — LLM API, persistence, filesystem, R adapter

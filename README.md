@@ -35,7 +35,7 @@ mindy-cli agent "Add error handling to the data loading pipeline"
 > **This project uses [Bun](https://bun.sh/) instead of npm.** Install Bun first if you haven't: `curl -fsSL https://bun.sh/install | bash`
 
 ```bash
-cd cli
+cd mindy-cli
 bun install
 bun run build
 
@@ -209,7 +209,7 @@ Prints the active session ID, turn count, token usage, and cost.
 The CLI follows Clean Architecture with dependency flowing inward:
 
 ```
-cli/src/
+mindy-cli/src/
 ├── domain/           # Entities, interfaces, value objects (no external deps)
 ├── application/
 │   ├── controllers/  # Commander command handlers
@@ -245,7 +245,7 @@ cli/src/
 > **This project uses [Bun](https://bun.sh/) instead of npm.**
 
 ```bash
-cd cli
+cd mindy-cli
 
 # Run without building
 bun run dev -- agent "your instruction"
@@ -263,7 +263,7 @@ bun test
 
 ```
 project-root/
-├── cli/          # TypeScript CLI (this tool)
+├── mindy-cli/    # TypeScript CLI (this tool)
 ├── app/          # Ruby backend API (Clean Architecture, Roda)
 ├── workers/      # Background LLM workers (Redis + SQS)
 ├── config/       # Shared secrets / environment config

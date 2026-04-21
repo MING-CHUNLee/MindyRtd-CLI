@@ -82,7 +82,7 @@ task :check_env do
   missing = required.reject { |k| ENV[k] }
   if missing.any?
     puts "❌ Missing required environment variables: #{missing.join(', ')}"
-    puts "   Copy cli/.env values or set them in a root .env file."
+    puts "   Copy mindy-cli/.env values or set them in a root .env file."
     exit 1
   else
     puts "✅ All required environment variables are set."
