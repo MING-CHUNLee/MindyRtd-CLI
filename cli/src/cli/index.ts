@@ -11,9 +11,10 @@ import path from 'path';
 
 import { createAgentCommand } from './presentation/agent-cli-presenter';
 import { createAskCommand }   from './presentation/ask-cli-presenter';
-import { createKnowledgeCommand } from './presentation/knowledge-cli-adapter';
+import { createKnowledgeCommand } from './presentation/knowledge-cli-presenter';
 import { KnowledgeService }       from '../application/services/knowledge-service';
 import { KnowledgeRepository }    from '../infrastructure/persistence/knowledge-repository';
+import { SessionRepository }      from '../infrastructure/persistence/session-repository';
 import { displayBanner }          from './presentation/views/banner';
 import { getSettings }            from '../infrastructure/config/settings';
 import { createAgentController }  from '../composition/create-agent-controller';
@@ -37,6 +38,7 @@ export async function startCLI(): Promise<void> {
 
     const agentCommand = createAgentCommand({
         statusBarItems: settings.statusBar.items,
+        repo: new SessionRepository(),
         createController: ({ directory, viewAdapter, approvalGate, installApprovalGate }) =>
             createAgentController({ directory, viewAdapter, approvalGate, installApprovalGate }),
     });

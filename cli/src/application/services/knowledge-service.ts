@@ -1,12 +1,14 @@
 import { IKnowledgeRepository } from '../../domain/interfaces/i-knowledge-repository';
-import { KnowledgeEntry } from '../../domain/entities/knowledge-entry';
+import { KnowledgeEntry, type KnowledgeSource } from '../../domain/entities/knowledge-entry';
 import { KnowledgeBase } from './knowledge-base';
 
 export class KnowledgeService {
     constructor(private readonly repo: IKnowledgeRepository) {}
 
-    add(entry: KnowledgeEntry): void {
+    add(title: string, content: string, tags: string[], source?: KnowledgeSource, projectDir?: string): { id: string; title: string } {
+        const entry = KnowledgeEntry.create(title, content, tags, source ?? 'manual', projectDir);
         this.repo.add(entry);
+        return { id: entry.id, title: entry.title };
     }
 
     list(projectDir?: string): KnowledgeEntry[] {

@@ -19,11 +19,11 @@ import ora from 'ora';
 import readline from 'readline';
 
 import type { AgentEvent, ProposedEdit, ProposedInstall, EventCallback, ApprovalCallback, InstallApprovalCallback } from '../../application/controllers/agent-controller';
-import { rollbackCommand } from './rollback-cli-adapter';
+import { createRollbackCommand, type RollbackCliPresenterDeps } from './rollback-cli-presenter';
 import type { StatusBarItemKey } from '../../shared/view-models';
 import { CliAgentController, type CliAgentControllerDeps, type AgentOptions } from '../controller/cli-agent-controller';
 
-export interface AgentCliPresenterDeps extends CliAgentControllerDeps {
+export interface AgentCliPresenterDeps extends CliAgentControllerDeps, RollbackCliPresenterDeps {
     statusBarItems: StatusBarItemKey[];
 }
 
@@ -168,7 +168,7 @@ Examples:
             const installApprovalGate = buildInstallApprovalGate();
             await ctrl.execute(instruction, options, viewAdapter, approvalGate, installApprovalGate);
         })
-        .addCommand(rollbackCommand);
+        .addCommand(createRollbackCommand({ repo: deps.repo }));
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

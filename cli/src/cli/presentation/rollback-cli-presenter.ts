@@ -1,50 +1,51 @@
 /**
- * Presentation: RollbackCliAdapter
+ * Presentation: RollbackCliPresenter
  *
- * CLI adapter for `mindy-cli agent rollback ...`.
+ * CLI presenter for `mindy-cli agent rollback ...`.
  */
 
 import { Command } from 'commander';
 import chalk from 'chalk';
 
-import { SessionRepository } from '../../infrastructure/persistence/session-repository';
-import { ConversationSession } from '../../domain/entities/conversation-session';
+import type { SessionRepository } from '../../infrastructure/persistence/session-repository';
 
-export const rollbackCommand = new Command('rollback')
-    .description('Roll back the current session to a previous turn')
-    .argument('[turn]', 'Turn number to roll back to (0 = clear all)', parseInt)
-    .option('--session <id>', 'Target a specific session by ID')
-    .option('--list', 'Only list turns without rolling back')
-    .addHelpText('after', `
+export interface RollbackCliPresenterDeps {
+    repo: SessionRepository;
+}
+
+export function createRollbackCommand(deps: RollbackCliPresenterDeps): Command {
+    return new Command('rollback')
+        .description('Roll back the current session to a previous turn')
+        .argument('[turn]', 'Turn number to roll back to (0 = clear all)', parseInt)
+        .option('--session <id>', 'Target a specific session by ID')
+        .option('--list', 'Only list turns without rolling back')
+        .addHelpText('after', `
 Examples:
   $ mindy agent rollback 2           # keep only the first 2 turns
   $ mindy agent rollback 0           # clear all turns from session
   $ mindy agent rollback --list      # show turn history only
     `)
-    .action(async (turn: number | undefined, options: { session?: string; list?: boolean }) => {
-        await executeRollbackCommand(turn, options);
-    });
+        .action(async (turn: number | undefined, options: { session?: string; list?: boolean }) => {
+            await executeRollbackCommand(deps.repo, turn, options);
+        });
+}
 
 async function executeRollbackCommand(
+    repo: SessionRepository,
     targetTurn: number | undefined,
     options: { session?: string; list?: boolean },
 ): Promise<void> {
-    const repo = new SessionRepository();
-
     // Load session
-    let session: ConversationSession | null;
-    if (options.session) {
-        session = await repo.load(options.session);
-        if (!session) {
-            console.error(chalk.red(`Session "${options.session}" not found.`));
-            process.exit(1);
-        }
-    } else {
-        session = await repo.loadLast();
-        if (!session) {
-            console.error(chalk.red('No active session found. Start one with: mindy agent "..."'));
-            process.exit(1);
-        }
+    const session = options.session
+        ? await repo.load(options.session)
+        : await repo.loadLast();
+
+    if (!session) {
+        const msg = options.session
+            ? `Session "${options.session}" not found.`
+            : 'No active session found. Start one with: mindy agent "..."';
+        console.error(chalk.red(msg));
+        process.exit(1);
     }
 
     const turns = session.turns;
@@ -74,22 +75,17 @@ async function executeRollbackCommand(
         process.exit(1);
     }
 
-    // Determine target (non-interactive)
-    const chosenTurn = targetTurn;
-
-    // Validate
-    if (chosenTurn < 0 || chosenTurn > turns.length) {
-        console.error(chalk.red(`Invalid turn number: ${chosenTurn}. Must be 0–${turns.length}.`));
+    if (targetTurn < 0 || targetTurn > turns.length) {
+        console.error(chalk.red(`Invalid turn number: ${targetTurn}. Must be 0–${turns.length}.`));
         process.exit(1);
     }
 
-    if (chosenTurn === turns.length) {
+    if (targetTurn === turns.length) {
         console.log(chalk.dim('  Already at this turn — nothing to do.'));
         return;
     }
 
-    // Execute rollback
-    session.rollbackTo(chosenTurn);
+    session.rollbackTo(targetTurn);
     await repo.save(session);
 
     const remaining = session.turns.length;

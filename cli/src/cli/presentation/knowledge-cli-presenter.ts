@@ -1,7 +1,7 @@
 /**
- * Presentation: KnowledgeCliAdapter
+ * Presentation: KnowledgeCliPresenter
  *
- * CLI adapter for knowledge base management.
+ * CLI presenter for knowledge base management.
  */
 
 import { Command } from 'commander';
@@ -9,13 +9,12 @@ import chalk from 'chalk';
 import readline from 'readline';
 
 import { KnowledgeService } from '../../application/services/knowledge-service';
-import { KnowledgeEntry } from '../../domain/entities/knowledge-entry';
 
-export interface KnowledgeCliAdapterDeps {
+export interface KnowledgeCliPresenterDeps {
     service: KnowledgeService;
 }
 
-export function createKnowledgeCommand(deps: KnowledgeCliAdapterDeps): Command {
+export function createKnowledgeCommand(deps: KnowledgeCliPresenterDeps): Command {
     const { service } = deps;
 
     const cmd = new Command('knowledge')
@@ -47,11 +46,10 @@ Sub-commands:
             }
 
             const tags = options.tags ? options.tags.split(',').map(t => t.trim()).filter(Boolean) : [];
-            const entry = KnowledgeEntry.create(title, content.trim(), tags, 'manual', options.project);
-            service.add(entry);
+            const result = service.add(title, content.trim(), tags, 'manual', options.project);
 
-            console.log(chalk.green(`\n✓ Knowledge entry added (id: ${entry.id})`));
-            console.log(chalk.dim(`  Title: ${entry.title}`));
+            console.log(chalk.green(`\n✓ Knowledge entry added (id: ${result.id})`));
+            console.log(chalk.dim(`  Title: ${result.title}`));
             if (tags.length) console.log(chalk.dim(`  Tags:  ${tags.join(', ')}`));
         });
 
