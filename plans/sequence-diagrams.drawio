@@ -1,14 +1,14 @@
 <mxfile host="65bd71144e">
     <diagram name="TUI 循序圖" id="tui-seq">
-        <mxGraphModel dx="508" dy="492" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1450" pageHeight="1750" math="0" shadow="0">
+        <mxGraphModel dx="688" dy="628" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1640" pageHeight="1750" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
-                <mxCell id="2" value="TUI Entry Point Sequence Diagram — cli/src/tui/" style="text;html=1;fontSize=15;fontStyle=1;align=left;verticalAlign=middle;" parent="1" vertex="1">
-                    <mxGeometry x="30" y="2" width="600" height="28" as="geometry"/>
+                <mxCell id="2" value="TUI Entry Point Sequence Diagram — src/index.ts → tui/src/tui/" style="text;html=1;fontSize=15;fontStyle=1;align=left;verticalAlign=middle;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="2" width="700" height="28" as="geometry"/>
                 </mxCell>
                 <mxCell id="3" value="─── sync call    - - ▷ event/return" style="text;html=1;fontSize=9;align=left;strokeColor=#CCCCCC;fillColor=#F9FAFB;" parent="1" vertex="1">
-                    <mxGeometry x="900" y="2" width="220" height="24" as="geometry"/>
+                    <mxGeometry x="1070" y="2" width="220" height="24" as="geometry"/>
                 </mxCell>
                 <mxCell id="10" value="User" style="rounded=1;whiteSpace=wrap;fillColor=#E0E7FF;strokeColor=#6366F1;fontStyle=1;fontSize=12;" parent="1" vertex="1">
                     <mxGeometry x="30" y="32" width="110" height="48" as="geometry"/>
@@ -19,79 +19,96 @@
                         <mxPoint x="85" y="1680" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="12" value="index.tsx&#xa;(startTUI)" style="rounded=1;whiteSpace=wrap;fillColor=#F0FDF4;strokeColor=#16A34A;fontStyle=1;fontSize=11;" parent="1" vertex="1">
+                <mxCell id="idx0" value="src/index.ts&#xa;(dispatcher)" style="rounded=1;whiteSpace=wrap;fillColor=#FFF7ED;strokeColor=#EA580C;fontStyle=1;fontSize=11;" parent="1" vertex="1">
                     <mxGeometry x="190" y="32" width="120" height="48" as="geometry"/>
                 </mxCell>
-                <mxCell id="13" value="" style="endArrow=none;dashed=1;strokeColor=#16A34A;strokeWidth=1;" parent="1" edge="1">
+                <mxCell id="idx1" value="" style="endArrow=none;dashed=1;strokeColor=#EA580C;strokeWidth=1;" parent="1" edge="1">
                     <mxGeometry relative="1" as="geometry">
                         <mxPoint x="250" y="80" as="sourcePoint"/>
                         <mxPoint x="250" y="1680" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
+                <mxCell id="12" value="tui/index.tsx&#xa;(startTUI)" style="rounded=1;whiteSpace=wrap;fillColor=#F0FDF4;strokeColor=#16A34A;fontStyle=1;fontSize=11;" parent="1" vertex="1">
+                    <mxGeometry x="360" y="32" width="120" height="48" as="geometry"/>
+                </mxCell>
+                <mxCell id="13" value="" style="endArrow=none;dashed=1;strokeColor=#16A34A;strokeWidth=1;" parent="1" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="420" y="80" as="sourcePoint"/>
+                        <mxPoint x="420" y="1680" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
                 <mxCell id="14" value="AppController.tsx" style="rounded=1;whiteSpace=wrap;fillColor=#FEF3C7;strokeColor=#D97706;fontStyle=1;fontSize=11;" parent="1" vertex="1">
-                    <mxGeometry x="365" y="32" width="145" height="48" as="geometry"/>
+                    <mxGeometry x="535" y="32" width="145" height="48" as="geometry"/>
                 </mxCell>
                 <mxCell id="15" value="" style="endArrow=none;dashed=1;strokeColor=#D97706;strokeWidth=1;" parent="1" edge="1">
                     <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="437" y="80" as="sourcePoint"/>
-                        <mxPoint x="437" y="1680" as="targetPoint"/>
+                        <mxPoint x="607" y="80" as="sourcePoint"/>
+                        <mxPoint x="607" y="1680" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="16" value="event-mapper.ts" style="rounded=1;whiteSpace=wrap;fillColor=#EDE9FE;strokeColor=#7C3AED;fontStyle=1;fontSize=11;" parent="1" vertex="1">
-                    <mxGeometry x="560" y="32" width="130" height="48" as="geometry"/>
+                    <mxGeometry x="730" y="32" width="130" height="48" as="geometry"/>
                 </mxCell>
                 <mxCell id="17" value="" style="endArrow=none;dashed=1;strokeColor=#7C3AED;strokeWidth=1;" parent="1" edge="1">
                     <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="625" y="80" as="sourcePoint"/>
-                        <mxPoint x="625" y="1680" as="targetPoint"/>
+                        <mxPoint x="795" y="80" as="sourcePoint"/>
+                        <mxPoint x="795" y="1680" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="18" value="App.tsx&#xa;(View)" style="rounded=1;whiteSpace=wrap;fillColor=#F0FDF4;strokeColor=#16A34A;fontStyle=1;fontSize=11;" parent="1" vertex="1">
-                    <mxGeometry x="745" y="32" width="120" height="48" as="geometry"/>
+                    <mxGeometry x="915" y="32" width="120" height="48" as="geometry"/>
                 </mxCell>
                 <mxCell id="19" value="" style="endArrow=none;dashed=1;strokeColor=#16A34A;strokeWidth=1;" parent="1" edge="1">
                     <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="805" y="80" as="sourcePoint"/>
-                        <mxPoint x="805" y="1680" as="targetPoint"/>
+                        <mxPoint x="975" y="80" as="sourcePoint"/>
+                        <mxPoint x="975" y="1680" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="20" value="Components&#xa;(view/)" style="rounded=1;whiteSpace=wrap;fillColor=#DCFCE7;strokeColor=#15803D;fontStyle=1;fontSize=11;" parent="1" vertex="1">
-                    <mxGeometry x="930" y="32" width="120" height="48" as="geometry"/>
+                    <mxGeometry x="1100" y="32" width="120" height="48" as="geometry"/>
                 </mxCell>
                 <mxCell id="21" value="" style="endArrow=none;dashed=1;strokeColor=#15803D;strokeWidth=1;" parent="1" edge="1">
                     <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="990" y="80" as="sourcePoint"/>
-                        <mxPoint x="990" y="1680" as="targetPoint"/>
+                        <mxPoint x="1160" y="80" as="sourcePoint"/>
+                        <mxPoint x="1160" y="1680" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="22" value="AgentService&#xa;(Application)" style="rounded=1;whiteSpace=wrap;fillColor=#FEE2E2;strokeColor=#DC2626;fontStyle=1;fontSize=11;" parent="1" vertex="1">
-                    <mxGeometry x="1115" y="32" width="145" height="48" as="geometry"/>
+                    <mxGeometry x="1285" y="32" width="145" height="48" as="geometry"/>
                 </mxCell>
                 <mxCell id="23" value="" style="endArrow=none;dashed=1;strokeColor=#DC2626;strokeWidth=1;" parent="1" edge="1">
                     <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="1187" y="80" as="sourcePoint"/>
-                        <mxPoint x="1187" y="1680" as="targetPoint"/>
+                        <mxPoint x="1357" y="80" as="sourcePoint"/>
+                        <mxPoint x="1357" y="1680" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="b1" value="① App Init" style="rounded=1;fillColor=#6366F1;strokeColor=#4338CA;fontColor=#FFFFFF;fontSize=9;fontStyle=1;" parent="1" vertex="1">
                     <mxGeometry x="30" y="92" width="70" height="18" as="geometry"/>
                 </mxCell>
-                <mxCell id="30" value="startTUI(config)" style="endArrow=block;endFill=1;strokeColor=#374151;fontStyle=1;fontSize=10;" parent="1" edge="1">
+                <mxCell id="30" value="mindy  (no args → isTUI = true)" style="endArrow=block;endFill=1;strokeColor=#374151;fontStyle=1;fontSize=10;" parent="1" edge="1">
                     <mxGeometry relative="1" as="geometry">
                         <mxPoint x="85" y="125" as="sourcePoint"/>
                         <mxPoint x="250" y="125" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
+                <mxCell id="30b" value="new Function(&#39;p&#39;, &#39;return import(p)&#39;)(&#39;./tui/index.js&#39;)" style="endArrow=block;endFill=1;strokeColor=#EA580C;fontSize=10;" parent="1" edge="1">
+                    <mxGeometry x="-0.1647" relative="1" as="geometry">
+                        <mxPoint x="250" y="152" as="sourcePoint"/>
+                        <mxPoint x="420" y="152" as="targetPoint"/>
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
                 <mxCell id="31" value="render(&lt;AppController /&gt;)" style="endArrow=block;endFill=1;strokeColor=#374151;fontStyle=1;fontSize=10;" parent="1" edge="1">
-                    <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="250" y="185" as="sourcePoint"/>
-                        <mxPoint x="437" y="185" as="targetPoint"/>
+                    <mxGeometry x="-0.3155" y="3" relative="1" as="geometry">
+                        <mxPoint x="420" y="185" as="sourcePoint"/>
+                        <mxPoint x="607" y="185" as="targetPoint"/>
+                        <mxPoint as="offset"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="32" value="render(&lt;App ...props /&gt;)" style="endArrow=block;endFill=1;strokeColor=#374151;fontSize=10;" parent="1" edge="1">
                     <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="437" y="245" as="sourcePoint"/>
-                        <mxPoint x="805" y="245" as="targetPoint"/>
+                        <mxPoint x="608" y="204" as="sourcePoint"/>
+                        <mxPoint x="976" y="204" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="b2" value="② Service Setup" style="rounded=1;fillColor=#D97706;strokeColor=#B45309;fontColor=#FFFFFF;fontSize=9;fontStyle=1;" parent="1" vertex="1">
@@ -99,44 +116,44 @@
                 </mxCell>
                 <mxCell id="33" value="createAgentController(config)" style="endArrow=block;endFill=1;strokeColor=#374151;fontStyle=1;fontSize=10;" parent="1" edge="1">
                     <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="437" y="300" as="sourcePoint"/>
-                        <mxPoint x="1187" y="300" as="targetPoint"/>
+                        <mxPoint x="607" y="300" as="sourcePoint"/>
+                        <mxPoint x="1357" y="300" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="34" value="service.initialize(sessionId?)" style="endArrow=block;endFill=1;strokeColor=#374151;fontStyle=1;fontSize=10;" parent="1" edge="1">
                     <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="437" y="360" as="sourcePoint"/>
-                        <mxPoint x="1187" y="360" as="targetPoint"/>
+                        <mxPoint x="607" y="360" as="sourcePoint"/>
+                        <mxPoint x="1357" y="360" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="35" value="emit: &#39;session_loaded&#39;" style="endArrow=open;endFill=0;dashed=1;strokeColor=#DC2626;fontSize=10;" parent="1" edge="1">
                     <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="1187" y="420" as="sourcePoint"/>
-                        <mxPoint x="437" y="420" as="targetPoint"/>
+                        <mxPoint x="1357" y="420" as="sourcePoint"/>
+                        <mxPoint x="607" y="420" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="36" value="mapAgentEventToMessage(event)" style="endArrow=block;endFill=1;strokeColor=#374151;fontStyle=1;fontSize=10;" parent="1" edge="1">
                     <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="437" y="480" as="sourcePoint"/>
-                        <mxPoint x="625" y="480" as="targetPoint"/>
+                        <mxPoint x="607" y="480" as="sourcePoint"/>
+                        <mxPoint x="795" y="480" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="37" value="return { message, sideEffect? }" style="endArrow=open;endFill=0;dashed=1;strokeColor=#7C3AED;fontSize=10;" parent="1" edge="1">
                     <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="625" y="535" as="sourcePoint"/>
-                        <mxPoint x="437" y="535" as="targetPoint"/>
+                        <mxPoint x="795" y="535" as="sourcePoint"/>
+                        <mxPoint x="607" y="535" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="38" value="setMessages() → re-render" style="endArrow=block;endFill=1;strokeColor=#374151;fontSize=10;" parent="1" edge="1">
                     <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="437" y="595" as="sourcePoint"/>
-                        <mxPoint x="805" y="595" as="targetPoint"/>
+                        <mxPoint x="607" y="595" as="sourcePoint"/>
+                        <mxPoint x="975" y="595" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="39" value="render &lt;ChatHistory messages /&gt;" style="endArrow=block;endFill=1;strokeColor=#374151;fontSize=10;" parent="1" edge="1">
                     <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="805" y="650" as="sourcePoint"/>
-                        <mxPoint x="990" y="650" as="targetPoint"/>
+                        <mxPoint x="975" y="650" as="sourcePoint"/>
+                        <mxPoint x="1160" y="650" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="b3" value="③ User Instruction" style="rounded=1;fillColor=#16A34A;strokeColor=#15803D;fontColor=#FFFFFF;fontSize=9;fontStyle=1;" parent="1" vertex="1">
@@ -145,31 +162,31 @@
                 <mxCell id="40" value="type input + Enter (Footer useInput)" style="endArrow=block;endFill=1;strokeColor=#6366F1;fontStyle=1;fontSize=10;" parent="1" edge="1">
                     <mxGeometry relative="1" as="geometry">
                         <mxPoint x="85" y="707" as="sourcePoint"/>
-                        <mxPoint x="437" y="707" as="targetPoint"/>
+                        <mxPoint x="607" y="707" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="41" value="executeInstruction(input)" style="endArrow=block;endFill=1;strokeColor=#374151;fontStyle=1;fontSize=10;" parent="1" edge="1">
                     <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="437" y="762" as="sourcePoint"/>
-                        <mxPoint x="1187" y="762" as="targetPoint"/>
+                        <mxPoint x="607" y="762" as="sourcePoint"/>
+                        <mxPoint x="1357" y="762" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="42" value="emit: &#39;stream_token&#39; (repeated)" style="endArrow=open;endFill=0;dashed=1;strokeColor=#DC2626;fontSize=10;" parent="1" edge="1">
                     <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="1187" y="822" as="sourcePoint"/>
-                        <mxPoint x="437" y="822" as="targetPoint"/>
+                        <mxPoint x="1357" y="822" as="sourcePoint"/>
+                        <mxPoint x="607" y="822" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="43" value="setStreamingContent / setIsStreaming(true)" style="endArrow=block;endFill=1;strokeColor=#374151;fontSize=10;" parent="1" edge="1">
                     <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="437" y="877" as="sourcePoint"/>
-                        <mxPoint x="805" y="877" as="targetPoint"/>
+                        <mxPoint x="607" y="877" as="sourcePoint"/>
+                        <mxPoint x="975" y="877" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="44" value="render &lt;StreamingMessage content /&gt;" style="endArrow=block;endFill=1;strokeColor=#374151;fontSize=10;" parent="1" edge="1">
                     <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="805" y="932" as="sourcePoint"/>
-                        <mxPoint x="990" y="932" as="targetPoint"/>
+                        <mxPoint x="975" y="932" as="sourcePoint"/>
+                        <mxPoint x="1160" y="932" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="b4" value="④ Edit Review" style="rounded=1;fillColor=#DC2626;strokeColor=#B91C1C;fontColor=#FFFFFF;fontSize=9;fontStyle=1;" parent="1" vertex="1">
@@ -177,72 +194,72 @@
                 </mxCell>
                 <mxCell id="45" value="emit: &#39;diff_proposed&#39; (StagedEdit[])" style="endArrow=open;endFill=0;dashed=1;strokeColor=#DC2626;fontSize=10;" parent="1" edge="1">
                     <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="1187" y="987" as="sourcePoint"/>
-                        <mxPoint x="437" y="987" as="targetPoint"/>
+                        <mxPoint x="1357" y="987" as="sourcePoint"/>
+                        <mxPoint x="607" y="987" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="46" value="setPendingReview + setAppState(&#39;reviewing&#39;)" style="endArrow=block;endFill=1;strokeColor=#374151;fontSize=10;" parent="1" edge="1">
                     <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="437" y="1042" as="sourcePoint"/>
-                        <mxPoint x="805" y="1042" as="targetPoint"/>
+                        <mxPoint x="607" y="1042" as="sourcePoint"/>
+                        <mxPoint x="975" y="1042" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="47" value="render &lt;DiffReview edit /&gt;" style="endArrow=block;endFill=1;strokeColor=#374151;fontSize=10;" parent="1" edge="1">
                     <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="805" y="1097" as="sourcePoint"/>
-                        <mxPoint x="990" y="1097" as="targetPoint"/>
+                        <mxPoint x="975" y="1097" as="sourcePoint"/>
+                        <mxPoint x="1160" y="1097" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="48" value="press Y  (Ink useInput in DiffReview)" style="endArrow=block;endFill=1;strokeColor=#6366F1;fontStyle=1;fontSize=10;" parent="1" edge="1">
                     <mxGeometry relative="1" as="geometry">
                         <mxPoint x="85" y="1157" as="sourcePoint"/>
-                        <mxPoint x="990" y="1157" as="targetPoint"/>
+                        <mxPoint x="1160" y="1157" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="49" value="onReviewDecision(true)" style="endArrow=block;endFill=1;strokeColor=#374151;fontSize=10;" parent="1" edge="1">
                     <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="990" y="1212" as="sourcePoint"/>
-                        <mxPoint x="437" y="1212" as="targetPoint"/>
+                        <mxPoint x="1160" y="1212" as="sourcePoint"/>
+                        <mxPoint x="607" y="1212" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="50" value="approvalResolverRef.current(true)" style="endArrow=block;endFill=1;strokeColor=#374151;fontStyle=1;fontSize=10;" parent="1" edge="1">
                     <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="437" y="1267" as="sourcePoint"/>
-                        <mxPoint x="1187" y="1267" as="targetPoint"/>
+                        <mxPoint x="607" y="1267" as="sourcePoint"/>
+                        <mxPoint x="1357" y="1267" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="51a" value="emit: &#39;edit_applied&#39;" style="endArrow=open;endFill=0;dashed=1;strokeColor=#DC2626;fontSize=10;" parent="1" edge="1">
                     <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="1187" y="1322" as="sourcePoint"/>
-                        <mxPoint x="437" y="1322" as="targetPoint"/>
+                        <mxPoint x="1357" y="1322" as="sourcePoint"/>
+                        <mxPoint x="607" y="1322" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="51" value="emit: &#39;turn_saved&#39;" style="endArrow=open;endFill=0;dashed=1;strokeColor=#DC2626;fontSize=10;" parent="1" edge="1">
                     <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="1187" y="1377" as="sourcePoint"/>
-                        <mxPoint x="437" y="1377" as="targetPoint"/>
+                        <mxPoint x="1357" y="1377" as="sourcePoint"/>
+                        <mxPoint x="607" y="1377" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="52" value="setStatusData (StatusBarVM)" style="endArrow=block;endFill=1;strokeColor=#374151;fontSize=10;" parent="1" edge="1">
                     <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="437" y="1432" as="sourcePoint"/>
-                        <mxPoint x="805" y="1432" as="targetPoint"/>
+                        <mxPoint x="607" y="1432" as="sourcePoint"/>
+                        <mxPoint x="975" y="1432" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="53" value="render &lt;StatusBar vm /&gt;" style="endArrow=block;endFill=1;strokeColor=#374151;fontSize=10;" parent="1" edge="1">
                     <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="805" y="1487" as="sourcePoint"/>
-                        <mxPoint x="990" y="1487" as="targetPoint"/>
+                        <mxPoint x="975" y="1487" as="sourcePoint"/>
+                        <mxPoint x="1160" y="1487" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="a1" value="⚠ approvalGate: Promise returned to AgentService;&#xa;blocks execution until user presses Y/N" style="text;html=1;strokeColor=#D97706;fillColor=#FEF3C7;align=left;verticalAlign=middle;whiteSpace=wrap;fontSize=9;" parent="1" vertex="1">
-                    <mxGeometry x="1290" y="1230" width="140" height="55" as="geometry"/>
+                    <mxGeometry x="1460" y="1230" width="140" height="55" as="geometry"/>
                 </mxCell>
                 <mxCell id="a2" value="⚡ All AgentService I/O via&#xa;typed emit events — never console.log" style="text;html=1;strokeColor=#16A34A;fillColor=#F0FDF4;align=left;verticalAlign=middle;whiteSpace=wrap;fontSize=9;" parent="1" vertex="1">
-                    <mxGeometry x="1290" y="395" width="140" height="50" as="geometry"/>
+                    <mxGeometry x="1460" y="395" width="140" height="50" as="geometry"/>
                 </mxCell>
                 <mxCell id="a3" value="✓ ChatHistory dispatches renderer prop:&#xa;&#39;scan&#39;→ScanResultCard&#xa;&#39;r_exec&#39;→RExecResultCard&#xa;&#39;r_install&#39;→RInstallResultCard" style="text;html=1;strokeColor=#15803D;fillColor=#DCFCE7;align=left;verticalAlign=middle;whiteSpace=wrap;fontSize=9;" parent="1" vertex="1">
-                    <mxGeometry x="1290" y="620" width="150" height="70" as="geometry"/>
+                    <mxGeometry x="1460" y="620" width="150" height="70" as="geometry"/>
                 </mxCell>
             </root>
         </mxGraphModel>
@@ -252,10 +269,10 @@
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
-                <mxCell id="2" value="CLI Entry Point Sequence Diagram — cli/src/cli/" style="text;html=1;fontSize=15;fontStyle=1;align=left;verticalAlign=middle;" parent="1" vertex="1">
-                    <mxGeometry x="30" y="2" width="600" height="28" as="geometry"/>
+                <mxCell id="2" value="CLI Entry Point Sequence Diagram — src/index.ts → cli/src/cli/" style="text;html=1;fontSize=15;fontStyle=1;align=left;verticalAlign=middle;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="2" width="700" height="28" as="geometry"/>
                 </mxCell>
-                <mxCell id="3" value="─── sync call&amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp;- - - ▷ event/return" style="text;html=1;fontSize=9;align=left;strokeColor=#CCCCCC;fillColor=#F9FAFB;" parent="1" vertex="1">
+                <mxCell id="3" value="─── sync call     - - - ▷ event/return" style="text;html=1;fontSize=9;align=left;strokeColor=#CCCCCC;fillColor=#F9FAFB;" parent="1" vertex="1">
                     <mxGeometry x="870" y="2" width="220" height="24" as="geometry"/>
                 </mxCell>
                 <mxCell id="10" value="User&#xa;(Terminal)" style="rounded=1;whiteSpace=wrap;fillColor=#E0E7FF;strokeColor=#6366F1;fontStyle=1;fontSize=11;" parent="1" vertex="1">
@@ -267,22 +284,22 @@
                         <mxPoint x="85" y="1490" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="12" value="index.ts&#xa;(startCLI)" style="rounded=1;whiteSpace=wrap;fillColor=#F0FDF4;strokeColor=#16A34A;fontStyle=1;fontSize=11;" parent="1" vertex="1">
+                <mxCell id="idx0" value="src/index.ts&#xa;(dispatcher)" style="rounded=1;whiteSpace=wrap;fillColor=#FFF7ED;strokeColor=#EA580C;fontStyle=1;fontSize=11;" parent="1" vertex="1">
                     <mxGeometry x="190" y="32" width="120" height="48" as="geometry"/>
                 </mxCell>
-                <mxCell id="13" value="" style="endArrow=none;dashed=1;strokeColor=#16A34A;strokeWidth=1;" parent="1" edge="1">
+                <mxCell id="idx1" value="" style="endArrow=none;dashed=1;strokeColor=#EA580C;strokeWidth=1;" parent="1" edge="1">
                     <mxGeometry relative="1" as="geometry">
                         <mxPoint x="250" y="80" as="sourcePoint"/>
                         <mxPoint x="250" y="1490" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="14" value="agent-cli-presenter.ts" style="rounded=1;whiteSpace=wrap;fillColor=#F0FDF4;strokeColor=#16A34A;fontStyle=1;fontSize=10;" parent="1" vertex="1">
-                    <mxGeometry x="363" y="32" width="155" height="48" as="geometry"/>
+                <mxCell id="12" value="cli/index.ts&#xa;(startCLI)" style="rounded=1;whiteSpace=wrap;fillColor=#F0FDF4;strokeColor=#16A34A;fontStyle=1;fontSize=11;" parent="1" vertex="1">
+                    <mxGeometry x="360" y="32" width="120" height="48" as="geometry"/>
                 </mxCell>
-                <mxCell id="15" value="" style="endArrow=none;dashed=1;strokeColor=#16A34A;strokeWidth=1;" parent="1" edge="1">
+                <mxCell id="13" value="" style="endArrow=none;dashed=1;strokeColor=#16A34A;strokeWidth=1;" parent="1" edge="1">
                     <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="440" y="80" as="sourcePoint"/>
-                        <mxPoint x="440" y="1490" as="targetPoint"/>
+                        <mxPoint x="420" y="80" as="sourcePoint"/>
+                        <mxPoint x="420" y="1490" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="16" value="cli-agent-controller.ts" style="rounded=1;whiteSpace=wrap;fillColor=#FEF3C7;strokeColor=#D97706;fontStyle=1;fontSize=10;" parent="1" vertex="1">
@@ -321,51 +338,50 @@
                         <mxPoint x="250" y="121" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
+                <mxCell id="30b" value="dynamic import(&#39;./cli/index&#39;)  [isTUI = false]" style="endArrow=block;endFill=1;strokeColor=#EA580C;fontSize=10;" parent="1" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="250" y="148" as="sourcePoint"/>
+                        <mxPoint x="420" y="148" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
                 <mxCell id="31" value="displayBanner()  [preAction hook]" style="endArrow=block;endFill=1;strokeColor=#374151;fontSize=10;" parent="1" edge="1">
                     <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="250" y="136" as="sourcePoint"/>
-                        <mxPoint x="860" y="136" as="targetPoint"/>
+                        <mxPoint x="420" y="171" as="sourcePoint"/>
+                        <mxPoint x="860" y="171" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="31b" value="getBanner() → console.log" style="endArrow=open;endFill=0;dashed=1;strokeColor=#15803D;fontSize=10;" parent="1" edge="1">
                     <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="860" y="158" as="sourcePoint"/>
-                        <mxPoint x="85" y="158" as="targetPoint"/>
-                    </mxGeometry>
-                </mxCell>
-                <mxCell id="32" value="createAgentCommand(deps) + program.parse(argv)" style="endArrow=block;endFill=1;strokeColor=#374151;fontSize=8;" parent="1" edge="1">
-                    <mxGeometry x="-0.0421" y="14" relative="1" as="geometry">
-                        <mxPoint x="250" y="248" as="sourcePoint"/>
-                        <mxPoint x="440" y="248" as="targetPoint"/>
-                        <mxPoint as="offset"/>
+                        <mxPoint x="860" y="193" as="sourcePoint"/>
+                        <mxPoint x="85" y="193" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="b2" value="② Service Setup" style="rounded=1;fillColor=#D97706;strokeColor=#B45309;fontColor=#FFFFFF;fontSize=9;fontStyle=1;" parent="1" vertex="1">
                     <mxGeometry x="30" y="218" width="90" height="18" as="geometry"/>
                 </mxCell>
-                <mxCell id="33" value="ctrl.execute(instruction, options, viewAdapter, approvalGate)" style="endArrow=block;endFill=1;strokeColor=#374151;fontStyle=1;fontSize=7;" parent="1" edge="1">
-                    <mxGeometry x="-0.0048" y="11" relative="1" as="geometry">
-                        <mxPoint x="439" y="276" as="sourcePoint"/>
-                        <mxPoint x="648" y="276" as="targetPoint"/>
+                <mxCell id="32" value="program.parse(argv) → agentCommand.action() → ctrl.execute(instruction, viewAdapter, approvalGate)" style="endArrow=block;endFill=1;strokeColor=#374151;fontSize=8;" parent="1" edge="1">
+                    <mxGeometry x="-0.0421" y="14" relative="1" as="geometry">
+                        <mxPoint x="420" y="248" as="sourcePoint"/>
+                        <mxPoint x="649" y="248" as="targetPoint"/>
                         <mxPoint as="offset"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="34" value="createAgentController() + service.initialize()" style="endArrow=block;endFill=1;strokeColor=#374151;fontStyle=1;fontSize=10;" parent="1" edge="1">
                     <mxGeometry x="0.0048" relative="1" as="geometry">
-                        <mxPoint x="650" y="294" as="sourcePoint"/>
-                        <mxPoint x="1066" y="294" as="targetPoint"/>
+                        <mxPoint x="650" y="276" as="sourcePoint"/>
+                        <mxPoint x="1066" y="276" as="targetPoint"/>
                         <mxPoint as="offset"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="35" value="emit: &#39;session_loaded&#39; → viewAdapter(event)" style="endArrow=open;endFill=0;dashed=1;strokeColor=#DC2626;fontSize=10;" parent="1" edge="1">
                     <mxGeometry relative="1" as="geometry">
                         <mxPoint x="1065" y="455" as="sourcePoint"/>
-                        <mxPoint x="440" y="455" as="targetPoint"/>
+                        <mxPoint x="649" y="455" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="36" value="console.log (chalk) session info" style="endArrow=block;endFill=1;strokeColor=#374151;fontSize=10;" parent="1" edge="1">
                     <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="440" y="505" as="sourcePoint"/>
+                        <mxPoint x="649" y="505" as="sourcePoint"/>
                         <mxPoint x="85" y="505" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
@@ -381,36 +397,36 @@
                 <mxCell id="38" value="emit: &#39;phase_start&#39; → viewAdapter(event)" style="endArrow=open;endFill=0;dashed=1;strokeColor=#DC2626;fontSize=10;" parent="1" edge="1">
                     <mxGeometry relative="1" as="geometry">
                         <mxPoint x="1065" y="615" as="sourcePoint"/>
-                        <mxPoint x="440" y="615" as="targetPoint"/>
+                        <mxPoint x="649" y="615" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="39" value="ora spinner.start() (console)" style="endArrow=block;endFill=1;strokeColor=#374151;fontSize=10;" parent="1" edge="1">
                     <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="440" y="665" as="sourcePoint"/>
+                        <mxPoint x="649" y="665" as="sourcePoint"/>
                         <mxPoint x="85" y="665" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="40" value="emit: &#39;react_step&#39; (thought/tool/observation)" style="endArrow=open;endFill=0;dashed=1;strokeColor=#DC2626;fontSize=10;" parent="1" edge="1">
                     <mxGeometry relative="1" as="geometry">
                         <mxPoint x="1065" y="715" as="sourcePoint"/>
-                        <mxPoint x="440" y="715" as="targetPoint"/>
+                        <mxPoint x="649" y="715" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="41" value="console.log (chalk colors per step type)" style="endArrow=block;endFill=1;strokeColor=#374151;fontSize=10;" parent="1" edge="1">
-                    <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="440" y="765" as="sourcePoint"/>
+                    <mxGeometry relative="1" as="geometry>
+                        <mxPoint x="649" y="765" as="sourcePoint"/>
                         <mxPoint x="85" y="765" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="42" value="emit: &#39;stream_token&#39; (repeated)" style="endArrow=open;endFill=0;dashed=1;strokeColor=#DC2626;fontSize=10;" parent="1" edge="1">
                     <mxGeometry relative="1" as="geometry">
                         <mxPoint x="1065" y="815" as="sourcePoint"/>
-                        <mxPoint x="440" y="815" as="targetPoint"/>
+                        <mxPoint x="649" y="815" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="43" value="process.stdout.write(token)" style="endArrow=block;endFill=1;strokeColor=#374151;fontSize=10;" parent="1" edge="1">
                     <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="440" y="865" as="sourcePoint"/>
+                        <mxPoint x="649" y="865" as="sourcePoint"/>
                         <mxPoint x="85" y="865" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
@@ -420,65 +436,65 @@
                 <mxCell id="44" value="emit: &#39;diff_proposed&#39; → viewAdapter(event)" style="endArrow=open;endFill=0;dashed=1;strokeColor=#DC2626;fontSize=10;" parent="1" edge="1">
                     <mxGeometry relative="1" as="geometry">
                         <mxPoint x="1065" y="920" as="sourcePoint"/>
-                        <mxPoint x="440" y="920" as="targetPoint"/>
+                        <mxPoint x="649" y="920" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="45" value="console.log diff lines + readline prompt" style="endArrow=block;endFill=1;strokeColor=#374151;fontSize=10;" parent="1" edge="1">
                     <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="440" y="970" as="sourcePoint"/>
+                        <mxPoint x="649" y="970" as="sourcePoint"/>
                         <mxPoint x="85" y="970" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="46" value="Y (or N)" style="endArrow=block;endFill=1;strokeColor=#6366F1;fontStyle=1;fontSize=10;" parent="1" edge="1">
                     <mxGeometry relative="1" as="geometry">
                         <mxPoint x="85" y="1025" as="sourcePoint"/>
-                        <mxPoint x="440" y="1025" as="targetPoint"/>
+                        <mxPoint x="649" y="1025" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="47" value="approvalGate Promise resolves(true)" style="endArrow=block;endFill=1;strokeColor=#374151;fontStyle=1;fontSize=10;" parent="1" edge="1">
                     <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="440" y="1075" as="sourcePoint"/>
+                        <mxPoint x="649" y="1075" as="sourcePoint"/>
                         <mxPoint x="1065" y="1075" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="48" value="emit: &#39;edit_applied&#39; + &#39;turn_saved&#39;" style="endArrow=open;endFill=0;dashed=1;strokeColor=#DC2626;fontSize=10;" parent="1" edge="1">
                     <mxGeometry relative="1" as="geometry">
                         <mxPoint x="1065" y="1130" as="sourcePoint"/>
-                        <mxPoint x="440" y="1130" as="targetPoint"/>
+                        <mxPoint x="649" y="1130" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="49" value="console.log &quot;Agent workflow complete&quot;" style="endArrow=block;endFill=1;strokeColor=#374151;fontSize=10;" parent="1" edge="1">
                     <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="440" y="1180" as="sourcePoint"/>
+                        <mxPoint x="649" y="1180" as="sourcePoint"/>
                         <mxPoint x="85" y="1180" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="50" value="executeInstruction returns → displayStatusBar(session, config)" style="endArrow=block;endFill=1;strokeColor=#374151;fontSize=10;" parent="1" edge="1">
+                <mxCell id="50" value="displayStatusBar(session, config)" style="endArrow=block;endFill=1;strokeColor=#374151;fontSize=10;" parent="1" edge="1">
                     <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="440" y="1235" as="sourcePoint"/>
-                        <mxPoint x="649" y="1235" as="targetPoint"/>
+                        <mxPoint x="649" y="1235" as="sourcePoint"/>
+                        <mxPoint x="860" y="1235" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="51" value="formatStatusBar(vm, displayConfig) → console.log" style="endArrow=block;endFill=1;strokeColor=#374151;fontSize=10;" parent="1" edge="1">
                     <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="649" y="1290" as="sourcePoint"/>
-                        <mxPoint x="860" y="1290" as="targetPoint"/>
-                    </mxGeometry>
-                </mxCell>
-                <mxCell id="52" value="status bar lines (model/ctx%/cost/turns)" style="endArrow=open;endFill=0;dashed=1;strokeColor=#15803D;fontSize=10;" parent="1" edge="1">
-                    <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="860" y="1340" as="sourcePoint"/>
-                        <mxPoint x="85" y="1340" as="targetPoint"/>
+                        <mxPoint x="860" y="1290" as="sourcePoint"/>
+                        <mxPoint x="85" y="1290" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="a1" value="✓ views/ are pure formatters:&#xa;format*() → string[]&#xa;display*() → void (wraps console.log)" style="text;html=1;strokeColor=#15803D;fillColor=#DCFCE7;align=left;verticalAlign=middle;whiteSpace=wrap;fontSize=9;" parent="1" vertex="1">
-                    <mxGeometry x="1155" y="1265" width="165" height="60" as="geometry"/>
+                    <mxGeometry x="1155" y="1210" width="165" height="60" as="geometry"/>
                 </mxCell>
                 <mxCell id="a2" value="⚠ approvalGate: readline.createInterface()&#xa;blocks until user presses Enter" style="text;html=1;strokeColor=#D97706;fillColor=#FEF3C7;align=left;verticalAlign=middle;whiteSpace=wrap;fontSize=9;" parent="1" vertex="1">
                     <mxGeometry x="1155" y="1000" width="165" height="50" as="geometry"/>
                 </mxCell>
                 <mxCell id="a3" value="✓ scan/library events render via&#xa;displayScanResult() / displayLibraryResult()&#xa;in views/ (tool_result_scan, tool_result_library)" style="text;html=1;strokeColor=#16A34A;fillColor=#F0FDF4;align=left;verticalAlign=middle;whiteSpace=wrap;fontSize=9;" parent="1" vertex="1">
                     <mxGeometry x="1155" y="690" width="170" height="65" as="geometry"/>
+                </mxCell>
+                <mxCell id="a4" value="displayBanner import: at module-load&#xa;(cli/index.ts 頂層)&#xa;displayBanner() 執行: program.parse()&#xa;→ Commander preAction hook" style="text;html=1;strokeColor=#16A34A;fillColor=#F0FDF4;align=left;verticalAlign=middle;whiteSpace=wrap;fontSize=9;" parent="1" vertex="1">
+                    <mxGeometry x="1155" y="145" width="170" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="a5" value="agent-cli-presenter.ts builds&#xa;viewAdapter (chalk/ora callbacks)&#xa;&amp; approvalGate (readline),&#xa;injected into ctrl.execute()" style="text;html=1;strokeColor=#D97706;fillColor=#FEF3C7;align=left;verticalAlign=middle;whiteSpace=wrap;fontSize=9;" parent="1" vertex="1">
+                    <mxGeometry x="1155" y="230" width="170" height="65" as="geometry"/>
                 </mxCell>
             </root>
         </mxGraphModel>

@@ -8,30 +8,49 @@
  * - Build viewAdapter (chalk, ora, console.log)
  * - Build approvalGate (readline)
  * - Define Commander command shape
- *
- * Execution logic (spinner state + AgentService calls) lives in
- * cli/controller/cli-agent-controller.ts.
+ * - Coordinate spinner state and delegate to AgentService
  */
 
 import { Command } from 'commander';
 import chalk from 'chalk';
-import ora from 'ora';
+import ora, { type Ora } from 'ora';
 import readline from 'readline';
 
+import type { AgentService } from '../../application/services/agent-service';
 import type { AgentEvent, ProposedEdit, ProposedInstall, EventCallback, ApprovalCallback, InstallApprovalCallback } from '../../application/controllers/agent-controller';
 import { createRollbackCommand, type RollbackCliPresenterDeps } from './rollback-cli-presenter';
+import { displayStatusBar } from './views/context-status-bar';
 import type { StatusBarItemKey } from '../../shared/view-models';
-import { CliAgentController, type CliAgentControllerDeps, type AgentOptions } from '../controller/cli-agent-controller';
+import type { WorkflowMode } from '../../application/services/mode-manager';
 
-export interface AgentCliPresenterDeps extends CliAgentControllerDeps, RollbackCliPresenterDeps {
+export interface AgentCliPresenterDeps extends RollbackCliPresenterDeps {
+    createController: (args: {
+        directory: string;
+        viewAdapter: EventCallback;
+        approvalGate: ApprovalCallback;
+        installApprovalGate: InstallApprovalCallback;
+    }) => AgentService;
     statusBarItems: StatusBarItemKey[];
+}
+
+export interface AgentOptions {
+    directory: string;
+    resume: boolean;
+    session?: string;
+    new: boolean;
+}
+
+interface SpinnerCtrl {
+    getSpinner(): Ora | null;
+    setSpinner(s: Ora | null): void;
+    getMode(): WorkflowMode | undefined;
 }
 
 // ── Pure rendering builders ───────────────────────────────────────────────────
 
 export function buildViewAdapter(
     instruction: string,
-    ctrl: CliAgentController,
+    spinnerCtrl: SpinnerCtrl,
 ): EventCallback {
     return (event: AgentEvent): void => {
         switch (event.type) {
@@ -42,29 +61,29 @@ export function buildViewAdapter(
                 } else {
                     console.log(chalk.dim(`\n  New session ${(sessionId as string).slice(-6)}`));
                 }
-                const mode = ctrl.getMode();
+                const mode = spinnerCtrl.getMode();
                 if (mode && mode !== 'default') {
                     console.log(chalk.bold.cyan(`  [Mode: ${mode}]`));
                 }
                 break;
             }
             case 'intent_classified':
-                ctrl.getSpinner()?.succeed(`Intent classified as: ${chalk.cyan(event.data.intent)}`);
-                ctrl.setSpinner(null);
+                spinnerCtrl.getSpinner()?.succeed(`Intent classified as: ${chalk.cyan(event.data.intent)}`);
+                spinnerCtrl.setSpinner(null);
                 if (event.data.intent === 'edit') {
                     console.log(chalk.blue(`\n🤖 Instruction: "${instruction}"\n`));
                 }
                 break;
             case 'phase_start':
-                ctrl.setSpinner(ora(event.data.description as string).start());
+                spinnerCtrl.setSpinner(ora(event.data.description as string).start());
                 break;
             case 'phase_end':
                 if (event.data.success) {
-                    ctrl.getSpinner()?.succeed(event.data.summary as string ?? (event.data.phase as string) + ' done');
+                    spinnerCtrl.getSpinner()?.succeed(event.data.summary as string ?? (event.data.phase as string) + ' done');
                 } else {
-                    ctrl.getSpinner()?.fail((event.data.phase as string) + ' failed');
+                    spinnerCtrl.getSpinner()?.fail((event.data.phase as string) + ' failed');
                 }
-                ctrl.setSpinner(null);
+                spinnerCtrl.setSpinner(null);
                 break;
             case 'react_step': {
                 const { thought, action, observation } = event.data;
@@ -162,11 +181,52 @@ Examples:
   $ mindy-cli agent "Continue the refactor" --session abc123
     `)
         .action(async (instruction: string, options: AgentOptions) => {
-            const ctrl = new CliAgentController(deps);
-            const viewAdapter = buildViewAdapter(instruction, ctrl);
-            const approvalGate = buildApprovalGate();
+            let spinner: Ora | null = null;
+            let service: AgentService | undefined;
+
+            const spinnerCtrl: SpinnerCtrl = {
+                getSpinner: () => spinner,
+                setSpinner: (s) => { spinner = s; },
+                getMode:    () => service?.getMode(),
+            };
+
+            const viewAdapter        = buildViewAdapter(instruction, spinnerCtrl);
+            const approvalGate       = buildApprovalGate();
             const installApprovalGate = buildInstallApprovalGate();
-            await ctrl.execute(instruction, options, viewAdapter, approvalGate, installApprovalGate);
+
+            service = deps.createController({
+                directory: options.directory,
+                viewAdapter,
+                approvalGate,
+                installApprovalGate,
+            });
+
+            await service.initialize({
+                sessionId: options.session,
+                forceNew:  options.new,
+            });
+
+            await service.executeInstruction(instruction);
+
+            const session = service.getSession();
+            const mode    = service.getMode();
+            displayStatusBar(
+                {
+                    model:               session.model,
+                    usagePercent:        session.tokenBudget.usagePercent,
+                    health:              session.tokenBudget.health,
+                    totalCostUSD:        session.totalCostUSD,
+                    turnCount:           session.turnCount,
+                    requestsPerMinute:   session.requestsPerMinute,
+                    lastTokensPerSecond: session.lastTokensPerSecond,
+                    lastResponseTimeMs:  session.lastResponseTimeMs,
+                    elapsedMs:           session.elapsedMs,
+                },
+                {
+                    items:        deps.statusBarItems,
+                    workflowMode: mode,
+                },
+            );
         })
         .addCommand(createRollbackCommand({ repo: deps.repo }));
 }
