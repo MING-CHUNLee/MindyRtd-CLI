@@ -6,12 +6,12 @@
  * Plugins live at: ~/.mindy/plugins/<name>.js
  *
  * Each plugin file must export a default (or named) object/class satisfying AgentTool:
- *   module.exports = { name, schema, execute }     // CommonJS
- *   module.exports.default = <class>               // or default export
+ *   export default { name, schema, execute }       // ESM default export
+ *   export const name = ...; export const execute = ...  // ESM named exports
  *
  * The PluginLoader:
  *   1. Discovers all .js files in the plugin directory
- *   2. require()s each one in a try/catch
+ *   2. dynamic import()s each one in a try/catch
  *   3. Validates the AgentTool contract (name + schema + execute)
  *   4. Registers valid plugins with the ToolRegistry
  *
@@ -60,11 +60,10 @@ export class PluginLoader {
      * Attempt to load a single plugin file and extract an AgentTool from it.
      * Returns null (with warning) if the file doesn't satisfy the AgentTool contract.
      */
-    loadOne(filePath: string): AgentTool | null {
+    async loadOne(filePath: string): Promise<AgentTool | null> {
         let mod: unknown;
         try {
-            // eslint-disable-next-line @typescript-eslint/no-var-requires
-            mod = require(filePath);
+            mod = await import(filePath);
         } catch (err) {
             const msg = err instanceof Error ? err.message : String(err);
             console.warn(`[plugin] Failed to load "${path.basename(filePath)}": ${msg}`);
@@ -100,7 +99,7 @@ export class PluginLoader {
         const results: PluginMeta[] = [];
 
         for (const filePath of files) {
-            const tool = this.loadOne(filePath);
+            const tool = await this.loadOne(filePath);
             if (tool) {
                 registry.register(tool);
                 results.push({
