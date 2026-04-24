@@ -18,7 +18,7 @@ import chalk from 'chalk';
 import ora from 'ora';
 import readline from 'readline';
 
-import type { AgentEvent, ProposedEdit, ProposedInstall, EventCallback, ApprovalCallback, InstallApprovalCallback } from '../../application/controllers/agent-controller';
+import type { AgentEvent, ProposedEdit, ProposedInstall, EventCallback, ApprovalCallback, InstallApprovalCallback } from '../../application/services/agent-service';
 import { createRollbackCommand, type RollbackCliPresenterDeps } from './rollback-cli-presenter';
 import type { StatusBarItemKey } from '../../shared/view-models';
 import { CliAgentController, type CliAgentControllerDeps, type AgentOptions } from '../controller/cli-agent-controller';

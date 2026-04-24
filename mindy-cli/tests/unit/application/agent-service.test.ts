@@ -7,10 +7,10 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
-    AgentController as AgentService,
-    AgentControllerDeps as AgentServiceDeps,
-    AgentEvent,
-} from '../../../src/application/controllers/agent-controller';
+    AgentService,
+    type AgentServiceDeps,
+    type AgentEvent,
+} from '../../../src/application/services/agent-service';
 import { EventBus } from '../../../src/application/services/event-bus';
 import { ModeManager } from '../../../src/application/services/mode-manager';
 import { ConversationSession } from '../../../src/domain/entities/conversation-session';

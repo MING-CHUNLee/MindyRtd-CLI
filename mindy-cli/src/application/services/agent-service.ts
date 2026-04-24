@@ -400,8 +400,3 @@ export class AgentService {
 
 }
 
-// ── Backward-compat re-exports ────────────────────────────────────────────────
-// Keep the old names available so any code that hasn't migrated yet still compiles.
-export { AgentService as AgentController };
-export type { AgentServiceOptions as AgentControllerOptions };
-export type { AgentServiceDeps as AgentControllerDeps };

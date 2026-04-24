@@ -10,7 +10,7 @@
 
 import type { Ora } from 'ora';
 import type { AgentService } from '../../application/services/agent-service';
-import type { AgentEvent, ProposedEdit, ProposedInstall, EventCallback, ApprovalCallback, InstallApprovalCallback } from '../../application/controllers/agent-controller';
+import type { AgentEvent, ProposedEdit, ProposedInstall, EventCallback, ApprovalCallback, InstallApprovalCallback } from '../../application/services/agent-service';
 import { displayStatusBar } from '../presentation/views/context-status-bar';
 import type { StatusBarItemKey } from '../../shared/view-models';
 import type { WorkflowMode } from '../../application/services/mode-manager';

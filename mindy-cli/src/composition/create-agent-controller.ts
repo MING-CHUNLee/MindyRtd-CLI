@@ -11,11 +11,11 @@
  */
 
 import {
-    AgentController,
+    AgentService,
     type AgentEvent,
     type ProposedEdit,
     type ProposedInstall,
-} from '../application/controllers/agent-controller';
+} from '../application/services/agent-service';
 
 import {
     buildAgentDeps,
@@ -28,8 +28,8 @@ export interface CreateAgentControllerArgs {
     installApprovalGate?: (plan: ProposedInstall) => Promise<boolean>;
 }
 
-export function createAgentController(args: CreateAgentControllerArgs): AgentController {
-    return new AgentController(
+export function createAgentController(args: CreateAgentControllerArgs): AgentService {
+    return new AgentService(
         { directory: args.directory },
         args.viewAdapter,
         buildAgentDeps(args.directory, args.approvalGate, args.installApprovalGate),

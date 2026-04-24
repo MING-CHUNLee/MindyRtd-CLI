@@ -23,7 +23,7 @@ import { RExecResultVM, RInstallResultVM } from './view-models/index.js';
 
 // Import the canonical types from the application layer for local use,
 // and re-export them so App.tsx can continue importing from this module.
-import type { AgentEvent, ProposedEdit } from '../../application/controllers/agent-controller.js';
+import type { AgentEvent, ProposedEdit } from '../../application/services/agent-service.js';
 export type { AgentEvent, ProposedEdit };
 
 /**

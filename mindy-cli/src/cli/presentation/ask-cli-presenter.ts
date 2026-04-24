@@ -12,7 +12,7 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import ora, { Ora } from 'ora';
 
-import type { AgentController, AgentEvent } from '../../application/controllers/agent-controller';
+import type { AgentService, AgentEvent } from '../../application/services/agent-service';
 import { displayStatusBar } from './views/context-status-bar';
 import type { StatusBarItemKey } from '../../shared/view-models';
 
@@ -21,7 +21,7 @@ export interface AskCliAdapterDeps {
     createController: (args: {
         directory: string;
         viewAdapter: (event: AgentEvent) => void;
-    }) => AgentController;
+    }) => AgentService;
 
     /** Status bar item order (typically loaded from user settings). */
     statusBarItems: StatusBarItemKey[];

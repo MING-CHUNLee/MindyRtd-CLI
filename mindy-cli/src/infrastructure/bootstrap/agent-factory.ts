@@ -3,7 +3,7 @@
  *
  * The single place where all infrastructure concretions and application use
  * cases are instantiated and wired together.  Callers (CLI adapter, TUI)
- * receive a fully assembled AgentControllerDeps object — no infrastructure
+ * receive a fully assembled AgentServiceDeps object — no infrastructure
  * imports leak into presentation or application layers.
  *
  * Parameters
@@ -49,16 +49,16 @@ import { ExecuteTutorUseCase } from '../../application/use-cases/execute-tutor-u
 import { ExecuteInstallUseCase } from '../../application/use-cases/execute-install-use-case';
 
 import type {
-    AgentControllerDeps,
+    AgentServiceDeps,
     ApprovalCallback,
     InstallApprovalCallback,
-} from '../../application/controllers/agent-controller';
+} from '../../application/services/agent-service';
 
 export function buildAgentDeps(
     rawDirectory = '.',
     onApproval: ApprovalCallback = async () => false,
     onInstallApproval?: InstallApprovalCallback,
-): AgentControllerDeps {
+): AgentServiceDeps {
     const directory = path.resolve(rawDirectory);
 
     // ── Infrastructure ────────────────────────────────────────────────────────

@@ -9,8 +9,8 @@
  * SessionRepository (which reads process.cwd()) writes sessions to the temp dir.
  */
 
-import { AgentController as AgentService } from '../../../src/application/controllers/agent-controller';
-import type { AgentEvent, AgentControllerDeps, ApprovalCallback } from '../../../src/application/controllers/agent-controller';
+import { AgentService } from '../../../src/application/services/agent-service';
+import type { AgentEvent, AgentServiceDeps as AgentControllerDeps, ApprovalCallback } from '../../../src/application/services/agent-service';
 import { DiffEngine } from '../../../src/application/services/diff-engine';
 import { ToolRegistry } from '../../../src/application/orchestration/tool-registry';
 import { EditStagingService } from '../../../src/application/services/edit-staging-service';

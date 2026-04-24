@@ -5,7 +5,7 @@ import AppView from '../presentation/App.js';
 import { TUIMessage, AppState, PendingEdit, PendingInstall, TUIConfig } from '../presentation/types.js';
 import { mapAgentEventToMessage, AgentEvent, ProposedEdit, nextId } from '../presentation/event-mapper.js';
 import { StatusBarVM } from '../../shared/view-models/index.js';
-import type { ProposedInstall } from '../../application/controllers/agent-controller.js';
+import type { ProposedInstall } from '../../application/services/agent-service.js';
 
 interface AppControllerProps {
     config?: TUIConfig;
