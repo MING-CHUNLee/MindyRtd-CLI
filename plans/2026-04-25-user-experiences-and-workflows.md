@@ -49,8 +49,23 @@ $ ai-tutor login init
    [ ] EE305: Computer Architecture 
 (Use ↑/↓ to navigate, Enter to confirm)
 
-- Local Configuration: Upon selecting CS201, the CLI creates a hidden local configuration file (e.g., .ai-tutor-config) strictly 
-within the current directory. 
-- This isolates the Course_ID = CS201 context without polluting global system variables.
-- At the same time, the backend needs to load that week's assignments
+   - Local Configuration: Upon selecting CS201, the CLI creates a hidden local configuration file (e.g., .ai-tutor-config) strictly  within the current directory. 
+   - This isolates the Course_ID = CS201 context without polluting global system variables.
+   - At the same time, the backend needs to load that week's assignments
 
+
+### Phase 2: Students writing assignments
+
+3. AI-Assisted Interaction 
+- Action: The student encounters a bug or conceptual wall and asks the CLI for help:
+- Under the Hood: The CLI/TUI bundles the student's current local code, the assignment policy, and the specific prompt, then sends it to the API.
+- Policy-Controlled Response: Instead of generating the corrected code , the AI adheres strictly to the teacher's policy. It provides hints, asks Socratic questions, or points out logical flaws without breaking the constraints.
+- Data Telemetry: The system silently logs interaction metrics—such as question types (Concept vs. Syntax), hint usage frequency, and timestamped struggle points. This data is fed back into the teacher's Learning Insight Dashboard (Phase 4).
+
+
+4. Local Testing & Submission
+- Action: Once the assignment is complete, the student submits it directly via the CLI.
+$ ai-tutor submit
+ > Running local unit tests... Passed!
+ > Packaging and uploading to server...
+ > Assignment submitted successfully! Timestamp: 2026-04-23 16:00:00
