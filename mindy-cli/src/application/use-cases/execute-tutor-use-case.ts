@@ -15,7 +15,17 @@ import { TurnUsage } from '../../domain/entities/conversation-turn';
 import { ToolRegistry } from '../orchestration/tool-registry';
 import { SessionMessage } from '../../shared/types/messages';
 import { estimateTokens } from '../prompts';
-import { buildTutorAgentPrompt, TutorStyle } from '../prompts/tutor-agent';
+import { buildTutorModePrompt } from '../prompts/mode-agent';
+import { PolicyLoader } from '../../infrastructure/config/policy-loader';
+import { WorkflowMode } from '../../infrastructure/config/settings';
+
+// Map TutorStyle to the WorkflowMode used by the policy file names
+const STYLE_TO_MODE: Record<TutorStyle, WorkflowMode> = {
+    socratic: 'tutor-socratic',
+    guide: 'tutor-guide',
+};
+
+export type TutorStyle = 'socratic' | 'guide';
 
 const MAX_CONTEXT_TOKENS = 6_000;
 const MAX_TOTAL_TOKENS = 7_500;
@@ -37,6 +47,8 @@ export interface TutorResult {
 // ── ExecuteTutorUseCase ───────────────────────────────────────────────────────
 
 export class ExecuteTutorUseCase {
+    private readonly policyLoader = new PolicyLoader();
+
     constructor(
         private readonly deps: ExecuteTutorDeps,
         private readonly style: TutorStyle,
@@ -128,7 +140,8 @@ export class ExecuteTutorUseCase {
         projectContext: string,
         fileContents: string,
     ): string {
-        const basePrompt = buildTutorAgentPrompt(this.style, this.deps.directory);
+        const policyText = this.policyLoader.load(STYLE_TO_MODE[this.style]);
+        const basePrompt = buildTutorModePrompt(policyText, this.deps.directory);
 
         const historyTokens = estimateTokens(history.map(m => m.content).join('\n'));
         const userTokens = estimateTokens(instruction);

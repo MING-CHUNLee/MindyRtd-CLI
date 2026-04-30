@@ -10,6 +10,9 @@ import { SessionStore } from '../../domain/repositories/session-store';
 import { WorkflowMode } from '../../infrastructure/config/settings';
 import { ModeManager } from './mode-manager';
 import type { RBridgePort } from '../ports/r-bridge-port';
+import { PolicyLoader } from '../../infrastructure/config/policy-loader';
+import { StressTestService } from './stress-test-service';
+import type { LLMGateway } from '../../domain/types/llm-gateway';
 
 export interface SlashCommandContext {
     session: ConversationSession;
@@ -19,6 +22,8 @@ export interface SlashCommandContext {
     rBridge?: RBridgePort;
     /** Plain model name — replaces llm.getProviderInfo().model used by /new. */
     initialModel: string;
+    /** LLM gateway — used by /stress-test. */
+    llm?: LLMGateway;
     setSession: (s: ConversationSession) => void;
     setPreviousSummary: (s: string) => void;
 }
@@ -105,6 +110,33 @@ export class SlashCommandRouter {
             }
             case 'mode':
                 return `Current mode: ${this.ctx.modeManager.getMode()}`;
+            case 'policy': {
+                const mode = this.ctx.modeManager.getMode();
+                const policy = new PolicyLoader().load(mode);
+                if (!policy) return `No policy file found for mode: ${mode}`;
+                return `Current mode: ${mode}\n\n${policy}`;
+            }
+            case 'stress-test': {
+                if (!this.ctx.llm) return 'stress-test requires an LLM connection.';
+                const mode = this.ctx.modeManager.getMode();
+                const service = new StressTestService(this.ctx.llm);
+                const cases = service.getTestCases(mode);
+                const lines: string[] = [`Running stress test for mode: ${mode} (${cases.length} cases)...\n`];
+                const report = await service.run(mode, (i, _total, result) => {
+                    const status = result.passed ? 'PASS' : 'FAIL';
+                    const snippet = result.response.length > 60
+                        ? result.response.slice(0, 60) + '…'
+                        : result.response;
+                    lines.push(`[${i + 1}/${cases.length}] ${result.case.attackType.padEnd(20)} → ${status}  "${snippet}"`);
+                });
+                lines.push('');
+                lines.push(`Result: ${report.passCount}/${cases.length} passed  |  ${report.failCount} boundary violation(s)`);
+                if (report.suggestion) {
+                    lines.push('');
+                    lines.push(`Suggestion: ${report.suggestion}`);
+                }
+                return lines.join('\n');
+            }
             case 'help':
                 return [
                     'Available commands:',
@@ -120,6 +152,8 @@ export class SlashCommandRouter {
                     '  /tutor-guide     — Switch to guided tutor mode (step-by-step hints)',
                     '  /default         — Return to normal mode',
                     '  /mode            — Show current active mode',
+                    '  /policy          — Show policy rules for the current mode',
+                    '  /stress-test     — Run automated Red Teaming against the current mode',
                     '  /exit            — Exit the REPL',
                     '  /help            — Show this help',
                 ].join('\n');

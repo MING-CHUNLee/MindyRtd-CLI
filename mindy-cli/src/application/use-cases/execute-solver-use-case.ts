@@ -20,7 +20,8 @@ import { SessionMessage } from '../../shared/types/messages';
 import { Orchestrator, OrchestratorResult } from '../orchestration/orchestrator';
 import { LLMOutput } from '../../domain/values/llm-output';
 import { Evaluator } from '../services/evaluator';
-import { buildSolverAgentPrompt } from '../prompts/solver-agent';
+import { buildModeAgentPrompt } from '../prompts/mode-agent';
+import { PolicyLoader } from '../../infrastructure/config/policy-loader';
 import { EditStagingService, StagedEdit } from '../services/edit-staging-service';
 import { LLMRequestPayload } from '../../shared/types/llm-types';
 
@@ -52,6 +53,8 @@ export class ExecuteSolverUseCase {
     private readonly evaluator: Evaluator;
     private readonly orchestrator: Orchestrator;
     private readonly stagingService: EditStagingService;
+
+    private readonly policyLoader = new PolicyLoader();
 
     constructor(private readonly deps: ExecuteSolverDeps) {
         this.evaluator = deps.evaluator ?? new Evaluator();
@@ -86,7 +89,8 @@ export class ExecuteSolverUseCase {
         this.deps.emit('phase_start', { phase: 'solver', description: 'Generating solution (solver mode)' });
 
         const toolsText = this.buildToolsText();
-        const systemPrompt = buildSolverAgentPrompt(this.deps.directory, toolsText);
+        const policyText = this.policyLoader.load('solver');
+        const systemPrompt = buildModeAgentPrompt(policyText, this.deps.directory, toolsText);
 
         const baseRequest: LLMRequestPayload = {
             systemPrompt,
