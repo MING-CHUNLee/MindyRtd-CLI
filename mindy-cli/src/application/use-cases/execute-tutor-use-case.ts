@@ -37,6 +37,8 @@ export interface ExecuteTutorDeps {
     registry: ToolRegistry;
     directory: string;
     emit: EmitFn;
+    /** Injected loader — allows assignment-specific policy overlay without subclassing. */
+    policyLoader?: PolicyLoader;
 }
 
 export interface TutorResult {
@@ -47,12 +49,14 @@ export interface TutorResult {
 // ── ExecuteTutorUseCase ───────────────────────────────────────────────────────
 
 export class ExecuteTutorUseCase {
-    private readonly policyLoader = new PolicyLoader();
+    private readonly policyLoader: PolicyLoader;
 
     constructor(
         private readonly deps: ExecuteTutorDeps,
         private readonly style: TutorStyle,
-    ) {}
+    ) {
+        this.policyLoader = deps.policyLoader ?? new PolicyLoader();
+    }
 
     async execute(instruction: string, history: SessionMessage[]): Promise<TutorResult> {
         this.deps.emit('phase_start', { phase: 'scan', description: 'Scanning workspace for context' });

@@ -26,12 +26,14 @@ export interface CreateAgentControllerArgs {
     viewAdapter: (event: AgentEvent) => void;
     approvalGate: (edit: ProposedEdit) => Promise<boolean>;
     installApprovalGate?: (plan: ProposedInstall) => Promise<boolean>;
+    /** Resolved absolute path to an assignment directory — activates tutor-guide mode with assignment-specific policy. */
+    assignmentDir?: string;
 }
 
 export function createAgentController(args: CreateAgentControllerArgs): AgentService {
     return new AgentService(
         { directory: args.directory },
         args.viewAdapter,
-        buildAgentDeps(args.directory, args.approvalGate, args.installApprovalGate),
+        buildAgentDeps(args.directory, args.approvalGate, args.installApprovalGate, args.assignmentDir),
     );
 }

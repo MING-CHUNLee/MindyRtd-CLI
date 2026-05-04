@@ -23,6 +23,7 @@ import { getRBridge } from '../r-adapter/r-bridge';
 import { PluginLoader } from '../filesystem/plugin-loader';
 import { KnowledgeRepository } from '../persistence/knowledge-repository';
 
+import { PolicyLoader } from '../config/policy-loader';
 import { DiffEngine } from '../../application/services/diff-engine';
 import { ToolRegistry } from '../../application/orchestration/tool-registry';
 import { EditStagingService } from '../../application/services/edit-staging-service';
@@ -58,6 +59,7 @@ export function buildAgentDeps(
     rawDirectory = '.',
     onApproval: ApprovalCallback = async () => false,
     onInstallApproval?: InstallApprovalCallback,
+    assignmentDir?: string,
 ): AgentServiceDeps {
     const directory = path.resolve(rawDirectory);
 
@@ -100,7 +102,7 @@ export function buildAgentDeps(
 
     // ── Application services ──────────────────────────────────────────────────
     const summarizer   = new HistorySummarizer(llm);
-    const modeManager  = new ModeManager();
+    const modeManager  = new ModeManager(assignmentDir ? 'tutor-guide' : undefined);
     const intentRouter = new IntentRouter(llm, emit);
 
     // Pre-bound plugin loader — hides ToolRegistry from the controller.
@@ -139,13 +141,17 @@ export function buildAgentDeps(
         emit,
     });
 
+    const assignmentPolicyLoader = assignmentDir
+        ? new PolicyLoader(undefined, assignmentDir)
+        : undefined;
+
     const tutorSocraticUseCase = new ExecuteTutorUseCase(
         { llm, registry, directory, emit },
         'socratic',
     );
 
     const tutorGuideUseCase = new ExecuteTutorUseCase(
-        { llm, registry, directory, emit },
+        { llm, registry, directory, emit, policyLoader: assignmentPolicyLoader },
         'guide',
     );
 

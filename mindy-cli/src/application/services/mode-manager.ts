@@ -12,8 +12,8 @@ export type { WorkflowMode };
 export class ModeManager {
     private activeMode: WorkflowMode;
 
-    constructor() {
-        this.activeMode = getSettings().workflowMode;
+    constructor(initialMode?: WorkflowMode) {
+        this.activeMode = initialMode ?? getSettings().workflowMode;
     }
 
     getMode(): WorkflowMode {

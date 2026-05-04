@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import path from 'path';
 import { useInput, useApp } from 'ink';
 
 import AppView from '../presentation/App.js';
@@ -18,8 +19,16 @@ function makeStatusMessage(content: string): TUIMessage {
 const AppController: React.FC<AppControllerProps> = ({ config }) => {
     const { exit } = useApp();
 
+    const assignmentName = config?.assignmentDir
+        ? path.basename(config.assignmentDir)
+        : undefined;
+
     const [messages, setMessages] = useState<TUIMessage[]>([
-        makeStatusMessage('Welcome to Mindy CLI! Type your instruction and press Enter. /help for commands.'),
+        makeStatusMessage(
+            assignmentName
+                ? `Welcome to Mindy CLI! Assignment: ${assignmentName} — tutor-guide mode active. /help for commands.`
+                : 'Welcome to Mindy CLI! Type your instruction and press Enter. /help for commands.',
+        ),
     ]);
     const [input, setInput] = useState('');
     const [appState, setAppState] = useState<AppState>('idle');
@@ -107,6 +116,7 @@ const AppController: React.FC<AppControllerProps> = ({ config }) => {
                 viewAdapter: handleAgentEvent,
                 approvalGate: onApproval,
                 installApprovalGate: onInstallApproval,
+                assignmentDir: config?.assignmentDir,
             });
             await service.initialize({
                 sessionId: config?.sessionId,

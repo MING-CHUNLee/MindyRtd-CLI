@@ -25,16 +25,27 @@ function getAgentDir(): string {
 
 export class PolicyLoader {
     private readonly agentDir: string;
+    /** When set, checks <overlayDir>/tutors/<mode>.md before the built-in agent dir. */
+    private readonly overlayDir?: string;
 
-    constructor(agentDir?: string) {
+    constructor(agentDir?: string, overlayDir?: string) {
         this.agentDir = agentDir ?? getAgentDir();
+        this.overlayDir = overlayDir;
     }
 
     /**
      * Load the policy markdown for the given mode.
-     * Returns an empty string (non-fatal) if the file is not found.
+     * Assignment-specific tutors/<mode>.md takes precedence over built-in agent/<mode>.md.
+     * Returns an empty string (non-fatal) if no file is found.
      */
     load(mode: WorkflowMode): string {
+        if (this.overlayDir) {
+            const overlayPath = path.join(this.overlayDir, 'tutors', `${mode}.md`);
+            try {
+                const content = fs.readFileSync(overlayPath, 'utf-8');
+                if (content) return content;
+            } catch { /* fall through to built-in */ }
+        }
         const filePath = path.join(this.agentDir, `${mode}.md`);
         try {
             return fs.readFileSync(filePath, 'utf-8');
