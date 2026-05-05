@@ -2,18 +2,20 @@
     "name": "mindy-rstudio-cli",
     "version": "1.0.0",
     "description": "CLI tool for detecting and analyzing R files in RStudio projects",
+    "type": "module",
     "main": "dist/index.js",
     "bin": {
         "mindy-cli": "dist/index.js",
         "mrc": "dist/index.js"
     },
     "scripts": {
-        "build": "tsc && node -e \"require('fs').cpSync('src/agent','dist/agent',{recursive:true})\"",
+        "build": "tsup && node --input-type=commonjs -e \"require('fs').cpSync('src/agent','dist/agent',{recursive:true})\"",
         "dev": "tsx src/index.ts",
         "mindy": "tsx src/index.ts",
         "start": "node dist/index.js",
         "mindy-cli": "node dist/index.js",
         "test": "vitest",
+        "prepare": "tsup && node --input-type=commonjs -e \"require('fs').cpSync('src/agent','dist/agent',{recursive:true})\"",
         "prepublishOnly": "npm run build"
     },
     "keywords": [
@@ -49,6 +51,7 @@
         "@types/pdf-parse": "^1.1.5",
         "@types/react": "^19.2.9",
         "ts-node": "^10.9.2",
+        "tsup": "^8.5.1",
         "tsx": "^4.7.0",
         "typescript": "^5.3.3",
         "vitest": "^4.0.18"

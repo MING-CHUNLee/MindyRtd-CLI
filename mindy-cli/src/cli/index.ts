@@ -19,10 +19,23 @@ import { displayBanner }          from './presentation/views/banner';
 import { getSettings }            from '../infrastructure/config/settings';
 import { createAgentController }  from '../composition/create-agent-controller';
 
+declare const __PKG_VERSION__: string;
+
+function getVersion(): string {
+    if (typeof __PKG_VERSION__ !== 'undefined') return __PKG_VERSION__;
+    // dev mode fallback: search upward for mindy-rstudio-cli package.json
+    for (const rel of ['../../package.json', '../package.json']) {
+        try {
+            const p = path.join(__dirname, rel);
+            const pkg = JSON.parse(fs.readFileSync(p, 'utf-8'));
+            if (pkg.name === 'mindy-rstudio-cli') return pkg.version as string;
+        } catch { /* continue */ }
+    }
+    return '1.0.0';
+}
+
 export async function startCLI(): Promise<void> {
-    const packageJsonPath = path.join(__dirname, '../../package.json');
-    const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
-    const version = packageJson.version;
+    const version = getVersion();
 
     const program = new Command();
 
