@@ -5,30 +5,35 @@
  * In the future, these may be shared with or replaced by API response types.
  */
 
-export { FileInfo, createFileInfo } from './file-info';
-export { ProjectInfo, createProjectInfo } from './project-info';
-export { ScanResult, RFileCollection, ScanResultProps, createScanResult } from './scan-result';
-export {
+export type { FileInfo } from './file-info';
+export { createFileInfo } from './file-info';
+export type { ProjectInfo } from './project-info';
+export { createProjectInfo } from './project-info';
+export type { ScanResult, RFileCollection, ScanResultProps } from './scan-result';
+export { createScanResult } from './scan-result';
+export type {
     LibraryInfo,
     LibraryScanResult,
     LibraryScanOptions,
-    createLibraryInfo,
-    createLibraryScanResult
 } from './library-info';
 export {
+    createLibraryInfo,
+    createLibraryScanResult,
+} from './library-info';
+export type {
     ContextBuilderOptions,
     EnvironmentContext,
     GeneratedPrompt,
     ContextSummary,
     CapabilityGroup,
-    SupportedLanguage
+    SupportedLanguage,
 } from './prompt-context';
-export {
+export type {
     EnvironmentServiceOptions,
     EnvironmentReport,
     PackageCheckResult,
     RHealthCheck,
-    EnvironmentCapabilities
+    EnvironmentCapabilities,
 } from './environment';
 
 /**

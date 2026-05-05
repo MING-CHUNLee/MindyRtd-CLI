@@ -5,7 +5,7 @@
  */
 
 // EnvironmentContext is a domain value object — re-export from domain/values
-export { EnvironmentContext } from '../../domain/values/environment-context';
+export type { EnvironmentContext } from '../../domain/values/environment-context';
 
 /**
  * Options for context building and prompt generation
