@@ -1,4 +1,4 @@
-# Mindy RStudio CLI — Backend API Reference
+# Tyla RStudio CLI — Backend API Reference
 
 ## Overview
 
@@ -69,7 +69,7 @@ GET http://localhost:9090/
 ```json
 {
   "status": "ok",
-  "message": "Mindy RStudio CLI API",
+  "message": "Tyla RStudio CLI API",
   "version": "1.0.0"
 }
 ```
@@ -203,7 +203,7 @@ Content-Type: application/json
 
 ```
 User runs:
-  mindy-cli edit "Add error handling to data loading functions"
+  Tyla-cli edit "Add error handling to data loading functions"
 
 Step 1 — FileResolver (CLI)
   Globs *.R / *.Rmd files in workspace

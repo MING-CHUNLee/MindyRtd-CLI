@@ -8,11 +8,11 @@ To execute code or analyze the current project, you must connect the CLI to RStu
 Start the listener service. This allows RStudio to receive commands from the CLI.
 
 ```r
-mindy::start()
+Tyla::start()
 ```
 
 **2️⃣ In Terminal:**
-Run any Mindy command. For example, to scan your project:
+Run any Tyla command. For example, to scan your project:
 
 ```bash
 mrc scan
@@ -32,7 +32,7 @@ mrc scan --no-recursive    # Top-level only
 ```
 
 ### `library` - Inspect Installed Packages
-Connects to R to list installed packages. **Requires `mindy::start()`**.
+Connects to R to list installed packages. **Requires `Tyla::start()`**.
 
 ```bash
 mrc library
@@ -49,7 +49,7 @@ mrc context --copy         # Copy to clipboard
 ```
 
 ### `run` - Execute Code in RStudio
-Directly executes R code or files in your active RStudio session. **Requires `mindy::start()`**.
+Directly executes R code or files in your active RStudio session. **Requires `Tyla::start()`**.
 
 ```bash
 # Run the file currently open in RStudio editor
@@ -66,7 +66,7 @@ mrc run report.Rmd
 ```
 
 ### `install` - Package Installation
-Installs R packages with multi-layered safety checks (CRAN status, trust metrics, dependencies, etc.) in your active RStudio session. **Requires `mindy::start()`**.
+Installs R packages with multi-layered safety checks (CRAN status, trust metrics, dependencies, etc.) in your active RStudio session. **Requires `Tyla::start()`**.
 
 ```bash
 # Install a package from CRAN

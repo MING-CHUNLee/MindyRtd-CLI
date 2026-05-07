@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Commands
 
-All commands run from the `mindy-cli/` directory (`cd mindy-cli` first):
+All commands run from the `tyla/` directory (`cd tyla` first):
 
 > **This project uses [Bun](https://bun.sh/) instead of npm.** Use `bun` for all package management and script execution.
 
@@ -13,7 +13,7 @@ bun run build        # Compile TypeScript → dist/
 bun run dev          # Run via tsx (no build needed)
 bun run test         # Run all tests via Vitest — must cd cli first; do NOT use "bun test"
 bun run test -- path/to/test.test.ts   # Run a single test file
-bun run mindy -- agent "instruction"  # Run CLI in dev mode
+bun run tyla -- agent "instruction"  # Run CLI in dev mode
 ```
 
 To run the built CLI:
@@ -26,7 +26,7 @@ node dist/index.js agent "instruction"
 The codebase follows **Clean Architecture** with four layers. Dependencies only point inward (presentation/infrastructure → application → domain).
 
 ```
-mindy-cli/src/
+tyla/src/
 ├── domain/          # No external deps — entities, interfaces, value objects
 ├── application/     # Business logic — use-cases, services, tools, prompts
 ├── infrastructure/  # External I/O — LLM API, persistence, filesystem, R adapter
@@ -61,7 +61,7 @@ The interactive TUI supports quick slash commands:
 - `src/application/use-cases/execute-instruction-use-case.ts` — edit/agent pipeline
 - `src/application/services/react-loop.ts` — ReAct loop (`[THOUGHT]`/`[ACTION]`/`[ANSWER]` markers)
 - `src/infrastructure/api/llm-controller.ts` — multi-provider LLM gateway (OpenAI, Anthropic, Azure, Gemini, Ollama)
-- `src/infrastructure/config/paths.ts` — all persistence paths; sessions/knowledge at `<cwd>/.mindy/`, plugins at `~/.mindy/plugins/`
+- `src/infrastructure/config/paths.ts` — all persistence paths; sessions/knowledge at `<cwd>/.tyla/`, plugins at `~/.tyla/plugins/`
 
 ### Event-driven design
 
