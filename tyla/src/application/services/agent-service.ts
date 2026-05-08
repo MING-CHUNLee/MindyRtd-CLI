@@ -55,6 +55,7 @@ export type AgentEvent =
     | { type: 'tool_result_library';  data: { data: unknown } }
     | { type: 'tool_result_r_exec';   data: { data: unknown } }
     | { type: 'tool_result_r_install'; data: { data: unknown } }
+    | { type: 'guard_blocked';    data: { reason: string; phase: string } }
     | { type: 'install_proposed'; data: {
         toInstall: string[];
         alreadyInstalled: string[];

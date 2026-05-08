@@ -5,6 +5,12 @@
  */
 
 export {
+    buildJudgeSystemPrompt,
+    buildRefusalInstruction,
+    NON_ENGLISH_REFUSAL,
+} from './guard-agent';
+
+export {
     buildRoleSection,
     buildEnvironmentSection,
     buildCapabilitiesSection,
@@ -12,6 +18,5 @@ export {
     buildConstraintsSection,
     buildCustomSection,
     identifyKeyPackages,
-    groupCapabilities,
     estimateTokens,
 } from './section-builders';

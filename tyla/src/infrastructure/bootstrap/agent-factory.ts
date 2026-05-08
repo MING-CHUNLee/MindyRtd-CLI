@@ -47,6 +47,7 @@ import { ExecuteInstructionUseCase } from '../../application/use-cases/execute-i
 import { ExecuteRunUseCase } from '../../application/use-cases/execute-run-use-case';
 import { ExecuteSolverUseCase } from '../../application/use-cases/execute-solver-use-case';
 import { ExecuteTutorUseCase } from '../../application/use-cases/execute-tutor-use-case';
+import { GuardAgent } from '../../application/services/guard-agent';
 import { ExecuteInstallUseCase } from '../../application/use-cases/execute-install-use-case';
 
 import type {
@@ -145,13 +146,15 @@ export function buildAgentDeps(
         ? new PolicyLoader(undefined, assignmentDir)
         : undefined;
 
+    const guardAgent = new GuardAgent(llm);
+
     const tutorSocraticUseCase = new ExecuteTutorUseCase(
-        { llm, registry, directory, emit },
+        { llm, registry, directory, emit, guardAgent },
         'socratic',
     );
 
     const tutorGuideUseCase = new ExecuteTutorUseCase(
-        { llm, registry, directory, emit, policyLoader: assignmentPolicyLoader },
+        { llm, registry, directory, emit, policyLoader: assignmentPolicyLoader, guardAgent },
         'guide',
     );
 

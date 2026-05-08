@@ -18,6 +18,7 @@ import { estimateTokens } from '../prompts';
 import { buildTutorModePrompt } from '../prompts/mode-agent';
 import { PolicyLoader } from '../../infrastructure/config/policy-loader';
 import { WorkflowMode } from '../../infrastructure/config/settings';
+import { IGuardAgent } from '../../domain/types/guard-agent';
 
 // Map TutorStyle to the WorkflowMode used by the policy file names
 const STYLE_TO_MODE: Record<TutorStyle, WorkflowMode> = {
@@ -39,6 +40,8 @@ export interface ExecuteTutorDeps {
     emit: EmitFn;
     /** Injected loader — allows assignment-specific policy overlay without subclassing. */
     policyLoader?: PolicyLoader;
+    /** Optional guard agent — intercepts prompts before they reach the tutor LLM. */
+    guardAgent?: IGuardAgent;
 }
 
 export interface TutorResult {
@@ -67,6 +70,16 @@ export class ExecuteTutorUseCase {
 
         this.deps.emit('phase_start', { phase: 'tutor', description: `Responding in ${this.style} tutor mode` });
         const systemPrompt = this.assemblePrompt(history, instruction, projectContext, fileContents);
+
+        if (this.deps.guardAgent) {
+            const policyText = this.policyLoader.load(STYLE_TO_MODE[this.style]);
+            const guardResult = await this.deps.guardAgent.check(instruction, policyText, this.style);
+            if (!guardResult.allowed) {
+                this.deps.emit('guard_blocked', { reason: guardResult.reason, phase: 'guard' });
+                return this.callLLMStream(systemPrompt, guardResult.refusalInstruction ?? instruction, history);
+            }
+        }
+
         return this.callLLMStream(systemPrompt, instruction, history);
     }
 
