@@ -35,14 +35,23 @@ export class PolicyLoader {
 
     /**
      * Load the policy markdown for the given mode.
-     * Assignment-specific tutors/<mode>.md takes precedence over built-in agent/<mode>.md.
+     * Resolution order (first non-empty wins):
+     *   1. <overlayDir>/tutors/<mode>/TUTOR.md  (directory-based assignment policy)
+     *   2. <overlayDir>/tutors/<mode>.md         (flat-file assignment policy)
+     *   3. <agentDir>/<mode>.md                  (built-in default)
      * Returns an empty string (non-fatal) if no file is found.
      */
     load(mode: WorkflowMode): string {
         if (this.overlayDir) {
-            const overlayPath = path.join(this.overlayDir, 'tutors', `${mode}.md`);
+            const dirPath = path.join(this.overlayDir, 'tutors', mode, 'TUTOR.md');
             try {
-                const content = fs.readFileSync(overlayPath, 'utf-8');
+                const content = fs.readFileSync(dirPath, 'utf-8');
+                if (content) return content;
+            } catch { /* fall through */ }
+
+            const flatPath = path.join(this.overlayDir, 'tutors', `${mode}.md`);
+            try {
+                const content = fs.readFileSync(flatPath, 'utf-8');
                 if (content) return content;
             } catch { /* fall through to built-in */ }
         }
