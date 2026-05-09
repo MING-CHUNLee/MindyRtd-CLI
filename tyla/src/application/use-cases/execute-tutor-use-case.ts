@@ -71,14 +71,8 @@ export class ExecuteTutorUseCase {
         this.deps.emit('phase_start', { phase: 'tutor', description: `Responding in ${this.style} tutor mode` });
         const systemPrompt = this.assemblePrompt(history, instruction, projectContext, fileContents);
 
-        if (this.deps.guardAgent) {
-            const policyText = this.policyLoader.load(STYLE_TO_MODE[this.style]);
-            const guardResult = await this.deps.guardAgent.check(instruction, policyText, this.style);
-            if (!guardResult.allowed) {
-                this.deps.emit('guard_blocked', { reason: guardResult.reason, phase: 'guard' });
-                return this.callLLMStream(systemPrompt, guardResult.refusalInstruction ?? instruction, history);
-            }
-        }
+        const guardBlock = await this.runGuard(instruction, history);
+        if (guardBlock) return guardBlock;
 
         return this.callLLMStream(systemPrompt, instruction, history);
     }
@@ -190,6 +184,33 @@ export class ExecuteTutorUseCase {
         }
 
         return basePrompt + contextSection + filesSection;
+    }
+
+    private async runGuard(
+        instruction: string,
+        history: SessionMessage[],
+    ): Promise<TutorResult | null> {
+        if (!this.deps.guardAgent) return null;
+
+        const policyText = this.policyLoader.load(STYLE_TO_MODE[this.style]);
+        const guardResult = await this.deps.guardAgent.check(instruction, policyText, this.style);
+
+        if (guardResult.allowed) return null;
+
+        if (guardResult.identityResponse) {
+            this.deps.emit('text_output', { content: guardResult.identityResponse });
+            this.deps.emit('phase_end', { phase: 'tutor', success: true });
+            return {
+                content: guardResult.identityResponse,
+                usage: { inputTokens: 0, outputTokens: 0, cacheCreationTokens: 0, cacheReadTokens: 0 },
+            };
+        }
+
+        this.deps.emit('guard_blocked', { reason: guardResult.reason, phase: 'guard' });
+        // Use a minimal system prompt (no file contents) so the blocked LLM call
+        // cannot see homework answers even through the refusal path.
+        const minimalPrompt = buildTutorModePrompt(policyText, this.deps.directory);
+        return this.callLLMStream(minimalPrompt, guardResult.refusalInstruction ?? instruction, history);
     }
 
     private compactHistory(history: SessionMessage[], systemPrompt: string, userMessage: string): SessionMessage[] {
