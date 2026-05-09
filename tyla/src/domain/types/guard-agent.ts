@@ -5,6 +5,8 @@ export interface GuardResult {
     reason: string;
     /** When allowed=false, pass this as the instruction to the tutor for in-persona refusal. */
     refusalInstruction?: string;
+    /** When set, return this text directly to the user — no LLM call needed. */
+    identityResponse?: string;
 }
 
 export interface IGuardAgent {

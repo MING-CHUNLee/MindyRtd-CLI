@@ -47,12 +47,34 @@ const JAILBREAK_PATTERNS: RegExp[] = [
     /only\s+output\s+(the\s+)?(final\s+)?result/i,
     /no\s+explanation.{0,20}(just|only)\s+(give|show|output)/i,
     /skip\s+the\s+explanation/i,
+    /write\s+(down\s+)?(the\s+|all\s+)?answers?/i,
+    /(give|provide|output|list)\s+(me\s+)?(the\s+|all\s+)?(correct\s+)?answers?/i,
+    /(do|complete|solve|finish)\s+(my|this|the)\s+(homework|assignment|exercises?|problems?|questions?)/i,
+    /answer\s+(this|these|the\s+(question|problem|exercise|homework))/i,
 
     // Indirect extraction via encoding / translation
     /translate\s+the\s+(correct\s+)?answer\s+to/i,
     /encode\s+(the\s+)?(answer|solution)\s+(in|as|to)\s+base64/i,
     /write\s+the\s+answer\s+as\s+a\s+(poem|song|haiku)/i,
 ];
+
+// ── Identity probe patterns ───────────────────────────────────────────────────
+const IDENTITY_PROBE_PATTERNS: RegExp[] = [
+    /who\s+are\s+you/i,
+    /what\s+are\s+you/i,
+    /tell\s+me\s+about\s+yourself/i,
+    /introduce\s+yourself/i,
+    /what\s+(is|are)\s+your\s+role/i,
+    /what\s+do\s+you\s+do/i,
+    /describe\s+yourself/i,
+    /what\s+kind\s+of\s+(ai|assistant|bot|tutor)\s+are\s+you/i,
+];
+
+function extractRoleDescription(policyText: string): string | null {
+    const match = policyText.match(/##\s+Role\s*\n([\s\S]*?)(?=\n##\s|\n#\s|$)/);
+    if (!match) return null;
+    return match[1].trim();
+}
 
 // ── GuardAgent ────────────────────────────────────────────────────────────────
 
@@ -67,6 +89,21 @@ export class GuardAgent implements IGuardAgent {
                 reason: 'non-English input',
                 refusalInstruction: NON_ENGLISH_REFUSAL,
             };
+        }
+
+        // Phase 0.5: identity probe — answer with Role description only
+        for (const pattern of IDENTITY_PROBE_PATTERNS) {
+            if (pattern.test(userPrompt)) {
+                const roleDescription = extractRoleDescription(policyText);
+                if (roleDescription) {
+                    return {
+                        allowed: false,
+                        reason: 'identity probe',
+                        identityResponse: roleDescription,
+                    };
+                }
+                break;
+            }
         }
 
         // Phase 1: rule-based check
