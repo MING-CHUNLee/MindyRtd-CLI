@@ -197,20 +197,25 @@ export class ExecuteTutorUseCase {
 
         if (guardResult.allowed) return null;
 
-        if (guardResult.identityResponse) {
-            this.deps.emit('text_output', { content: guardResult.identityResponse });
-            this.deps.emit('phase_end', { phase: 'tutor', success: true });
-            return {
-                content: guardResult.identityResponse,
-                usage: { inputTokens: 0, outputTokens: 0, cacheCreationTokens: 0, cacheReadTokens: 0 },
-            };
+        switch (guardResult.action) {
+            case 'identity': {
+                const { identityResponse } = guardResult;
+                this.deps.emit('text_output', { content: identityResponse });
+                this.deps.emit('phase_end', { phase: 'tutor', success: true });
+                return {
+                    content: identityResponse,
+                    usage: { inputTokens: 0, outputTokens: 0, cacheCreationTokens: 0, cacheReadTokens: 0 },
+                };
+            }
+            case 'refuse': {
+                const { refusalInstruction } = guardResult;
+                this.deps.emit('guard_blocked', { reason: guardResult.reason, phase: 'guard' });
+                // Use a minimal system prompt (no file contents) so the blocked LLM call
+                // cannot see homework answers even through the refusal path.
+                const minimalPrompt = buildTutorModePrompt(policyText, this.deps.directory);
+                return this.callLLMStream(minimalPrompt, refusalInstruction, history);
+            }
         }
-
-        this.deps.emit('guard_blocked', { reason: guardResult.reason, phase: 'guard' });
-        // Use a minimal system prompt (no file contents) so the blocked LLM call
-        // cannot see homework answers even through the refusal path.
-        const minimalPrompt = buildTutorModePrompt(policyText, this.deps.directory);
-        return this.callLLMStream(minimalPrompt, guardResult.refusalInstruction ?? instruction, history);
     }
 
     private compactHistory(history: SessionMessage[], systemPrompt: string, userMessage: string): SessionMessage[] {

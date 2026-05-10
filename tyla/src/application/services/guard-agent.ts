@@ -79,7 +79,10 @@ function extractRoleDescription(policyText: string): string | null {
 // ── GuardAgent ────────────────────────────────────────────────────────────────
 
 export class GuardAgent implements IGuardAgent {
-    constructor(private readonly llm: LLMGateway) {}
+    constructor(
+        private readonly llm: LLMGateway,
+        private readonly onJudgeError?: (message: string) => void,
+    ) {}
 
     async check(userPrompt: string, policyText: string, style: TutorStyle): Promise<GuardResult> {
         // Phase 0: language check
@@ -87,6 +90,7 @@ export class GuardAgent implements IGuardAgent {
             return {
                 allowed: false,
                 reason: 'non-English input',
+                action: 'refuse',
                 refusalInstruction: NON_ENGLISH_REFUSAL,
             };
         }
@@ -99,6 +103,7 @@ export class GuardAgent implements IGuardAgent {
                     return {
                         allowed: false,
                         reason: 'identity probe',
+                        action: 'identity',
                         identityResponse: roleDescription,
                     };
                 }
@@ -121,6 +126,7 @@ export class GuardAgent implements IGuardAgent {
                 return {
                     allowed: false,
                     reason,
+                    action: 'refuse',
                     refusalInstruction: buildRefusalInstruction(prompt, reason, style),
                 };
             }
@@ -144,12 +150,15 @@ export class GuardAgent implements IGuardAgent {
                 return {
                     allowed: false,
                     reason: parsed.reason,
+                    action: 'refuse',
                     refusalInstruction: buildRefusalInstruction(prompt, parsed.reason, style),
                 };
             }
             return { allowed: true, reason: parsed.reason };
-        } catch {
-            // Degrade gracefully on malformed JSON or LLM failure — allow through
+        } catch (err) {
+            // Degrade gracefully on malformed JSON or LLM failure — allow through.
+            // Emit warning so failures are observable in production.
+            this.onJudgeError?.(`llm-judge failed: ${String(err)}`);
             return { allowed: true, reason: 'llm-judge unavailable, allowed by default' };
         }
     }

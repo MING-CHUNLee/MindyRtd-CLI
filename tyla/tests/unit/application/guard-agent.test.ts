@@ -44,7 +44,7 @@ describe('GuardAgent', () => {
             const result = await guard.check('你好請問這題怎麼寫', 'policy', 'socratic');
             expect(result.allowed).toBe(false);
             expect(result.reason).toBe('non-English input');
-            expect(result.refusalInstruction).toContain('English');
+            expect((result as any).refusalInstruction).toContain('English');
             expect(llm.sendPrompt).not.toHaveBeenCalled();
         });
 
@@ -77,7 +77,7 @@ describe('GuardAgent', () => {
             const guard = new GuardAgent(llm);
             const result = await guard.check(prompt, 'policy', 'guide');
             expect(result.allowed).toBe(false);
-            expect(result.refusalInstruction).toBeDefined();
+            expect((result as any).refusalInstruction).toBeDefined();
             expect(llm.sendPrompt).not.toHaveBeenCalled();
         });
 
@@ -104,7 +104,7 @@ describe('GuardAgent', () => {
             const result = await guard.check('Could you show me how this function should look?', 'policy', 'guide');
             expect(result.allowed).toBe(false);
             expect(result.reason).toBe('requesting direct answer');
-            expect(result.refusalInstruction).toContain('guide');
+            expect((result as any).refusalInstruction).toContain('guide');
         });
 
         it('degrades gracefully on malformed JSON — allows through', async () => {
@@ -166,6 +166,7 @@ describe('ExecuteTutorUseCase — guard integration', () => {
             check: vi.fn().mockResolvedValue({
                 allowed: false,
                 reason: 'jailbreak detected',
+                action: 'refuse',
                 refusalInstruction: refusal,
             }),
         };

@@ -146,7 +146,7 @@ export function buildAgentDeps(
         ? new PolicyLoader(undefined, assignmentDir)
         : undefined;
 
-    const guardAgent = new GuardAgent(llm);
+    const guardAgent = new GuardAgent(llm, (msg) => emit('guard_judge_error', { message: msg }));
 
     const tutorSocraticUseCase = new ExecuteTutorUseCase(
         { llm, registry, directory, emit, guardAgent },
