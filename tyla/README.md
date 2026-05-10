@@ -1,4 +1,4 @@
-# Mindy CLI (Node.js Package)
+# Tyla CLI (Node.js Package)
 
 > **This project uses [Bun](https://bun.sh/) instead of npm.** Use `bun` for all package management and script execution.
 
@@ -11,7 +11,7 @@ Please refer to the [Root Documentation](../README.md) for full details.
 ## Development
 
 ```bash
-cd mindy-cli
+cd Tyla
 bun install
 bun run dev
 ```

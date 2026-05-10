@@ -1,21 +1,21 @@
-# Mindy — Agentic CLI for R/RStudio Projects
+# Tyla — Agentic CLI for R/RStudio Projects
 
-**Mindy** is an agentic CLI tool that brings LLM-powered code editing and analysis directly into the RStudio Terminal. It detects R project files, understands your codebase, and executes multi-step instructions — with a diff review before any file is touched.
+**Tyla** is an agentic CLI tool that brings LLM-powered code editing and analysis directly into the RStudio Terminal. It detects R project files, understands your codebase, and executes multi-step instructions — with a diff review before any file is touched.
 
 ```
-mindy-cli agent "Add error handling to the data loading pipeline"
+Tyla agent "Add error handling to the data loading pipeline"
 ```
 
 ---
 
 ## Features
 
-- **Agent mode** — give a natural language instruction; Mindy scans your files, reasons with ReAct loops, proposes edits, and applies them after you review the diff
+- **Agent mode** — give a natural language instruction; Tyla scans your files, reasons with ReAct loops, proposes edits, and applies them after you review the diff
 - **Ask mode** — conversational Q&A with streaming output; automatically reads relevant files to answer questions about your project
 - **Session memory** — conversations persist across calls; resume previous sessions with `--resume`
 - **Rollback** — revert to any earlier session checkpoint
 - **Knowledge base** — store project-specific notes and conventions that the agent recalls automatically
-- **Plugin system** — drop custom tools into `~/.mindy/plugins/` to extend agent capabilities
+- **Plugin system** — drop custom tools into `~/.Tyla/plugins/` to extend agent capabilities
 - **Interactive TUI** — full terminal UI with live status bar (model, context usage, cost, RPM)
 - **Multi-provider LLM** — OpenAI, Anthropic Claude, Azure OpenAI, Google Gemini, or local Ollama; auto-detected from API keys
 
@@ -35,7 +35,7 @@ mindy-cli agent "Add error handling to the data loading pipeline"
 > **This project uses [Bun](https://bun.sh/) instead of npm.** Install Bun first if you haven't: `curl -fsSL https://bun.sh/install | bash`
 
 ```bash
-cd mindy-cli
+cd Tyla
 bun install
 bun run build
 
@@ -43,7 +43,7 @@ bun run build
 bun link
 ```
 
-After linking, both `mindy-cli` and `mrc` are available as global commands.
+After linking, both `Tyla` and `mrc` are available as global commands.
 
 ---
 
@@ -65,7 +65,7 @@ LLM_MODEL=claude-sonnet-4-20250514   # override default model
 LLM_MAX_TOKENS=4096
 ```
 
-Project data (sessions, knowledge base, settings) is stored in `.mindy/` inside your working directory. Plugin tools are global at `~/.mindy/plugins/`.
+Project data (sessions, knowledge base, settings) is stored in `.Tyla/` inside your working directory. Plugin tools are global at `~/.Tyla/plugins/`.
 
 ---
 
@@ -74,7 +74,7 @@ Project data (sessions, knowledge base, settings) is stored in `.mindy/` inside 
 ### Interactive TUI (default)
 
 ```bash
-mindy-cli
+Tyla
 ```
 
 Launches a full-screen terminal UI. Type instructions or questions directly.
@@ -85,19 +85,19 @@ Launches a full-screen terminal UI. Type instructions or questions directly.
 
 ```bash
 # One-shot instruction
-mindy-cli agent "Refactor hw11.R to use tidyverse pipes"
+Tyla agent "Refactor hw11.R to use tidyverse pipes"
 
 # Specify a workspace directory
-mindy-cli agent "Fix the ggplot theme" --directory ./analysis
+Tyla agent "Fix the ggplot theme" --directory ./analysis
 
 # Resume the previous session (agent remembers prior changes)
-mindy-cli agent "Now add unit tests" --resume
+Tyla agent "Now add unit tests" --resume
 
 # Resume a specific session by ID
-mindy-cli agent "Continue the refactor" --session <id>
+Tyla agent "Continue the refactor" --session <id>
 
 # Force a new session
-mindy-cli agent "Start fresh" --new
+Tyla agent "Start fresh" --new
 ```
 
 The agent will:
@@ -112,8 +112,8 @@ The agent will:
 ### Ask mode — Q&A without editing
 
 ```bash
-mindy-cli ask "What does the load_data function do?"
-mindy-cli ask "Why is my ggplot not rendering correctly?"
+Tyla ask "What does the load_data function do?"
+Tyla ask "Why is my ggplot not rendering correctly?"
 ```
 
 Streams the answer in real time. Uses the same session memory as agent mode.
@@ -124,26 +124,26 @@ Streams the answer in real time. Uses the same session memory as agent mode.
 
 ```bash
 # Execute R scripts (via RStudio listener)
-mindy-cli r run script.R
-mindy-cli r run "1 + 1"
+Tyla r run script.R
+Tyla r run "1 + 1"
 
 # Install packages
-mindy-cli r install ggplot2 dplyr
-mindy-cli r install tidyverse --method bioc   # Bioconductor
+Tyla r install ggplot2 dplyr
+Tyla r install tidyverse --method bioc   # Bioconductor
 
 # Preview generated system prompt (debug)
-mindy-cli r context
-mindy-cli r context --minimal --tokens
+Tyla r context
+Tyla r context --minimal --tokens
 ```
 
-Scan and library inspection are available as agent tools: `mindy-cli ask "scan this project"`.
+Scan and library inspection are available as agent tools: `Tyla ask "scan this project"`.
 
 ---
 
 ### Edit — apply a file patch directly
 
 ```bash
-mindy-cli edit script.R
+Tyla edit script.R
 ```
 
 Opens an interactive diff review for a pending edit.
@@ -153,8 +153,8 @@ Opens an interactive diff review for a pending edit.
 ### Rollback — revert to an earlier turn
 
 ```bash
-mindy-cli agent rollback         # revert last turn (interactive)
-mindy-cli agent rollback 3       # revert to turn 3
+Tyla agent rollback         # revert last turn (interactive)
+Tyla agent rollback 3       # revert to turn 3
 ```
 
 ---
@@ -163,41 +163,41 @@ mindy-cli agent rollback 3       # revert to turn 3
 
 ```bash
 # Add a note
-mindy-cli knowledge add "ggplot theme" "Always use theme_minimal() in this project" --tags ggplot2,style
+Tyla knowledge add "ggplot theme" "Always use theme_minimal() in this project" --tags ggplot2,style
 
 # Add interactively (omit content)
-mindy-cli knowledge add "data conventions"
+Tyla knowledge add "data conventions"
 
 # List all entries
-mindy-cli knowledge list
+Tyla knowledge list
 
 # Search
-mindy-cli knowledge search "ggplot"
+Tyla knowledge search "ggplot"
 
 # Remove
-mindy-cli knowledge remove <id>
+Tyla knowledge remove <id>
 ```
 
-Entries are stored at `.mindy/knowledge.json` and injected into agent context automatically.
+Entries are stored at `.Tyla/knowledge.json` and injected into agent context automatically.
 
 ---
 
 ### Plugins — extend the agent
 
 ```bash
-mindy-cli config plugins list    # show loaded plugins
-mindy-cli config plugins dir     # show plugin directory path
+Tyla config plugins list    # show loaded plugins
+Tyla config plugins dir     # show plugin directory path
 ```
 
-To add a plugin, place a `.js` file in `~/.mindy/plugins/` that exports an object implementing the `ITool` interface (`name`, `description`, `schema`, `execute`).
+To add a plugin, place a `.js` file in `~/.Tyla/plugins/` that exports an object implementing the `ITool` interface (`name`, `description`, `schema`, `execute`).
 
 ---
 
 ### Context — preview generated system prompt
 
 ```bash
-mindy-cli r context
-mindy-cli r context --summary --tokens
+Tyla r context
+Tyla r context --summary --tokens
 ```
 
 Prints the active session ID, turn count, token usage, and cost.
@@ -209,7 +209,7 @@ Prints the active session ID, turn count, token usage, and cost.
 The CLI follows Clean Architecture with dependency flowing inward:
 
 ```
-mindy-cli/src/
+Tyla/src/
 ├── domain/           # Entities, interfaces, value objects (no external deps)
 ├── application/
 │   ├── controllers/  # Commander command handlers
@@ -245,7 +245,7 @@ mindy-cli/src/
 > **This project uses [Bun](https://bun.sh/) instead of npm.**
 
 ```bash
-cd mindy-cli
+cd Tyla
 
 # Run without building
 bun run dev -- agent "your instruction"
@@ -263,7 +263,7 @@ bun test
 
 ```
 project-root/
-├── mindy-cli/    # TypeScript CLI (this tool)
+├── Tyla/    # TypeScript CLI (this tool)
 ├── app/          # Ruby backend API (Clean Architecture, Roda)
 ├── workers/      # Background LLM workers (Redis + SQS)
 ├── config/       # Shared secrets / environment config
