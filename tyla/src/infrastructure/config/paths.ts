@@ -39,3 +39,7 @@ export function getCommandsDir(): string {
 export function getSettingsFile(): string {
     return path.join(getProjectBase(), 'settings.json');
 }
+
+export function getGuardLogFile(): string {
+    return path.join(getProjectBase(), 'guard-log.json');
+}
