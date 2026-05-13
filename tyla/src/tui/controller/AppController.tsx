@@ -117,6 +117,7 @@ const AppController: React.FC<AppControllerProps> = ({ config }) => {
                 approvalGate: onApproval,
                 installApprovalGate: onInstallApproval,
                 assignmentDir: config?.assignmentDir,
+                tutorMode: config?.tutorMode,
             });
             await service.initialize({
                 sessionId: config?.sessionId,

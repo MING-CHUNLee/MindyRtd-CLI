@@ -76,4 +76,6 @@ export interface TUIConfig {
     forceNew?: boolean;
     /** Absolute path to an assignment directory — activates tutor-guide mode with assignment-specific policy. */
     assignmentDir?: string;
+    /** Activates tutor-socratic mode without requiring an assignment directory. */
+    tutorMode?: boolean;
 }

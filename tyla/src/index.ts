@@ -31,7 +31,8 @@ function resolveAssignmentDir(value: string): string {
     const args = process.argv.slice(2);
     const assignmentIdx = args.indexOf('--assignment');
     const hasAssignment = assignmentIdx !== -1;
-    const isTUI = args.length === 0 || hasAssignment;
+    const hasTutor = args.includes('--tutor');
+    const isTUI = args.length === 0 || hasAssignment || hasTutor;
 
     if (isTUI) {
         let assignmentDir: string | undefined;
@@ -47,9 +48,9 @@ function resolveAssignmentDir(value: string): string {
         // Dynamic import via Function prevents tsc from type-checking the ESM TUI module
         // (ink requires node16 moduleResolution; the TUI dir is excluded from CJS compilation)
         // eslint-disable-next-line @typescript-eslint/no-implied-eval
-        const load = new Function('p', 'return import(p)') as (p: string) => Promise<{ startTUI: (cfg?: { directory: string; assignmentDir?: string }) => Promise<void> }>;
+        const load = new Function('p', 'return import(p)') as (p: string) => Promise<{ startTUI: (cfg?: { directory: string; assignmentDir?: string; tutorMode?: boolean }) => Promise<void> }>;
         const { startTUI } = await load('./tui/index.js');
-        await startTUI({ directory: process.cwd(), assignmentDir });
+        await startTUI({ directory: process.cwd(), assignmentDir, tutorMode: hasTutor });
     } else {
         const { startCLI } = await import('./cli/index');
         await startCLI();

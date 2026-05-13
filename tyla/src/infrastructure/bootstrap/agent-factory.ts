@@ -48,6 +48,7 @@ import { ExecuteRunUseCase } from '../../application/use-cases/execute-run-use-c
 import { ExecuteSolverUseCase } from '../../application/use-cases/execute-solver-use-case';
 import { ExecuteTutorUseCase } from '../../application/use-cases/execute-tutor-use-case';
 import { GuardAgent } from '../../application/services/guard-agent';
+import { appendGuardLog } from '../persistence/guard-log-repository';
 import { ExecuteInstallUseCase } from '../../application/use-cases/execute-install-use-case';
 
 import type {
@@ -61,6 +62,7 @@ export function buildAgentDeps(
     onApproval: ApprovalCallback = async () => false,
     onInstallApproval?: InstallApprovalCallback,
     assignmentDir?: string,
+    tutorMode?: boolean,
 ): AgentServiceDeps {
     const directory = path.resolve(rawDirectory);
 
@@ -103,7 +105,8 @@ export function buildAgentDeps(
 
     // ── Application services ──────────────────────────────────────────────────
     const summarizer   = new HistorySummarizer(llm);
-    const modeManager  = new ModeManager(assignmentDir ? 'tutor-guide' : undefined);
+    const initialMode = assignmentDir ? 'tutor-guide' : tutorMode ? 'tutor-socratic' : undefined;
+    const modeManager  = new ModeManager(initialMode);
     const intentRouter = new IntentRouter(llm, emit);
 
     // Pre-bound plugin loader — hides ToolRegistry from the controller.
@@ -146,7 +149,11 @@ export function buildAgentDeps(
         ? new PolicyLoader(undefined, assignmentDir)
         : undefined;
 
-    const guardAgent = new GuardAgent(llm, (msg) => emit('guard_judge_error', { message: msg }));
+    const guardAgent = new GuardAgent(
+        llm,
+        (msg) => emit('guard_judge_error', { message: msg }),
+        appendGuardLog,
+    );
 
     const tutorSocraticUseCase = new ExecuteTutorUseCase(
         { llm, registry, directory, emit, guardAgent },
