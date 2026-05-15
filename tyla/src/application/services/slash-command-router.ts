@@ -7,7 +7,6 @@
 
 import { ConversationSession } from '../../domain/entities/conversation-session';
 import { SessionStore } from '../../domain/repositories/session-store';
-import { WorkflowMode } from '../../infrastructure/config/settings';
 import { ModeManager } from './mode-manager';
 import type { RBridgePort } from '../ports/r-bridge-port';
 import { PolicyLoader } from '../../infrastructure/config/policy-loader';
@@ -99,17 +98,6 @@ export class SlashCommandRouter {
                     return `Rollback failed: ${error instanceof Error ? error.message : String(error)}`;
                 }
             }  
-            // switch fall-through
-            case 'solver':
-            case 'tutor-socratic':
-            case 'tutor-guide':
-            case 'default': {
-                // Switch cases enumerate all valid WorkflowMode values — cast is safe.
-                this.ctx.modeManager.setMode(cmd as WorkflowMode);
-                return `Mode: ${cmd}`;
-            }
-            case 'mode':
-                return `Current mode: ${this.ctx.modeManager.getMode()}`;
             case 'policy': {
                 const mode = this.ctx.modeManager.getMode();
                 const policy = new PolicyLoader().load(mode);
@@ -147,11 +135,6 @@ export class SlashCommandRouter {
                     '  /rollback list   — List turns in current session',
                     '  /rollback session list        — List recent saved sessions',
                     '  /rollback session <id> <n>    — Roll back a saved session to turn n',
-                    '  /solver          — Switch to solver mode (generates solution files)',
-                    '  /tutor-socratic  — Switch to Socratic tutor mode (guides with questions)',
-                    '  /tutor-guide     — Switch to guided tutor mode (step-by-step hints)',
-                    '  /default         — Return to normal mode',
-                    '  /mode            — Show current active mode',
                     '  /policy          — Show policy rules for the current mode',
                     '  /stress-test     — Run automated Red Teaming against the current mode',
                     '  /exit            — Exit the REPL',

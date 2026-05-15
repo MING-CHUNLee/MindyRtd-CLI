@@ -45,7 +45,6 @@ import { LibraryScanTool } from '../../application/tools/library-scan-tool';
 import { ExecuteAskUseCase } from '../../application/use-cases/execute-ask-use-case';
 import { ExecuteInstructionUseCase } from '../../application/use-cases/execute-instruction-use-case';
 import { ExecuteRunUseCase } from '../../application/use-cases/execute-run-use-case';
-import { ExecuteSolverUseCase } from '../../application/use-cases/execute-solver-use-case';
 import { ExecuteTutorUseCase } from '../../application/use-cases/execute-tutor-use-case';
 import { GuardAgent } from '../../application/services/guard-agent';
 import { appendGuardLog } from '../persistence/guard-log-repository';
@@ -135,16 +134,6 @@ export function buildAgentDeps(
         llm, registry, directory, emit, rBridge,
     });
 
-    const solverUseCase = new ExecuteSolverUseCase({
-        llm,
-        registry,
-        diffEngine,
-        directory,
-        onApproval: approvalBus.approve.bind(approvalBus),
-        stagingService,
-        emit,
-    });
-
     const assignmentPolicyLoader = assignmentDir
         ? new PolicyLoader(undefined, assignmentDir)
         : undefined;
@@ -155,14 +144,9 @@ export function buildAgentDeps(
         appendGuardLog,
     );
 
-    const tutorSocraticUseCase = new ExecuteTutorUseCase(
-        { llm, registry, directory, emit, guardAgent },
-        'socratic',
-    );
-
-    const tutorGuideUseCase = new ExecuteTutorUseCase(
+    const tutorUseCase = new ExecuteTutorUseCase(
         { llm, registry, directory, emit, policyLoader: assignmentPolicyLoader, guardAgent },
-        'guide',
+        modeManager.getMode(),
     );
 
     const installUseCase = new ExecuteInstallUseCase({
@@ -176,9 +160,7 @@ export function buildAgentDeps(
         askUseCase,
         instructionUseCase,
         runUseCase,
-        solverUseCase,
-        tutorSocraticUseCase,
-        tutorGuideUseCase,
+        tutorUseCase,
         installUseCase,
         intentRouter,
         summarizer,

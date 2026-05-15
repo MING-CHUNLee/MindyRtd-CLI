@@ -20,13 +20,7 @@ import { PolicyLoader } from '../../infrastructure/config/policy-loader';
 import { WorkflowMode } from '../../infrastructure/config/settings';
 import { IGuardAgent } from '../../domain/types/guard-agent';
 
-// Map TutorStyle to the WorkflowMode used by the policy file names
-const STYLE_TO_MODE: Record<TutorStyle, WorkflowMode> = {
-    socratic: 'tutor-socratic',
-    guide: 'tutor-guide',
-};
-
-export type TutorStyle = 'socratic' | 'guide';
+export type TutorStyle = WorkflowMode;
 
 const MAX_CONTEXT_TOKENS = 6_000;
 const MAX_TOTAL_TOKENS = 7_500;
@@ -56,7 +50,7 @@ export class ExecuteTutorUseCase {
 
     constructor(
         private readonly deps: ExecuteTutorDeps,
-        private readonly style: TutorStyle,
+        private readonly style: WorkflowMode,
     ) {
         this.policyLoader = deps.policyLoader ?? new PolicyLoader();
     }
@@ -68,7 +62,7 @@ export class ExecuteTutorUseCase {
 
         const fileContents = await this.readRelevantFiles(instruction, scannedFiles);
 
-        this.deps.emit('phase_start', { phase: 'tutor', description: `Responding in ${this.style} tutor mode` });
+        this.deps.emit('phase_start', { phase: 'tutor', description: `Responding in ${this.style} mode` });
         const systemPrompt = this.assemblePrompt(history, instruction, projectContext, fileContents);
 
         const guardBlock = await this.runGuard(instruction, history);
@@ -151,7 +145,7 @@ export class ExecuteTutorUseCase {
         projectContext: string,
         fileContents: string,
     ): string {
-        const policyText = this.policyLoader.load(STYLE_TO_MODE[this.style]);
+        const policyText = this.policyLoader.load(this.style);
         const basePrompt = buildTutorModePrompt(policyText, this.deps.directory);
 
         const historyTokens = estimateTokens(history.map(m => m.content).join('\n'));
@@ -192,7 +186,7 @@ export class ExecuteTutorUseCase {
     ): Promise<TutorResult | null> {
         if (!this.deps.guardAgent) return null;
 
-        const policyText = this.policyLoader.load(STYLE_TO_MODE[this.style]);
+        const policyText = this.policyLoader.load(this.style);
         const guardResult = await this.deps.guardAgent.check(instruction, policyText, this.style);
 
         if (guardResult.allowed) return null;

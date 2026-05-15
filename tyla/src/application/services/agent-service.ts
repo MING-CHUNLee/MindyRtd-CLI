@@ -30,7 +30,6 @@ import { SessionMessage } from '../../shared/types/messages';
 import { ExecuteAskUseCase } from '../use-cases/execute-ask-use-case';
 import { ExecuteInstructionUseCase } from '../use-cases/execute-instruction-use-case';
 import { ExecuteRunUseCase } from '../use-cases/execute-run-use-case';
-import { ExecuteSolverUseCase } from '../use-cases/execute-solver-use-case';
 import { ExecuteTutorUseCase } from '../use-cases/execute-tutor-use-case';
 import { ExecuteInstallUseCase } from '../use-cases/execute-install-use-case';
 
@@ -107,9 +106,7 @@ export interface AgentServiceDeps {
     askUseCase: ExecuteAskUseCase;
     instructionUseCase: ExecuteInstructionUseCase;
     runUseCase: ExecuteRunUseCase;
-    solverUseCase: ExecuteSolverUseCase;
-    tutorSocraticUseCase: ExecuteTutorUseCase;
-    tutorGuideUseCase: ExecuteTutorUseCase;
+    tutorUseCase: ExecuteTutorUseCase;
     installUseCase: ExecuteInstallUseCase;
     // ── Application services ──────────────────────────────────────────────────
     intentRouter: IntentRouter;
@@ -143,9 +140,7 @@ export class AgentService {
     private readonly askUseCase: ExecuteAskUseCase;
     private readonly instructionUseCase: ExecuteInstructionUseCase;
     private readonly runUseCase: ExecuteRunUseCase;
-    private readonly solverUseCase: ExecuteSolverUseCase;
-    private readonly tutorSocraticUseCase: ExecuteTutorUseCase;
-    private readonly tutorGuideUseCase: ExecuteTutorUseCase;
+    private readonly tutorUseCase: ExecuteTutorUseCase;
     private readonly installUseCase: ExecuteInstallUseCase;
     private readonly modeManager: ModeManager;
     private readonly slashRouter: SlashCommandRouter;
@@ -175,13 +170,11 @@ export class AgentService {
         this.pluginLoader = deps.pluginLoader;
         this.intentRouter = deps.intentRouter;
 
-        this.askUseCase          = deps.askUseCase;
-        this.instructionUseCase  = deps.instructionUseCase;
-        this.runUseCase          = deps.runUseCase;
-        this.solverUseCase       = deps.solverUseCase;
-        this.tutorSocraticUseCase = deps.tutorSocraticUseCase;
-        this.tutorGuideUseCase   = deps.tutorGuideUseCase;
-        this.installUseCase      = deps.installUseCase;
+        this.askUseCase         = deps.askUseCase;
+        this.instructionUseCase = deps.instructionUseCase;
+        this.runUseCase         = deps.runUseCase;
+        this.tutorUseCase       = deps.tutorUseCase;
+        this.installUseCase     = deps.installUseCase;
 
         this.modeManager = deps.modeManager;
 
@@ -258,30 +251,13 @@ export class AgentService {
     async executeInstruction(instruction: string): Promise<void> {
         const history = await this.prepareHistory();
 
-        // Mode overrides normal intent classification
+        // Non-default modes bypass intent classification and go directly to the tutor pipeline,
+        // which reads the corresponding policy md file for the active mode.
         const mode = this.modeManager.getMode();
-        if (mode === 'solver') {
+        if (mode !== 'default') {
             return this.executeWithMode(
                 instruction,
-                () => this.solverUseCase.execute(instruction, history),
-                result => result.appliedFiles.length > 0
-                    ? `Solution written to: ${result.appliedFiles.join(', ')}.`
-                    : 'No solution file was generated.',
-            );
-        }
-
-        if (mode === 'tutor-socratic') {
-            return this.executeWithMode(
-                instruction,
-                () => this.tutorSocraticUseCase.execute(instruction, history),
-                result => result.content,
-            );
-        }
-
-        if (mode === 'tutor-guide') {
-            return this.executeWithMode(
-                instruction,
-                () => this.tutorGuideUseCase.execute(instruction, history),
+                () => this.tutorUseCase.execute(instruction, history),
                 result => result.content,
             );
         }

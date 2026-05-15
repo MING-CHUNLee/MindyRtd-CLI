@@ -22,7 +22,7 @@ Respond ONLY with valid JSON on a single line:
 }
 
 export function buildRefusalInstruction(blockedPrompt: string, reason: string, style: TutorStyle): string {
-    const tutorLabel = style === 'socratic' ? 'socratic' : 'guide';
+    const tutorLabel = style.replace(/^tutor-/, '');
     return `A student just sent you the following message, which you must NOT fulfill:
 """
 ${blockedPrompt}
