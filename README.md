@@ -1,22 +1,25 @@
-# Tyla — Agentic CLI for R/RStudio Projects
+# Tyla — Agentic CLI for Code Analysis and Editing
 
-**Tyla** is an agentic CLI tool that brings LLM-powered code editing and analysis directly into the RStudio Terminal. It detects R project files, understands your codebase, and executes multi-step instructions — with a diff review before any file is touched.
+**Tyla** is an agentic CLI tool that brings LLM-powered code editing, analysis, and tutoring directly into your terminal. It understands your project structure, reads relevant files automatically, and executes multi-step instructions — with a diff review before any file is touched.
 
 ```
-Tyla agent "Add error handling to the data loading pipeline"
+tyla                                  # Interactive TUI (default)
+tyla agent "Add error handling to the data loading pipeline"
 ```
 
 ---
 
 ## Features
 
+- **Interactive TUI** — full-screen Ink-based terminal UI; the default entry point when you run `tyla` with no arguments
 - **Agent mode** — give a natural language instruction; Tyla scans your files, reasons with ReAct loops, proposes edits, and applies them after you review the diff
 - **Ask mode** — conversational Q&A with streaming output; automatically reads relevant files to answer questions about your project
+- **Workflow modes** — switch between `default`, `solver`, `tutor-socratic`, and `tutor-guide` in the TUI via slash commands
+- **Guard agent** — probability-based LLM safety judge; screens user input in tutor modes before processing
 - **Session memory** — conversations persist across calls; resume previous sessions with `--resume`
-- **Rollback** — revert to any earlier session checkpoint
+- **Rollback** — revert to any earlier session checkpoint via TUI slash command
 - **Knowledge base** — store project-specific notes and conventions that the agent recalls automatically
-- **Plugin system** — drop custom tools into `~/.Tyla/plugins/` to extend agent capabilities
-- **Interactive TUI** — full terminal UI with live status bar (model, context usage, cost, RPM)
+- **Plugin system** — drop custom tools into `~/.tyla/plugins/` to extend agent capabilities
 - **Multi-provider LLM** — OpenAI, Anthropic Claude, Azure OpenAI, Google Gemini, or local Ollama; auto-detected from API keys
 
 ---
@@ -25,7 +28,7 @@ Tyla agent "Add error handling to the data loading pipeline"
 
 - [Bun](https://bun.sh/) >= 1.0 (used instead of npm for all package management and script execution)
 - Node.js >= 18 (runtime for the built CLI)
-- R installed (for `run` and `install` commands)
+- R installed (for `run` and R-adapter tools)
 - An API key for at least one supported LLM provider
 
 ---
@@ -35,7 +38,7 @@ Tyla agent "Add error handling to the data loading pipeline"
 > **This project uses [Bun](https://bun.sh/) instead of npm.** Install Bun first if you haven't: `curl -fsSL https://bun.sh/install | bash`
 
 ```bash
-cd Tyla
+cd tyla
 bun install
 bun run build
 
@@ -43,7 +46,7 @@ bun run build
 bun link
 ```
 
-After linking, both `Tyla` and `mrc` are available as global commands.
+After linking, `tyla` is available as a global command.
 
 ---
 
@@ -65,7 +68,21 @@ LLM_MODEL=claude-sonnet-4-20250514   # override default model
 LLM_MAX_TOKENS=4096
 ```
 
-Project data (sessions, knowledge base, settings) is stored in `.Tyla/` inside your working directory. Plugin tools are global at `~/.Tyla/plugins/`.
+Project data (sessions, knowledge base, settings) is stored in `.tyla/` inside your working directory. Plugin tools are global at `~/.tyla/plugins/`.
+
+### Status bar
+
+Customize the status bar items shown at the bottom of the TUI by editing `.tyla/settings.json`:
+
+```json
+{
+  "statusBar": {
+    "items": ["mode", "model", "context", "rpm"]
+  }
+}
+```
+
+Available items: `mode`, `model`, `context`, `rpm`, `cost`, `turn`, `duration`, `tps`, `latency`.
 
 ---
 
@@ -74,10 +91,35 @@ Project data (sessions, knowledge base, settings) is stored in `.Tyla/` inside y
 ### Interactive TUI (default)
 
 ```bash
-Tyla
+tyla
 ```
 
-Launches a full-screen terminal UI. Type instructions or questions directly.
+Launches a full-screen terminal UI. Type instructions or slash commands directly.
+
+```bash
+# Start in tutor-guide mode (for assignment walkthroughs)
+tyla --tutor
+
+# Point to a specific assignment directory
+tyla --assignment ./assignments/HW2
+```
+
+#### TUI slash commands
+
+| Command | Description |
+|---------|-------------|
+| `/run` | Run the current file in RStudio immediately (requires `tyla::start()` in RStudio) |
+| `/new` | Start a new session (previous session is summarized) |
+| `/status` | Show current session ID, turn count, and token usage |
+| `/mode` | Show the active workflow mode |
+| `/default` | Switch to default agent mode |
+| `/solver` | Switch to solver mode (agentic edit pipeline) |
+| `/tutor-socratic` | Switch to Socratic tutor mode (no file writes) |
+| `/tutor-guide` | Switch to tutor-guide mode (guided walkthrough) |
+| `/rollback list` | List turns in the current session |
+| `/rollback <n>` | Roll back the current session to after turn `n` |
+| `/rollback session list` | List recent saved sessions |
+| `/rollback session <id> <n>` | Roll back a saved session to after turn `n` |
 
 ---
 
@@ -85,19 +127,19 @@ Launches a full-screen terminal UI. Type instructions or questions directly.
 
 ```bash
 # One-shot instruction
-Tyla agent "Refactor hw11.R to use tidyverse pipes"
+tyla agent "Refactor hw11.R to use tidyverse pipes"
 
 # Specify a workspace directory
-Tyla agent "Fix the ggplot theme" --directory ./analysis
+tyla agent "Fix the ggplot theme" --directory ./analysis
 
 # Resume the previous session (agent remembers prior changes)
-Tyla agent "Now add unit tests" --resume
+tyla agent "Now add unit tests" --resume
 
 # Resume a specific session by ID
-Tyla agent "Continue the refactor" --session <id>
+tyla agent "Continue the refactor" --session <id>
 
 # Force a new session
-Tyla agent "Start fresh" --new
+tyla agent "Start fresh" --new
 ```
 
 The agent will:
@@ -112,50 +154,11 @@ The agent will:
 ### Ask mode — Q&A without editing
 
 ```bash
-Tyla ask "What does the load_data function do?"
-Tyla ask "Why is my ggplot not rendering correctly?"
+tyla ask "What does the load_data function do?"
+tyla ask "Why is my ggplot not rendering correctly?"
 ```
 
 Streams the answer in real time. Uses the same session memory as agent mode.
-
----
-
-### R utilities — run, install, inspect
-
-```bash
-# Execute R scripts (via RStudio listener)
-Tyla r run script.R
-Tyla r run "1 + 1"
-
-# Install packages
-Tyla r install ggplot2 dplyr
-Tyla r install tidyverse --method bioc   # Bioconductor
-
-# Preview generated system prompt (debug)
-Tyla r context
-Tyla r context --minimal --tokens
-```
-
-Scan and library inspection are available as agent tools: `Tyla ask "scan this project"`.
-
----
-
-### Edit — apply a file patch directly
-
-```bash
-Tyla edit script.R
-```
-
-Opens an interactive diff review for a pending edit.
-
----
-
-### Rollback — revert to an earlier turn
-
-```bash
-Tyla agent rollback         # revert last turn (interactive)
-Tyla agent rollback 3       # revert to turn 3
-```
 
 ---
 
@@ -163,44 +166,22 @@ Tyla agent rollback 3       # revert to turn 3
 
 ```bash
 # Add a note
-Tyla knowledge add "ggplot theme" "Always use theme_minimal() in this project" --tags ggplot2,style
+tyla knowledge add "ggplot theme" "Always use theme_minimal() in this project" --tags ggplot2,style
 
 # Add interactively (omit content)
-Tyla knowledge add "data conventions"
+tyla knowledge add "data conventions"
 
 # List all entries
-Tyla knowledge list
+tyla knowledge list
 
 # Search
-Tyla knowledge search "ggplot"
+tyla knowledge search "ggplot"
 
 # Remove
-Tyla knowledge remove <id>
+tyla knowledge remove <id>
 ```
 
-Entries are stored at `.Tyla/knowledge.json` and injected into agent context automatically.
-
----
-
-### Plugins — extend the agent
-
-```bash
-Tyla config plugins list    # show loaded plugins
-Tyla config plugins dir     # show plugin directory path
-```
-
-To add a plugin, place a `.js` file in `~/.Tyla/plugins/` that exports an object implementing the `ITool` interface (`name`, `description`, `schema`, `execute`).
-
----
-
-### Context — preview generated system prompt
-
-```bash
-Tyla r context
-Tyla r context --summary --tokens
-```
-
-Prints the active session ID, turn count, token usage, and cost.
+Entries are stored at `.tyla/knowledge.json` and injected into agent context automatically.
 
 ---
 
@@ -209,25 +190,33 @@ Prints the active session ID, turn count, token usage, and cost.
 The CLI follows Clean Architecture with dependency flowing inward:
 
 ```
-Tyla/src/
+tyla/src/
 ├── domain/           # Entities, interfaces, value objects (no external deps)
 ├── application/
-│   ├── controllers/  # Commander command handlers
-│   ├── use-cases/    # Execute-ask / execute-instruction pipelines
-│   ├── services/     # Orchestrator, ReAct loop, DiffEngine, KnowledgeBase, ...
-│   ├── tools/        # FileScanTool, FileReadTool, RExecTool
-│   └── prompts/      # Prompt templates & section builders
+│   ├── orchestration/  # Orchestrator, ReAct loop, ToolRegistry
+│   ├── ports/          # R-bridge port interface
+│   ├── prompts/        # Prompt templates & section builders
+│   ├── services/       # AgentService, GuardAgent, SlashCommandRouter, DiffEngine, ...
+│   ├── tools/          # FileScanTool, FileReadTool, FileEditTool, PdfReadTool,
+│   │                   # RExecTool, RInstallTool, RRenderTool, LibraryScanTool
+│   └── use-cases/      # execute-ask, execute-instruction, execute-solver, execute-tutor
 ├── infrastructure/
 │   ├── api/          # LLM gateway (OpenAI / Anthropic / Azure / Gemini / Ollama)
-│   ├── persistence/  # Session & knowledge JSON repositories
-│   ├── filesystem/   # File scanner, finder, resolver
-│   ├── r-adapter/    # R path detection, script runner, package installer
-│   ├── plugins/      # Plugin loader
-│   └── config/       # Paths, settings, constants
-├── presentation/
-│   ├── tui/          # Ink-based interactive terminal UI
-│   └── views/        # Status bar, scan result, banner
-└── shared/           # Cross-cutting types and utilities
+│   ├── bootstrap/    # AgentFactory (wires all deps together)
+│   ├── config/       # Paths, settings, constants, policy-loader
+│   ├── filesystem/   # File scanner, finder, resolver, plugin-loader
+│   ├── persistence/  # Session, knowledge, guard-log repositories
+│   └── r-adapter/    # R path detection, script runner, package installer, library scanner
+├── cli/              # Commander-based one-shot CLI
+│   ├── index.ts      # CLI composition root (startCLI)
+│   ├── controller/   # CliAgentController
+│   └── presentation/ # Agent, ask, knowledge, rollback presenters + views
+├── tui/              # Ink-based interactive TUI
+│   ├── index.tsx     # TUI entry point (startTUI)
+│   ├── controller/   # AppController (React/Ink state machine)
+│   └── presentation/ # App, ChatHistory, DiffReview, StatusBar, Footer, ...
+├── composition/      # createAgentController factory
+└── shared/           # Cross-cutting types, utils, i18n, view-models
 ```
 
 **Key flows:**
@@ -236,7 +225,14 @@ Tyla/src/
 |------|----------|
 | `agent` | Intent classify → Orchestrator → ReAct loop → Evaluator → Diff review → Apply |
 | `ask` | File scan → Read relevant files → Stream LLM response |
+| `solver` | Orchestrator → ReAct loop with solver prompt → Diff review → Apply |
+| `tutor-*` | Guard check → File scan → Stream tutor response (no file writes) |
 | Multi-step | Triggered by keywords (`then`, `also`, `first`, `each`) → sequential Orchestrator steps |
+
+**Entry dispatch** (`src/index.ts`):
+- `tyla` (no args) → TUI
+- `tyla --tutor` or `tyla --assignment <path>` → TUI in tutor-guide mode
+- `tyla agent/ask/knowledge ...` → CLI (Commander)
 
 ---
 
@@ -245,16 +241,20 @@ Tyla/src/
 > **This project uses [Bun](https://bun.sh/) instead of npm.**
 
 ```bash
-cd Tyla
+cd tyla
 
 # Run without building
 bun run dev -- agent "your instruction"
+bun run tyla -- agent "your instruction"
 
 # Build
 bun run build
 
-# Run tests
-bun test
+# Run tests (must be inside tyla/)
+bun run test
+
+# Run a single test file
+bun run test -- path/to/test.test.ts
 ```
 
 ---
@@ -263,7 +263,7 @@ bun test
 
 ```
 project-root/
-├── Tyla/    # TypeScript CLI (this tool)
+├── tyla/         # TypeScript CLI (this tool)
 ├── app/          # Ruby backend API (Clean Architecture, Roda)
 ├── workers/      # Background LLM workers (Redis + SQS)
 ├── config/       # Shared secrets / environment config
