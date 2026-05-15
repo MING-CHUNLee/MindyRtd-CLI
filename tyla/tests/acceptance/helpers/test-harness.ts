@@ -30,7 +30,6 @@ import { RInstallTool } from '../../../src/application/tools/r-install-tool';
 import { ExecuteAskUseCase } from '../../../src/application/use-cases/execute-ask-use-case';
 import { ExecuteInstructionUseCase } from '../../../src/application/use-cases/execute-instruction-use-case';
 import { ExecuteRunUseCase } from '../../../src/application/use-cases/execute-run-use-case';
-import { ExecuteSolverUseCase } from '../../../src/application/use-cases/execute-solver-use-case';
 import { ExecuteTutorUseCase } from '../../../src/application/use-cases/execute-tutor-use-case';
 import { ExecuteInstallUseCase } from '../../../src/application/use-cases/execute-install-use-case';
 import type { LLMGateway } from '../../../src/domain/types/llm-gateway';
@@ -104,15 +103,8 @@ export function createHarness(opts: HarnessOpts): Harness {
 
     const runUseCase = new ExecuteRunUseCase({ llm, registry, directory, emit });
 
-    const solverUseCase = new ExecuteSolverUseCase({
-        llm, registry, diffEngine, directory, onApproval, stagingService, emit,
-    });
-
-    const tutorSocraticUseCase = new ExecuteTutorUseCase(
-        { llm, registry, directory, emit }, 'socratic',
-    );
-    const tutorGuideUseCase = new ExecuteTutorUseCase(
-        { llm, registry, directory, emit }, 'guide',
+    const tutorUseCase = new ExecuteTutorUseCase(
+        { llm, registry, directory, emit }, modeManager.getMode(),
     );
     const installUseCase = new ExecuteInstallUseCase({ registry, emit });
 
@@ -121,9 +113,7 @@ export function createHarness(opts: HarnessOpts): Harness {
         askUseCase,
         instructionUseCase,
         runUseCase,
-        solverUseCase,
-        tutorSocraticUseCase,
-        tutorGuideUseCase,
+        tutorUseCase,
         installUseCase,
         intentRouter,
         summarizer,

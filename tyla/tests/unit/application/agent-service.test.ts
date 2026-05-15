@@ -98,22 +98,16 @@ function makeService(
         execute: vi.fn().mockResolvedValue({ content: 'installed', usage: ZERO_USAGE }),
     };
 
-    const mockSolverUseCase = {
-        execute: vi.fn().mockResolvedValue({ solutionPath: '', appliedFiles: [], outputs: [], usage: ZERO_USAGE }),
-    };
-
     const mockTutorUseCase = {
         execute: vi.fn().mockResolvedValue({ content: 'tutor response', usage: ZERO_USAGE }),
     };
 
     const deps: AgentServiceDeps = {
-        askUseCase:          mockAskUseCase as never,
-        instructionUseCase:  mockInstructionUseCase as never,
-        runUseCase:          mockRunUseCase as never,
-        solverUseCase:       mockSolverUseCase as never,
-        tutorSocraticUseCase: mockTutorUseCase as never,
-        tutorGuideUseCase:   mockTutorUseCase as never,
-        installUseCase:      mockInstallUseCase as never,
+        askUseCase:         mockAskUseCase as never,
+        instructionUseCase: mockInstructionUseCase as never,
+        runUseCase:         mockRunUseCase as never,
+        tutorUseCase:       mockTutorUseCase as never,
+        installUseCase:     mockInstallUseCase as never,
         intentRouter:        mockIntentRouter as never,
         summarizer: {
             shouldSummarize: vi.fn().mockReturnValue(false),
@@ -306,70 +300,6 @@ describe('AgentService', () => {
             const result = await service.handleSlashCommand('/rollback 99');
 
             expect(result).toContain('Rollback failed');
-        });
-
-        it('/solver switches mode and returns confirmation', async () => {
-            const { service } = makeService();
-            await service.initialize();
-
-            const result = await service.handleSlashCommand('/solver');
-
-            expect(result).toBe('Mode: solver');
-            expect(service.getMode()).toBe('solver');
-        });
-
-        it('/tutor-socratic switches mode and returns confirmation', async () => {
-            const { service } = makeService();
-            await service.initialize();
-
-            const result = await service.handleSlashCommand('/tutor-socratic');
-
-            expect(result).toBe('Mode: tutor-socratic');
-            expect(service.getMode()).toBe('tutor-socratic');
-        });
-
-        it('/tutor-guide switches mode and returns confirmation', async () => {
-            const { service } = makeService();
-            await service.initialize();
-
-            const result = await service.handleSlashCommand('/tutor-guide');
-
-            expect(result).toBe('Mode: tutor-guide');
-            expect(service.getMode()).toBe('tutor-guide');
-        });
-
-        it('/default resets mode back to default', async () => {
-            const { service } = makeService();
-            await service.initialize();
-            await service.handleSlashCommand('/solver');
-
-            const result = await service.handleSlashCommand('/default');
-
-            expect(result).toBe('Mode: default');
-            expect(service.getMode()).toBe('default');
-        });
-
-        it('/mode reports current mode', async () => {
-            const { service } = makeService();
-            await service.initialize();
-            await service.handleSlashCommand('/tutor-guide');
-
-            const result = await service.handleSlashCommand('/mode');
-
-            expect(result).toContain('tutor-guide');
-        });
-
-        it('/help includes mode commands', async () => {
-            const { service } = makeService();
-            await service.initialize();
-
-            const result = await service.handleSlashCommand('/help');
-
-            expect(result).toContain('/solver');
-            expect(result).toContain('/tutor-socratic');
-            expect(result).toContain('/tutor-guide');
-            expect(result).toContain('/default');
-            expect(result).toContain('/mode');
         });
     });
 });

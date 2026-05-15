@@ -149,49 +149,6 @@ describe('SlashCommandRouter', () => {
         });
     });
 
-    describe('mode commands', () => {
-        it('/solver switches mode', async () => {
-            const ctx = makeContext();
-            const router = new SlashCommandRouter(ctx);
-            const result = await router.handle('/solver');
-            expect(result).toBe('Mode: solver');
-            expect(ctx.modeManager.getMode()).toBe('solver');
-        });
-
-        it('/tutor-socratic switches mode', async () => {
-            const ctx = makeContext();
-            const router = new SlashCommandRouter(ctx);
-            const result = await router.handle('/tutor-socratic');
-            expect(result).toBe('Mode: tutor-socratic');
-            expect(ctx.modeManager.getMode()).toBe('tutor-socratic');
-        });
-
-        it('/tutor-guide switches mode', async () => {
-            const ctx = makeContext();
-            const router = new SlashCommandRouter(ctx);
-            const result = await router.handle('/tutor-guide');
-            expect(result).toBe('Mode: tutor-guide');
-            expect(ctx.modeManager.getMode()).toBe('tutor-guide');
-        });
-
-        it('/default resets mode', async () => {
-            const ctx = makeContext();
-            const router = new SlashCommandRouter(ctx);
-            await router.handle('/solver');
-            const result = await router.handle('/default');
-            expect(result).toBe('Mode: default');
-            expect(ctx.modeManager.getMode()).toBe('default');
-        });
-
-        it('/mode reports current mode', async () => {
-            const ctx = makeContext();
-            const router = new SlashCommandRouter(ctx);
-            await router.handle('/tutor-guide');
-            const result = await router.handle('/mode');
-            expect(result).toContain('tutor-guide');
-        });
-    });
-
     describe('/help', () => {
         it('returns available commands list', async () => {
             const ctx = makeContext();
@@ -201,11 +158,11 @@ describe('SlashCommandRouter', () => {
             expect(result).toContain('/run');
             expect(result).toContain('/rollback');
             expect(result).toContain('/exit');
-            expect(result).toContain('/solver');
-            expect(result).toContain('/tutor-socratic');
-            expect(result).toContain('/tutor-guide');
-            expect(result).toContain('/default');
-            expect(result).toContain('/mode');
+            expect(result).not.toContain('/solver');
+            expect(result).not.toContain('/tutor-socratic');
+            expect(result).not.toContain('/tutor-guide');
+            expect(result).not.toContain('/default');
+            expect(result).not.toContain('/mode');
         });
     });
 

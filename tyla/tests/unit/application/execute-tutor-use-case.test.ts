@@ -47,10 +47,10 @@ function makeDeps(overrides: Partial<ExecuteTutorDeps> = {}): {
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
-describe('ExecuteTutorUseCase (socratic)', () => {
+describe('ExecuteTutorUseCase (tutor-socratic)', () => {
     it('streams response and returns content', async () => {
         const { deps } = makeDeps({ llm: makeMockLLM('What do you think the answer might be?') });
-        const useCase = new ExecuteTutorUseCase(deps, 'socratic');
+        const useCase = new ExecuteTutorUseCase(deps, 'tutor-socratic');
 
         const result = await useCase.execute('solve my homework', []);
 
@@ -59,7 +59,7 @@ describe('ExecuteTutorUseCase (socratic)', () => {
 
     it('emits text_output with LLM content', async () => {
         const { deps, events } = makeDeps({ llm: makeMockLLM('What have you tried so far?') });
-        const useCase = new ExecuteTutorUseCase(deps, 'socratic');
+        const useCase = new ExecuteTutorUseCase(deps, 'tutor-socratic');
 
         await useCase.execute('solve hw1', []);
 
@@ -69,7 +69,7 @@ describe('ExecuteTutorUseCase (socratic)', () => {
 
     it('emits phase_start and phase_end for tutor phase', async () => {
         const { deps, events } = makeDeps();
-        const useCase = new ExecuteTutorUseCase(deps, 'socratic');
+        const useCase = new ExecuteTutorUseCase(deps, 'tutor-socratic');
 
         await useCase.execute('explain this', []);
 
@@ -83,7 +83,7 @@ describe('ExecuteTutorUseCase (socratic)', () => {
         const llm = makeMockLLM();
         (llm.streamPrompt as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('API error'));
         const { deps, events } = makeDeps({ llm });
-        const useCase = new ExecuteTutorUseCase(deps, 'socratic');
+        const useCase = new ExecuteTutorUseCase(deps, 'tutor-socratic');
 
         await expect(useCase.execute('help', [])).rejects.toThrow();
 
@@ -93,10 +93,10 @@ describe('ExecuteTutorUseCase (socratic)', () => {
     });
 });
 
-describe('ExecuteTutorUseCase (guide)', () => {
+describe('ExecuteTutorUseCase (tutor-guide)', () => {
     it('returns guide-style content', async () => {
         const { deps } = makeDeps({ llm: makeMockLLM('Step 1: Understand the problem') });
-        const useCase = new ExecuteTutorUseCase(deps, 'guide');
+        const useCase = new ExecuteTutorUseCase(deps, 'tutor-guide');
 
         const result = await useCase.execute('solve hw2', []);
 
@@ -112,7 +112,7 @@ describe('ExecuteTutorUseCase (guide)', () => {
             },
         );
         const { deps, events } = makeDeps({ llm });
-        const useCase = new ExecuteTutorUseCase(deps, 'guide');
+        const useCase = new ExecuteTutorUseCase(deps, 'tutor-guide');
 
         await useCase.execute('help me with hw3', []);
 
