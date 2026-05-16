@@ -18,18 +18,6 @@ Authorization: Bearer <token>
 
 ---
 
-## Setup Flow (2 calls)
-
-**Before (v1.1 — 3 calls):**
-1. `POST /auth/verify_google_token`
-2. `GET /account/current_context?courseId=:courseId`
-3. `GET /assignments/:assignmentId/package`
-
-**After (v1.2 — 2 calls):**
-1. `POST /auth/verify_google_token` — returns `{ student, auth, courses[] }`
-2. `GET /assignments/:assignmentId/package?courseId=:courseId` — returns ZIP + assignment metadata
-
----
 
 ## CLI Responsibilities
 
@@ -39,7 +27,7 @@ The following concerns are handled entirely by tyla (not tyto):
 - **Local auth state** — JWT and expiry are persisted to `~/.tyla/auth.json`; this token is reused until expiry.
 - **Assignment context** — `./.ai-tutor-config` stores `{ student, auth, selectedCourse, currentAssignment }` after setup.
 - **Skip redundant downloads** — if `./assignments/<courseId>-<assignmentId>/` already exists on disk, tyla skips the `GET /package` call.
-- **Solutions isolation** — `solutions/` content received from `GET /documents` is held in memory and passed directly to the LLM. It is **never** written to disk.
+- **Solutions isolation** — the CLI calls `GET /assignments/:id/documents/token` to obtain a short-lived decryption key, decrypts the local `solutions/` files **in memory**, and passes the plaintext to the LLM. Decrypted content is **never** written to disk.
 
 ---
 
@@ -133,7 +121,9 @@ After selection the CLI writes `~/.tyla/auth.json` and calls `GET /assignments/:
 
 > **When called:** Once per assignment setup (start of week). Skipped if the local folder already exists.
 
-Download the encrypted assignment ZIP and assignment metadata for the active assignment.
+![Download Assignment Package](./img/Download%20Assignment%20Package.drawio.png)
+
+Download the assignment ZIP for the active assignment. Assignment metadata is bundled inside the ZIP as `metadata.json`.
 
 ```
 GET /assignments/:assignmentId/package?courseId=:courseId
@@ -162,55 +152,56 @@ Authorization: Bearer <token>
 ```
 Content-Type: application/zip
 Content-Disposition: attachment; filename="CS201-HW2.zip"
-X-Assignment-Course-Id: CS201
-X-Assignment-Course-Name: Data Structures
-X-Assignment-Id: HW2
-X-Assignment-Title: Homework 2
-X-Assignment-Due-At: 2026-05-07T23:59:00+08:00
-X-Assignment-Mode: tutor-guide
-X-Assignment-Starter-File: CS201-HW2/student-files/student01.Rmd
-X-Assignment-Spec-File: CS201-HW2/assignment/HW2.md
-X-Assignment-Submission-Endpoint: https://api.example.com/submit
 
 <binary ZIP content>
 ```
-
-> **Open question — metadata delivery format.** Three options are under consideration:
-> - **Response headers** (current spec) — simple, no content-type change.
-> - **JSON body with signed ZIP URL** — returns JSON with a pre-signed download URL; client makes a second GET to fetch the ZIP.
-> - **Multipart response** — single response body with a JSON part and a binary part.
->
-> This spec uses response headers until a final decision is made.
 
 The ZIP unpacks directly to the local working directory. Paths are relative to `assignments/`:
 
 ```
 assignments/
 └── CS201-HW2/
+    ├── metadata.json    ← CLI reads this first to populate .ai-tutor-config
     ├── student-files/   ← plaintext — student reads and edits these
     ├── tutors/          ← plaintext — tutor policy files (socratic.md, guide.md, …)
     ├── notes/           ← plaintext — class handouts
     ├── assignment/      ← plaintext — spec documents (HW2.md / HW2.tex)
-    └── solutions/       ← encrypted — student cannot open; decrypted server-side only
+    └── solutions/       ← encrypted — CLI decrypts in memory using key from GET /documents/token; never written to disk
 ```
 
-`starterFile` and `specFile` are paths relative to `assignments/` (e.g. `CS201-HW2/student-files/student01.Rmd`).
+**`metadata.json` schema**
 
-The CLI must **not** attempt to decrypt `solutions/`. Plaintext solution content is only available via `GET /assignments/:id/documents`.
+```json
+{
+  "courseId": "CS201",
+  "courseName": "Data Structures",
+  "id": "HW2",
+  "title": "Homework 2",
+  "dueAt": "2026-05-07T23:59:00+08:00",
+  "mode": "tutor-guide",
+  "starterFile": "CS201-HW2/student-files/student01.Rmd",
+  "specFile": "CS201-HW2/assignment/HW2.md",
+  "submissionEndpoint": "https://api.example.com/submit"
+}
+```
 
-**Field Reference — `X-Assignment-*` headers**
+`starterFile` and `specFile` are paths relative to `assignments/`. After unpacking, the CLI reads `metadata.json` and writes `.ai-tutor-config`.
 
-| Header | Type | Description |
-|--------|------|-------------|
-| `X-Assignment-Course-Id` | string | Course identifier |
-| `X-Assignment-Course-Name` | string | Human-readable course name |
-| `X-Assignment-Id` | string | Assignment identifier (e.g. `"HW2"`) |
-| `X-Assignment-Title` | string | Human-readable assignment name |
-| `X-Assignment-Due-At` | string (ISO 8601) | Due date with timezone |
-| `X-Assignment-Mode` | enum | LLM tutoring policy: `"tutor-socratic"` / `"tutor-guide"` |
-| `X-Assignment-Starter-File` | string | Path relative to `assignments/` |
-| `X-Assignment-Spec-File` | string | Path relative to `assignments/` |
-| `X-Assignment-Submission-Endpoint` | string | Full URL the CLI POSTs the submission to |
+The CLI must **not** attempt to decrypt `solutions/` on disk. In-memory decryption uses the short-lived key obtained from `GET /assignments/:assignmentId/documents/token`.
+
+**Field Reference — `metadata.json`**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `courseId` | string | Course identifier |
+| `courseName` | string | Human-readable course name |
+| `id` | string | Assignment identifier (e.g. `"HW2"`) |
+| `title` | string | Human-readable assignment name |
+| `dueAt` | string (ISO 8601) | Due date with timezone |
+| `mode` | enum | LLM tutoring policy: `"tutor-socratic"` / `"tutor-guide"` |
+| `starterFile` | string | Path relative to `assignments/` |
+| `specFile` | string | Path relative to `assignments/` |
+| `submissionEndpoint` | string | Full URL the CLI POSTs the submission to |
 
 **Error Responses**
 
@@ -222,16 +213,16 @@ The CLI must **not** attempt to decrypt `solutions/`. Plaintext solution content
 
 ---
 
-### 3. Request Assignment Documents (for LLM context)
+### 3. Request Solutions Decryption Token (for LLM context)
 
-> **When called:** Every time the student asks a question (not cached — always fetches fresh decrypted content).
+> **When called:** Once per session (or when the cached token is within 5 minutes of expiry). The CLI caches the token in memory and reuses it for all questions in the same session.
 
-![Question Flow](./img/Question%20Flow.drawio.png)
+![Request Solutions Decryption Token](./img/Request%20Solutions%20Decryption%20Token.drawio.png)
 
-Fetch decrypted assignment documents from the backend to use as LLM context. The student's local copy of `solutions/` is encrypted; this endpoint is the only way to obtain the plaintext content. The CLI passes the returned documents directly to the external LLM API — they are never written to disk.
+Obtain a short-lived decryption token scoped to `(studentId, assignmentId)`. The CLI uses this token to decrypt the local `solutions/` files in memory and pass their contents as LLM context. Plaintext files (`hw`, `notes`) are read directly from the local ZIP — they do not go through this endpoint.
 
 ```
-GET /assignments/:assignmentId/documents
+GET /assignments/:assignmentId/documents/token
 ```
 
 **Path Parameter**
@@ -239,12 +230,6 @@ GET /assignments/:assignmentId/documents
 | Parameter | Description |
 |-----------|-------------|
 | `assignmentId` | Assignment identifier (e.g. `HW2`) — read from `.ai-tutor-config` → `currentAssignment.id` |
-
-**Query Parameter**
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `types` | string (comma-separated) | no | Document types to include: `hw`, `solutions`, `notes`. Defaults to `hw,notes`. |
 
 **Request Headers**
 
@@ -256,31 +241,17 @@ Authorization: Bearer <token>
 
 ```json
 {
-  "documents": [
-    {
-      "type": "hw",
-      "filename": "HW2.md",
-      "content": "# Homework 2\n..."
-    },
-    {
-      "type": "solutions",
-      "filename": "HW2-solution1.Rmd",
-      "content": "..."
-    },
-    {
-      "type": "notes",
-      "filename": "class-handout.md",
-      "content": "..."
-    }
-  ]
+  "decryptionKey": "<base64-encoded-key>",
+  "expiresAt": "2026-05-16T15:30:00Z",
+  "algorithm": "AES-256-GCM"
 }
 ```
 
 **Security model**
 
-- `solutions` documents are stored encrypted on the backend; this endpoint decrypts them server-side before responding.
-- The student's local ZIP contains an encrypted copy of `solutions/` that cannot be opened without this endpoint.
-- The CLI receives plaintext in memory and passes it as LLM context — it must **not** persist `solutions` content to disk.
+- The decryption key is scoped to `(studentId, assignmentId)` with a 1-hour TTL. The same key is returned for repeated calls within the TTL window; a new key is issued after expiry.
+- The CLI caches `{ decryptionKey, expiresAt }` in memory. Before each LLM call it checks the remaining TTL — if under 5 minutes, it silently re-fetches before decrypting.
+- The decryption key must **not** be persisted to disk. Decrypted `solutions/` content must **not** be written to disk.
 
 **Error Responses**
 
@@ -299,7 +270,7 @@ The CLI persists setup results to two locations:
 | Path | Content | Purpose |
 |------|---------|---------|
 | `~/.tyla/auth.json` | `{ "token": "...", "expiresAt": "..." }` | JWT reused for all future API calls |
-| `./.ai-tutor-config` | `{ student, auth, selectedCourse, currentAssignment }` — populated from login (step 1) and package headers (step 2) | Per-project context; different directories can have different assignments |
+| `./.ai-tutor-config` | `{ student, auth, selectedCourse, currentAssignment }` — populated from login (step 1) and `metadata.json` inside the ZIP (step 2) | Per-project context; different directories can have different assignments |
 | `./assignments/<course>-<id>/` | Unpacked ZIP contents (student-files/, tutors/, notes/, assignment/, solutions/) | Student working directory |
 
 > `.ai-tutor-config` is project-scoped so that different working directories can represent different course environments.
@@ -323,18 +294,20 @@ CLI                         Google        Tyto Backend      GitHub LLM API
  │  [multiple courses] → TUI picker             │                  │
  │                                              │                  │
  │── GET /assignments/:id/package?courseId ───► │                  │
- │◄─ <ZIP> + X-Assignment-* headers ─────────  │                  │
+ │◄─ <binary ZIP> ─────────────────────────────  │                  │
  │  [unpack to ./assignments/<courseId>-<id>/]  │                  │
- │  [write ./.ai-tutor-config from headers]     │                  │
+ │  [read metadata.json → write .ai-tutor-config]               │
  │  student-files/ notes/ assignment/ → plaintext               │
  │  solutions/ → encrypted blob (cannot open)  │                  │
  │                                              │                  │
  │  ── student asks a question ──────────────────────────────────  │
- │── GET /assignments/:id/documents ──────────► │                  │
+ │── GET /assignments/:id/documents/token ────► │                  │
  │   [Authorization: Bearer token]              │                  │
  │   [assignmentId from .ai-tutor-config]       │                  │
- │◄─ { documents: [hw, solutions, notes] } ───  │                  │
- │  [hold in memory, never write to disk]       │                  │
+ │◄─ { decryptionKey, expiresAt, algorithm } ─  │                  │
+ │  [decrypt solutions/ in memory]              │                  │
+ │  [read student-files/ notes/ assignment/ from disk — plaintext] │
+ │  [hold all content in memory, never write to disk]              │
  │                                              │                  │
  │── LLM key + context + documents + question ────────────────────►│
  │◄─ AI response (streamed) ──────────────────────────────────────  │
