@@ -1,7 +1,7 @@
 # API Specification — Tyla CLI × Tyto Backend (Google OAuth)
 
-> **Version:** 1.1  
-> **Date:** 2026-05-12  
+> **Version:** 1.2  
+> **Date:** 2026-05-16  
 > **Base URL:** `https://<tyto-host>/api`
 
 ---
@@ -18,11 +18,38 @@ Authorization: Bearer <token>
 
 ---
 
+## Setup Flow (2 calls)
+
+**Before (v1.1 — 3 calls):**
+1. `POST /auth/verify_google_token`
+2. `GET /account/current_context?courseId=:courseId`
+3. `GET /assignments/:assignmentId/package`
+
+**After (v1.2 — 2 calls):**
+1. `POST /auth/verify_google_token` — returns `{ student, auth, courses[] }`
+2. `GET /assignments/:assignmentId/package?courseId=:courseId` — returns ZIP + assignment metadata
+
+---
+
+## CLI Responsibilities
+
+The following concerns are handled entirely by tyla (not tyto):
+
+- **PKCE OAuth 2.0 flow** — tyla initiates the Google authorization, handles the redirect, and exchanges the code for an `access_token`.
+- **Local auth state** — JWT and expiry are persisted to `~/.tyla/auth.json`; this token is reused until expiry.
+- **Assignment context** — `./.ai-tutor-config` stores `{ student, auth, selectedCourse, currentAssignment }` after setup.
+- **Skip redundant downloads** — if `./assignments/<courseId>-<assignmentId>/` already exists on disk, tyla skips the `GET /package` call.
+- **Solutions isolation** — `solutions/` content received from `GET /documents` is held in memory and passed directly to the LLM. It is **never** written to disk.
+
+---
+
 ## Endpoints
 
 ### 1. Verify Google Token (Login)
-![Login Flow](./img/Login%20Flow.drawio.png)
 
+> **When called:** Once per login session. The returned JWT is reused until `expiresAt`.
+
+![Login Flow](./img/Login%20Flow.drawio.png)
 
 Exchange a Google `access_token` for a Tyto JWT and initial workspace context.
 
@@ -69,7 +96,7 @@ The CLI handles course selection locally:
 - **Single course** — auto-select, proceed immediately.
 - **Multiple courses** — render TUI picker; user navigates with ↑/↓ and confirms with Enter.
 
-After selection the CLI writes the chosen course to `.ai-tutor-config` and calls `GET /account/current_context` to fetch the assignment.
+After selection the CLI writes `~/.tyla/auth.json` and calls `GET /assignments/:assignmentId/package?courseId=:courseId` to fetch the assignment package and metadata in one request.
 
 **Field Reference — `student`**
 
@@ -104,66 +131,19 @@ After selection the CLI writes the chosen course to `.ai-tutor-config` and calls
 
 ### 2. Download Assignment Package
 
-Download the encrypted assignment ZIP for the active assignment.
+> **When called:** Once per assignment setup (start of week). Skipped if the local folder already exists.
+
+Download the encrypted assignment ZIP and assignment metadata for the active assignment.
 
 ```
-GET /assignments/:assignmentId/package
+GET /assignments/:assignmentId/package?courseId=:courseId
 ```
 
 **Path Parameter**
 
 | Parameter | Description |
 |-----------|-------------|
-| `assignmentId` | Assignment identifier matching `currentAssignment.id` (e.g. `HW2`) |
-
-**Request Headers**
-
-```
-Authorization: Bearer <token>
-```
-
-**Response — 200 OK**
-
-```
-Content-Type: application/zip
-Content-Disposition: attachment; filename="CS201-HW2.zip"
-
-<binary ZIP content>
-```
-
-The ZIP unpacks directly to the local working directory. Paths are relative to `assignments/`:
-
-```
-assignments/
-└── CS201-HW2/
-    ├── student-files/   ← plaintext — student reads and edits these
-    ├── tutors/          ← plaintext — tutor policy files (socratic.md, guide.md, …)
-    ├── notes/           ← plaintext — class handouts
-    ├── assignment/      ← plaintext — spec documents (HW2.md / HW2.tex)
-    └── solutions/       ← encrypted — student cannot open; decrypted server-side only
-```
-
-`starterFile` and `specFile` in `currentAssignment` are paths relative to `assignments/` (e.g. `CS201-HW2/student-files/student01.Rmd`).
-
-The CLI must **not** attempt to decrypt `solutions/`. Plaintext solution content is only available via `GET /assignments/:id/documents`.
-
-**Error Responses**
-
-| Status | Body | When |
-|--------|------|------|
-| 401 | `{ "error": "Invalid or missing credential" }` | Missing or expired token |
-| 403 | `{ "error": "Not enrolled in this assignment" }` | Student not enrolled |
-| 404 | `{ "error": "Assignment not found" }` | Invalid `assignmentId` |
-
----
-
-### 3. Get Current Context
-
-Fetch the active assignment for a selected course. Called after course selection (login or subsequent runs).
-
-```
-GET /account/current_context?courseId=:courseId
-```
+| `assignmentId` | Assignment identifier (e.g. `HW2`) |
 
 **Query Parameter**
 
@@ -177,52 +157,74 @@ GET /account/current_context?courseId=:courseId
 Authorization: Bearer <token>
 ```
 
-No request body.
-
 **Response — 200 OK**
 
-```json
-{
-  "selectedCourse": {
-    "id": "CS201",
-    "name": "Data Structures"
-  },
-  "currentAssignment": {
-    "id": "HW2",
-    "title": "Homework 2",
-    "dueAt": "2026-05-07T23:59:00+08:00",
-    "mode": "tutor-guide",
-    "starterFile": "CS201-HW2/student-files/student01.Rmd",
-    "specFile": "CS201-HW2/assignment/HW2.md",
-    "submissionEndpoint": "https://api.example.com/submit"
-  }
-}
+```
+Content-Type: application/zip
+Content-Disposition: attachment; filename="CS201-HW2.zip"
+X-Assignment-Course-Id: CS201
+X-Assignment-Course-Name: Data Structures
+X-Assignment-Id: HW2
+X-Assignment-Title: Homework 2
+X-Assignment-Due-At: 2026-05-07T23:59:00+08:00
+X-Assignment-Mode: tutor-guide
+X-Assignment-Starter-File: CS201-HW2/student-files/student01.Rmd
+X-Assignment-Spec-File: CS201-HW2/assignment/HW2.md
+X-Assignment-Submission-Endpoint: https://api.example.com/submit
+
+<binary ZIP content>
 ```
 
-`currentAssignment` is `null` when enrolled but no active assignment exists.
+> **Open question — metadata delivery format.** Three options are under consideration:
+> - **Response headers** (current spec) — simple, no content-type change.
+> - **JSON body with signed ZIP URL** — returns JSON with a pre-signed download URL; client makes a second GET to fetch the ZIP.
+> - **Multipart response** — single response body with a JSON part and a binary part.
+>
+> This spec uses response headers until a final decision is made.
 
-**Field Reference — `currentAssignment`**
+The ZIP unpacks directly to the local working directory. Paths are relative to `assignments/`:
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | string | Assignment identifier (e.g. `"HW2"`) |
-| `title` | string | Human-readable assignment name |
-| `dueAt` | string (ISO 8601) | Due date with timezone |
-| `mode` | enum | LLM tutoring policy: `"tutor-socratic"` / `"tutor-guide"` / `"solver"` |
-| `starterFile` | string | Path relative to `assignments/` inside the ZIP (e.g. `CS201-HW2/student-files/student01.Rmd`) |
-| `specFile` | string | Path relative to `assignments/` inside the ZIP (e.g. `CS201-HW2/assignment/HW2.md`) |
-| `submissionEndpoint` | string | Full URL the CLI POSTs the submission to |
+```
+assignments/
+└── CS201-HW2/
+    ├── student-files/   ← plaintext — student reads and edits these
+    ├── tutors/          ← plaintext — tutor policy files (socratic.md, guide.md, …)
+    ├── notes/           ← plaintext — class handouts
+    ├── assignment/      ← plaintext — spec documents (HW2.md / HW2.tex)
+    └── solutions/       ← encrypted — student cannot open; decrypted server-side only
+```
+
+`starterFile` and `specFile` are paths relative to `assignments/` (e.g. `CS201-HW2/student-files/student01.Rmd`).
+
+The CLI must **not** attempt to decrypt `solutions/`. Plaintext solution content is only available via `GET /assignments/:id/documents`.
+
+**Field Reference — `X-Assignment-*` headers**
+
+| Header | Type | Description |
+|--------|------|-------------|
+| `X-Assignment-Course-Id` | string | Course identifier |
+| `X-Assignment-Course-Name` | string | Human-readable course name |
+| `X-Assignment-Id` | string | Assignment identifier (e.g. `"HW2"`) |
+| `X-Assignment-Title` | string | Human-readable assignment name |
+| `X-Assignment-Due-At` | string (ISO 8601) | Due date with timezone |
+| `X-Assignment-Mode` | enum | LLM tutoring policy: `"tutor-socratic"` / `"tutor-guide"` |
+| `X-Assignment-Starter-File` | string | Path relative to `assignments/` |
+| `X-Assignment-Spec-File` | string | Path relative to `assignments/` |
+| `X-Assignment-Submission-Endpoint` | string | Full URL the CLI POSTs the submission to |
 
 **Error Responses**
 
 | Status | Body | When |
 |--------|------|------|
-| 401 | `{ "error": "Invalid or missing credential" }` | Missing or expired `Authorization` header |
-| 403 | `{ "error": "Not enrolled in this course" }` | Student not enrolled in the specified course |
-| 404 | `{ "error": "No active assignment" }` | Course found but no active assignment exists |
+| 401 | `{ "error": "Invalid or missing credential" }` | Missing or expired token |
+| 403 | `{ "error": "Not enrolled in this assignment" }` | Student not enrolled |
+| 404 | `{ "error": "Assignment not found" }` | Invalid `assignmentId` or `courseId` |
 
-### 4. Request Assignment Documents (for LLM context)
+---
 
+### 3. Request Assignment Documents (for LLM context)
+
+> **When called:** Every time the student asks a question (not cached — always fetches fresh decrypted content).
 
 ![Question Flow](./img/Question%20Flow.drawio.png)
 
@@ -236,7 +238,7 @@ GET /assignments/:assignmentId/documents
 
 | Parameter | Description |
 |-----------|-------------|
-| `assignmentId` | Assignment identifier (e.g. `HW2`) — read from `.ai-tutor-config` → `currentAssignment.id` written during login step ④ |
+| `assignmentId` | Assignment identifier (e.g. `HW2`) — read from `.ai-tutor-config` → `currentAssignment.id` |
 
 **Query Parameter**
 
@@ -290,14 +292,14 @@ Authorization: Bearer <token>
 
 ---
 
-## CLI Local State After Login
+## CLI Local State After Setup
 
-The CLI persists login results to two locations:
+The CLI persists setup results to two locations:
 
 | Path | Content | Purpose |
 |------|---------|---------|
 | `~/.tyla/auth.json` | `{ "token": "...", "expiresAt": "..." }` | JWT reused for all future API calls |
-| `./.ai-tutor-config` | `{ student, auth, selectedCourse, currentAssignment }` — merged from login steps ② and ④ | Per-project context; different directories can have different assignments |
+| `./.ai-tutor-config` | `{ student, auth, selectedCourse, currentAssignment }` — populated from login (step 1) and package headers (step 2) | Per-project context; different directories can have different assignments |
 | `./assignments/<course>-<id>/` | Unpacked ZIP contents (student-files/, tutors/, notes/, assignment/, solutions/) | Student working directory |
 
 > `.ai-tutor-config` is project-scoped so that different working directories can represent different course environments.
@@ -309,7 +311,7 @@ The CLI persists login results to two locations:
 ```
 CLI                         Google        Tyto Backend      GitHub LLM API
  │                              │               │                  │
- │  ── login ─────────────────────────────────  │                  │
+ │  ── setup (once per assignment) ───────────  │                  │
  │── PKCE authorize ────────────►               │                  │
  │◄─ access_token ─────────────┘               │                  │
  │                                              │                  │
@@ -320,13 +322,10 @@ CLI                         Google        Tyto Backend      GitHub LLM API
  │  [single course]  → auto-select              │                  │
  │  [multiple courses] → TUI picker             │                  │
  │                                              │                  │
- │── GET /account/current_context?courseId ───► │                  │
- │◄─ { selectedCourse, currentAssignment } ───  │                  │
- │  [write ./.ai-tutor-config]                  │                  │
- │                                              │                  │
- │── GET /assignments/:id/package ────────────► │                  │
- │◄─ <ZIP> ───────────────────────────────────  │                  │
+ │── GET /assignments/:id/package?courseId ───► │                  │
+ │◄─ <ZIP> + X-Assignment-* headers ─────────  │                  │
  │  [unpack to ./assignments/<courseId>-<id>/]  │                  │
+ │  [write ./.ai-tutor-config from headers]     │                  │
  │  student-files/ notes/ assignment/ → plaintext               │
  │  solutions/ → encrypted blob (cannot open)  │                  │
  │                                              │                  │
@@ -349,3 +348,4 @@ CLI                         Google        Tyto Backend      GitHub LLM API
 - Refresh tokens or silent re-auth (CLI re-runs login when token expires)
 - Persisting selected course on the backend (selection is CLI-local only)
 - Conditional ZIP download (e.g. `If-None-Match` / version check)
+- `GET /account/current_context` — removed in v1.2 (merged into `GET /package`)
