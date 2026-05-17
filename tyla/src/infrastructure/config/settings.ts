@@ -24,6 +24,9 @@ export interface Settings {
         items: StatusBarItem[];
     };
     workflowMode: WorkflowMode;
+    courseId?: string;
+    projectId?: string;
+    studentId?: string;
 }
 
 export function getSettings(): Settings {
@@ -50,6 +53,10 @@ export function getSettings(): Settings {
         if (typeof parsed?.workflowMode === 'string' && VALID_MODES.includes(parsed.workflowMode as WorkflowMode)) {
             defaults.workflowMode = parsed.workflowMode as WorkflowMode;
         }
+
+        if (typeof parsed?.courseId === 'string') defaults.courseId = parsed.courseId;
+        if (typeof parsed?.projectId === 'string') defaults.projectId = parsed.projectId;
+        if (typeof parsed?.studentId === 'string') defaults.studentId = parsed.studentId;
     } catch {
         // Missing or invalid file — use defaults
     }

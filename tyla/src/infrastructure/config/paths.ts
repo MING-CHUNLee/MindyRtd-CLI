@@ -2,7 +2,7 @@
  * Centralized persistence paths.
  *
  * Project-scoped data (sessions, knowledge, commands) lives in <cwd>/.tyla/
- * Global data (plugins) stays in ~/.tyla/
+ * Global data (plugins, login profile) stays in ~/.tyla/
  */
 
 import path from 'path';
@@ -42,4 +42,8 @@ export function getSettingsFile(): string {
 
 export function getGuardLogFile(): string {
     return path.join(getProjectBase(), 'guard-log.json');
+}
+
+export function getProfileFile(): string {
+    return path.join(getProjectBase(), 'profile.json');
 }
