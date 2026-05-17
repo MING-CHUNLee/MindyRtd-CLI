@@ -48,6 +48,7 @@ import { ExecuteRunUseCase } from '../../application/use-cases/execute-run-use-c
 import { ExecuteTutorUseCase } from '../../application/use-cases/execute-tutor-use-case';
 import { GuardAgent } from '../../application/services/guard-agent';
 import { appendGuardLog } from '../persistence/guard-log-repository';
+import { PromptLogGateway } from '../api/logging/gateway/prompt-log-gateway';
 import { ExecuteInstallUseCase } from '../../application/use-cases/execute-install-use-case';
 
 import type {
@@ -138,10 +139,14 @@ export function buildAgentDeps(
         ? new PolicyLoader(undefined, assignmentDir)
         : undefined;
 
+    const promptLogGateway = new PromptLogGateway();
     const guardAgent = new GuardAgent(
         llm,
         (msg) => emit('guard_judge_error', { message: msg }),
-        appendGuardLog,
+        (entry) => {
+            appendGuardLog(entry);
+            promptLogGateway.postLog(entry);
+        },
     );
 
     const tutorUseCase = new ExecuteTutorUseCase(
