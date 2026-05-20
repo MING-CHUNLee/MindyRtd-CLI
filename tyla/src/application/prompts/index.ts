@@ -7,7 +7,6 @@
 export {
     buildJudgeSystemPrompt,
     buildRefusalInstruction,
-    NON_ENGLISH_REFUSAL,
 } from './guard-agent';
 
 export {

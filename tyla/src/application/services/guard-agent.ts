@@ -3,8 +3,6 @@ import { GuardResult, GuardLogEntry, IGuardAgent, GUARD_ATTACK_THRESHOLD } from 
 import type { TutorStyle } from '../use-cases/execute-tutor-use-case';
 import { buildJudgeSystemPrompt, buildRefusalInstruction } from '../prompts/guard-agent';
 
-const PROB_SUM_EPSILON = 0.01;
-
 export class GuardAgent implements IGuardAgent {
     constructor(
         private readonly llm: LLMGateway,
@@ -19,43 +17,42 @@ export class GuardAgent implements IGuardAgent {
     private async runLLMJudge(prompt: string, policyText: string, style: TutorStyle): Promise<GuardResult> {
         try {
             const response = await this.llm.sendPrompt({
-                systemPrompt: buildJudgeSystemPrompt(policyText),
+                systemPrompt: buildJudgeSystemPrompt(),
                 userMessage: prompt,
             });
 
-            const parsed = JSON.parse(response.content.trim()) as { attack: number; benign: number; reason: string };
+            const parsed = JSON.parse(response.content.trim()) as { 'attack-probability': number; evaluation: string };
+            const attackProb = parsed['attack-probability'];
+            const evaluation = parsed.evaluation;
             if (
-                typeof parsed.attack !== 'number' ||
-                typeof parsed.benign !== 'number' ||
-                typeof parsed.reason !== 'string' ||
-                parsed.attack < 0 || parsed.attack > 1 ||
-                parsed.benign < 0 || parsed.benign > 1 ||
-                Math.abs(parsed.attack + parsed.benign - 1) > PROB_SUM_EPSILON
+                typeof attackProb !== 'number' ||
+                typeof evaluation !== 'string' ||
+                attackProb < 0 || attackProb > 1
             ) {
                 throw new Error('unexpected JSON shape');
             }
 
-            const probability = { attack: parsed.attack, benign: parsed.benign };
-            const allowed = parsed.attack < GUARD_ATTACK_THRESHOLD;
+            const probability = { attack: attackProb, benign: 1 - attackProb };
+            const allowed = attackProb < GUARD_ATTACK_THRESHOLD;
 
             this.onLog?.({
                 timestamp: new Date().toISOString(),
                 userPrompt: prompt,
                 probability,
-                reason: parsed.reason,
+                reason: evaluation,
                 allowed,
             });
 
             if (!allowed) {
                 return {
                     allowed: false,
-                    reason: parsed.reason,
+                    reason: evaluation,
                     probability,
                     action: 'refuse',
-                    refusalInstruction: buildRefusalInstruction(prompt, parsed.reason, style),
+                    refusalInstruction: buildRefusalInstruction(prompt, evaluation, style),
                 };
             }
-            return { allowed: true, reason: parsed.reason, probability };
+            return { allowed: true, reason: evaluation, probability };
         } catch (err) {
             this.onJudgeError?.(`llm-judge failed: ${String(err)}`);
             return { allowed: true, reason: 'llm-judge unavailable, allowed by default' };
