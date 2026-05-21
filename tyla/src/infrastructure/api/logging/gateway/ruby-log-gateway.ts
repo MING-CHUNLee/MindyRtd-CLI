@@ -10,7 +10,6 @@
  */
 
 import axios, { AxiosError } from 'axios';
-import { getEnv } from '../../../config';
 import { RUBY_API } from '../../../config/constants';
 
 // ============================================
@@ -39,9 +38,7 @@ export class RubyLogGateway {
     private timeout: number;
 
     constructor() {
-        const host = getEnv('API_HOST') ?? RUBY_API.DEFAULT_HOST;
-        const port = getEnv('API_PORT') ?? String(RUBY_API.DEFAULT_PORT);
-        this.baseUrl = `http://${host}:${port}`;
+        this.baseUrl = `http://${RUBY_API.HOST}:${RUBY_API.PORT}`;
         this.timeout = RUBY_API.DEFAULT_TIMEOUT_MS;
     }
 

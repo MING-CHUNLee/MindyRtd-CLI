@@ -140,11 +140,20 @@ export const INSTALLATION = {
 // ============================================
 
 export const RUBY_API = {
-    /** Default Ruby API host */
-    DEFAULT_HOST: 'localhost',
-    /** Default Ruby API port */
-    DEFAULT_PORT: 9090,
+    HOST: process.env.API_HOST ?? 'localhost',
+    PORT: Number(process.env.API_PORT ?? 9090),
     /** Default request timeout (60 seconds — LLM calls can be slow) */
+    DEFAULT_TIMEOUT_MS: 60_000,
+} as const;
+
+// ============================================
+// Tyla API (guard checks, analytics)
+// ============================================
+
+export const TYLA_API = {
+    HOST: process.env.TYLA_API_HOST ?? 'localhost',
+    PORT: Number(process.env.TYLA_API_PORT ?? 9292),
+    /** Default request timeout (60 seconds — LLM judge calls can be slow) */
     DEFAULT_TIMEOUT_MS: 60_000,
 } as const;
 

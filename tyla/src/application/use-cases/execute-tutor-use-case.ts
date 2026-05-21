@@ -62,11 +62,11 @@ export class ExecuteTutorUseCase {
 
         const fileContents = await this.readRelevantFiles(instruction, scannedFiles);
 
-        this.deps.emit('phase_start', { phase: 'tutor', description: `Responding in ${this.style} mode` });
-        const systemPrompt = this.assemblePrompt(history, instruction, projectContext, fileContents);
-
         const guardBlock = await this.runGuard(instruction, history);
         if (guardBlock) return guardBlock;
+
+        this.deps.emit('phase_start', { phase: 'tutor', description: `Responding in ${this.style} mode` });
+        const systemPrompt = this.assemblePrompt(history, instruction, projectContext, fileContents);
 
         return this.callLLMStream(systemPrompt, instruction, history);
     }
@@ -186,8 +186,10 @@ export class ExecuteTutorUseCase {
     ): Promise<TutorResult | null> {
         if (!this.deps.guardAgent) return null;
 
+        this.deps.emit('phase_start', { phase: 'guard', description: 'Running safety check' });
         const policyText = this.policyLoader.load(this.style);
         const guardResult = await this.deps.guardAgent.check(instruction, policyText, this.style);
+        this.deps.emit('phase_end', { phase: 'guard', success: true, summary: `Guard: ${guardResult.reason}` });
 
         if (guardResult.allowed) return null;
 
